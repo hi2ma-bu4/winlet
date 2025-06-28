@@ -1,0 +1,46 @@
+{
+  "name": "winlet",
+  "version": "0.0.0.1",
+  "description": "ウィンドウ生成ライブラリ",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hi2ma-bu4/winlet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hi2ma-bu4/winlet/issues"
+  },
+  "homepage": "https://github.com/hi2ma-bu4/winlet",
+  "author": "hi2ma-bu4",
+  "main": "dist/winlet.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "build": "node dev/build.js"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-transform-runtime": "^7.25.9",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
+    "babelify": "^10.0.0",
+    "browserify": "^17.0.1",
+    "exorcist": "^2.0.0",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.43.0",
+    "rollup-plugin-dts": "^6.2.1",
+    "terser": "^5.37.0",
+    "tsify": "^5.0.4",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.26.0"
+  },
+  "volta": {
+    "node": "22.17.0",
+    "npm": "11.4.2"
+  }
+}

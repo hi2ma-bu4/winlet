@@ -1,0 +1,17 @@
+{
+    "presets": [
+        [
+            "@babel/preset-env",
+            {
+                "targets": "last 8 Chrome versions, last 8 Firefox versions, last 8 Safari versions, last 8 Edge versions", // 対応するブラウザの指定
+                "useBuiltIns": "usage", // 必要なポリフィルのみを自動でインポート
+                "corejs": 3 // core-jsのバージョン
+            }
+        ],
+        "@babel/preset-typescript"
+    ],
+    "plugins": [
+        "@babel/plugin-transform-runtime" // 反復的なコードを効率化
+    ],
+    "comments": false // コメントを削除してファイルサイズを小さくする
+}
