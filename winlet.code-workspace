@@ -11,6 +11,11 @@
 			"bat": "cmd /c",
 		},
 		"cSpell.words": [
+			"baseclass",
+			"maximizable",
+			"minimizable",
+			"reorderable",
+			"windowmanager",
 			"winlet"
 		]
 	}

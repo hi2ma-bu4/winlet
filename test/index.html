@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>WinLet - JavaScript Window Library Demo</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+	<link rel="stylesheet" href="./style.css">
+
+	<script src="https://cdn.jsdelivr.net/gh/hi2ma-bu4/jasc@v1.15.3.10/jasc.js"></script>
+	<script src="../dist/winlet.js"></script>
+
+	<script src="./main.js"></script>
+</head>
+<body>
+
+	<h1>WinLet - JavaScript Window Library Demo</h1>
+	<p class="description">以下のボタンをクリックして、さまざまな機能を持つウィンドウを作成します。</p>
+
+	<button onclick="createBasicWindow()">基本ウィンドウ</button>
+	<button onclick="createIframeWindow()">Iframeウィンドウ</button>
+	<button onclick="createTemplateWindow()">Templateウィンドウ</button>
+	<button onclick="createFullFeatureWindow()">全機能ウィンドウ</button>
+
+	<template id="my-template">
+		<div class="sample-content">
+			<h2>Templateから読み込まれたコンテンツ</h2>
+			<p>これは <code>&lt;template&gt;</code> タグ内のHTMLです。</p>
+			<p>カウンター: <span id="counter">0</span></p>
+			<button onclick="document.getElementById('counter').innerText++">カウントアップ</button>
+		</div>
+	</template>
+</body>
+</html>

@@ -1,0 +1,43 @@
+import { WindowOptions } from "./types";
+
+// Partial<WindowOptions>ではなく、全てのキーを定義して型安全にする
+export const defaultConfig: Required<WindowOptions> = {
+	id: null,
+	ifExists: "focus",
+	title: "New Window",
+	icon: null,
+	x: "center",
+	y: "center",
+	width: 500,
+	height: 400,
+	minWidth: 200,
+	minHeight: 150,
+	resizableX: true,
+	resizableY: true,
+	movable: true,
+	closable: true,
+	minimizable: true,
+	maximizable: true,
+	enableShortcuts: true,
+	controlsPosition: "right",
+	content: {
+		html: "",
+		iframe: "",
+		template: "",
+	},
+	menu: [],
+	tabs: [],
+	tabOptions: {
+		reorderable: false,
+		closable: false,
+		addable: false,
+		onAdd: undefined,
+	},
+	contextMenu: [],
+	onOpen: () => {},
+	onClose: () => {},
+	onFocus: () => {},
+	onBlur: () => {},
+	onResize: () => {},
+	onMove: () => {},
+};

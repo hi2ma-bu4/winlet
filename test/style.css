@@ -1,0 +1,35 @@
+body {
+	background-color: #333;
+	background-image: url('https://picsum.photos/1920/1080?nature');
+	background-position: top;
+	background-repeat: no-repeat;
+	background-size: auto;
+	color: #fff;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	padding: 20px;
+}
+
+h1 {
+	text-shadow: 2px 2px 4px #000;
+}
+
+.description {
+	text-shadow: 1px 1px 2px #000;
+}
+
+button {
+	border: 1px solid #ccc;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 16px;
+	margin: 5px;
+	padding: 10px 15px;
+}
+
+button:hover {
+	background-color: #ddd;
+}
+
+.sample-content {
+	padding: 15px;
+}
