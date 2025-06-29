@@ -39,7 +39,7 @@ interface IWindow {
         x: number;
         y: number;
     };
-    setPosition(x: number | "center" | "left" | "right", y: number | "center" | "top" | "bottom"): void;
+    setPosition(x: number | "center" | "left" | "right" | "auto", y: number | "center" | "top" | "bottom" | "auto"): void;
     getSize(): {
         width: number;
         height: number;
@@ -89,11 +89,11 @@ interface WindowOptions {
     /**
      * ウィンドウのX座標
      */
-    x?: number | "center" | "left" | "right";
+    x?: number | "center" | "left" | "right" | "auto";
     /**
      * ウィンドウのY座標
      */
-    y?: number | "center" | "top" | "bottom";
+    y?: number | "center" | "top" | "bottom" | "auto";
     /**
      * ウィンドウのサイズX
      */

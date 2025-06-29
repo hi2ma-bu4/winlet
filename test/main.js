@@ -13,13 +13,10 @@ jasc.on("DOMContentLoaded", () => {
 
 function createBasicWindow() {
 	WinLet.createWindow({
-		id: "basic-window",
 		title: "基本的なウィンドウ",
 		icon: "https://img.icons8.com/color/48/000000/html-5.png",
 		width: 400,
 		height: 250,
-		x: "left",
-		y: "top",
 		content: {
 			html: `
                 <div style="padding: 20px;">
@@ -73,6 +70,8 @@ function createFullFeatureWindow() {
 		icon: "fas fa-star",
 		width: 700,
 		height: 500,
+		x: "center",
+		y: "center",
 		menu: [
 			{
 				name: "ファイル",

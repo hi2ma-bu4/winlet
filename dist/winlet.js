@@ -181,8 +181,8 @@ var defaultConfig = exports.defaultConfig = {
   ifExists: "focus",
   title: "New Window",
   icon: null,
-  x: "center",
-  y: "center",
+  x: "auto",
+  y: "auto",
   width: 500,
   height: 400,
   minWidth: 200,
@@ -1039,9 +1039,11 @@ var _possibleConstructorReturn2 = _interopRequireDefault(require("@babel/runtime
 var _getPrototypeOf2 = _interopRequireDefault(require("@babel/runtime/helpers/getPrototypeOf"));
 var _inherits2 = _interopRequireDefault(require("@babel/runtime/helpers/inherits"));
 var _defineProperty2 = _interopRequireDefault(require("@babel/runtime/helpers/defineProperty"));
+var _config = require("../const/config");
 var _errors = require("../const/errors");
 var _types = require("../const/types");
 var _baseclass = _interopRequireDefault(require("../libs/baseclass"));
+var _utils = _interopRequireDefault(require("../libs/utils"));
 var _styles = _interopRequireDefault(require("../style/styles"));
 var _window2 = _interopRequireDefault(require("./window"));
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
@@ -1060,6 +1062,8 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "activeWindow", null);
     (0, _defineProperty2["default"])(_this, "contextMenuEl", null);
     (0, _defineProperty2["default"])(_this, "isInitialized", false);
+    (0, _defineProperty2["default"])(_this, "lastAutoPosition", null);
+    (0, _defineProperty2["default"])(_this, "CASCADE_OFFSET", 30);
     _this.globalConfig = initialConfig;
     return _this;
   }
@@ -1258,10 +1262,37 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
           }
         }
       }
-      var win = new _window2["default"](options, this);
+      var creationOptions = _utils["default"].deepMerge(_config.defaultConfig, options);
+      if (creationOptions.x === "auto" || creationOptions.y === "auto") {
+        var winWidth = creationOptions.width;
+        var winHeight = creationOptions.height;
+        var containerRect = this.container.getBoundingClientRect();
+        var nextX;
+        var nextY;
+        if (this.lastAutoPosition === null) {
+          nextX = 0;
+          nextY = 0;
+        } else {
+          nextX = this.lastAutoPosition.x + this.CASCADE_OFFSET;
+          nextY = this.lastAutoPosition.y + this.CASCADE_OFFSET;
+        }
+        if (nextX + winWidth > containerRect.width) {
+          nextX = 0;
+        }
+        if (nextY + winHeight > containerRect.height) {
+          nextY = 0;
+        }
+        creationOptions.x = nextX;
+        creationOptions.y = nextY;
+        this.lastAutoPosition = {
+          x: nextX,
+          y: nextY
+        };
+      }
+      var win = new _window2["default"](creationOptions, this);
       this.windows.set(win.id, win);
       this.container.appendChild(win.el);
-      win.setPosition(win.options.x, win.options.y);
+      win.setPosition(creationOptions.x, creationOptions.y);
       this.focusWindow(win);
       return win;
     }
@@ -1361,7 +1392,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }]);
 }(_baseclass["default"]);
 
-},{"../const/errors":18,"../const/types":19,"../libs/baseclass":23,"../style/styles":25,"./window":20,"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/defineProperty":5,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11,"@babel/runtime/helpers/typeof":15}],22:[function(require,module,exports){
+},{"../const/config":17,"../const/errors":18,"../const/types":19,"../libs/baseclass":23,"../libs/utils":24,"../style/styles":25,"./window":20,"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/defineProperty":5,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11,"@babel/runtime/helpers/typeof":15}],22:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1503,7 +1534,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v0.0.1.1";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.0.1";
 
 },{}]},{},[22])
 //# sourceMappingURL=winlet.js.map

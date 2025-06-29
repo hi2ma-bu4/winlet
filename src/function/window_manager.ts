@@ -1,8 +1,10 @@
 // src/WindowManager.ts
 
+import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
 import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, WindowOptions } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
+import Utils from "../libs/utils";
 import styleData from "../style/styles";
 import WinLetWindow from "./window";
 
@@ -15,6 +17,9 @@ export default class WindowManager extends WinLetBaseClass {
 	private isInitialized = false;
 
 	private globalConfig: Required<GlobalConfigOptions>;
+
+	private lastAutoPosition: { x: number; y: number } | null = null;
+	private readonly CASCADE_OFFSET = 30;
 
 	constructor(initialConfig: Required<GlobalConfigOptions>) {
 		super();
@@ -222,11 +227,45 @@ export default class WindowManager extends WinLetBaseClass {
 			}
 		}
 
-		const win = new WinLetWindow(options, this);
+		const creationOptions: Required<WindowOptions> = Utils.deepMerge(defaultConfig, options);
+		if (creationOptions.x === "auto" || creationOptions.y === "auto") {
+			const winWidth = creationOptions.width;
+			const winHeight = creationOptions.height;
+			const containerRect = this.container!.getBoundingClientRect();
+
+			let nextX: number;
+			let nextY: number;
+
+			if (this.lastAutoPosition === null) {
+				nextX = 0;
+				nextY = 0;
+			} else {
+				// 右下へカスケード
+				nextX = this.lastAutoPosition.x + this.CASCADE_OFFSET;
+				nextY = this.lastAutoPosition.y + this.CASCADE_OFFSET;
+			}
+
+			// はみ出しチェックとリセット
+			if (nextX + winWidth > containerRect.width) {
+				nextX = 0;
+			}
+			if (nextY + winHeight > containerRect.height) {
+				nextY = 0;
+			}
+
+			// 計算結果をオプションに反映
+			creationOptions.x = nextX;
+			creationOptions.y = nextY;
+
+			// 次回のために位置を保存
+			this.lastAutoPosition = { x: nextX, y: nextY };
+		}
+
+		const win = new WinLetWindow(creationOptions, this);
 		this.windows.set(win.id, win);
 		this.container!.appendChild(win.el);
 
-		win.setPosition(win.options.x, win.options.y);
+		win.setPosition(creationOptions.x, creationOptions.y);
 		this.focusWindow(win);
 		return win;
 	}
