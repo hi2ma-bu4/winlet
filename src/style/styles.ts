@@ -231,7 +231,9 @@ const styleData: string = `
 .$[prefix]-menu-dropdown li.has-submenu::after {
     content: '▶';
     position: absolute;
+    top: 50%;
     right: 10px;
+    margin-top: -0.65em;
     font-size: 0.8em;
     color: inherit;
 }
@@ -243,6 +245,10 @@ const styleData: string = `
 }
 
 /* サブメニューはホバーで開く */
+.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {
+    display: none;
+}
+
 .$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {
     display: block;
 }
@@ -331,9 +337,8 @@ const styleData: string = `
 
 /* タブ追加ボタン */
 .$[prefix]-tab-add-btn {
-    padding: 4px 8px;
-    font-size: 16px;
-    line-height: 1;
+    padding: 8px;
+    font-size: 14px;
     cursor: pointer;
     border-bottom: 1px solid var(--$[prefix]-tab-border);
 }

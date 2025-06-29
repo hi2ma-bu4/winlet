@@ -4,6 +4,7 @@ import { defaultConfig } from "./const/config";
 import { GlobalConfigOptions, IWindow, WindowOptions, WinLetApi } from "./const/types";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
+import { LIB_VERSION } from "./version";
 
 const globalConfig: Required<GlobalConfigOptions> = {
 	windowSwitchShortcut: "Ctrl+`", // デフォルトショートカット（バッククォート）
@@ -56,6 +57,13 @@ const api: WinLetApi = {
 	setGlobalConfig: (options: GlobalConfigOptions): void => {
 		Object.assign(globalConfig, options);
 		manager.applyGlobalConfig(globalConfig);
+	},
+
+	/**
+	 * ライブラリのバージョンを取得
+	 */
+	get version() {
+		return LIB_VERSION;
 	},
 };
 

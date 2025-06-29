@@ -18,11 +18,19 @@ export const defaultConfig: Required<WindowOptions> = {
 	closable: true,
 	minimizable: true,
 	maximizable: true,
+	maximizableOnDblClick: true,
 	enableShortcuts: true,
 	controlsPosition: "right",
 	content: {
 		html: "",
-		iframe: "",
+		iframe: {
+			src: "",
+			srcdoc: "",
+			allow: "",
+			referrerPolicy: "",
+			loading: "lazy",
+			sandbox: "",
+		},
 		template: "",
 	},
 	menu: [],
@@ -40,4 +48,5 @@ export const defaultConfig: Required<WindowOptions> = {
 	onBlur: () => {},
 	onResize: () => {},
 	onMove: () => {},
+	onReload: () => {},
 };

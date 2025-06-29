@@ -37,6 +37,14 @@ function prepareDir(dir) {
 	fs.mkdirSync(dir, { recursive: true });
 }
 
+function generateVersionFile() {
+	const pkg = require(path.join(baseDir, "package.json"));
+	const versionFilePath = path.join(baseDir, "src", "version.ts");
+	const content = `// このファイルは自動生成されます\nexport const LIB_VERSION = "${pkg.version}";\n`;
+	fs.writeFileSync(versionFilePath, content);
+	console.log(`📄 version.ts を生成 (${pkg.version})`);
+}
+
 function bundle() {
 	return new Promise((resolve, reject) => {
 		// Browserifyの設定
@@ -89,6 +97,10 @@ async function minifyCode() {
 	try {
 		console.log("🧹 distクリーンアップ中...");
 		prepareDir(outputDir);
+
+		console.log("🔧 バージョンファイル生成中...");
+		generateVersionFile();
+
 		console.log("📦 バンドル中...");
 		await bundle();
 		console.log("┗✅ バンドル完了！");

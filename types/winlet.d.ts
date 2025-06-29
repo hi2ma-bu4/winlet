@@ -1,7 +1,23 @@
 type WindowState = "normal" | "minimized" | "maximized";
 interface WindowContentOptions {
+    /**
+     * 直接埋め込むHTML
+     */
     html?: string;
-    iframe?: string;
+    /**
+     * iframe設定
+     */
+    iframe?: {
+        src?: HTMLIFrameElement["src"];
+        srcdoc?: HTMLIFrameElement["srcdoc"];
+        allow?: HTMLIFrameElement["allow"];
+        referrerPolicy?: HTMLIFrameElement["referrerPolicy"];
+        loading?: HTMLIFrameElement["loading"];
+        sandbox?: string[] | string;
+    };
+    /**
+     * HTMLテンプレートのselector
+     */
     template?: string;
 }
 interface IWindow {
@@ -16,10 +32,20 @@ interface IWindow {
     restore(): void;
     focus(): void;
     blur(): void;
+    getTitle(): string;
     setTitle(title: string): void;
     setIcon(icon: string | null): void;
-    setPosition(x: number | "center", y: number | "center"): void;
+    getPosition(): {
+        x: number;
+        y: number;
+    };
+    setPosition(x: number | "center" | "left" | "right", y: number | "center" | "top" | "bottom"): void;
+    getSize(): {
+        width: number;
+        height: number;
+    };
     setSize(width: number | string, height: number | string): void;
+    reload(): void;
 }
 interface MenuItem {
     name?: string;
@@ -63,11 +89,11 @@ interface WindowOptions {
     /**
      * ウィンドウのX座標
      */
-    x?: number | "center";
+    x?: number | "center" | "left" | "right";
     /**
      * ウィンドウのY座標
      */
-    y?: number | "center";
+    y?: number | "center" | "top" | "bottom";
     /**
      * ウィンドウのサイズX
      */
@@ -108,6 +134,10 @@ interface WindowOptions {
      * ウィンドウを最大化するボタンの表示
      */
     maximizable?: boolean;
+    /**
+     * タイトルバーのダブルクリックで最大化
+     */
+    maximizableOnDblClick?: boolean;
     /**
      * ショートカットキーを有効化
      */
@@ -174,6 +204,12 @@ interface WindowOptions {
      * ウィンドウ移動時
      */
     onMove?: (win: IWindow) => void;
+    /**
+     * ウィンドウリロード時
+     *
+     * デフォルトのリロード動作（iframeの再読み込みやhtmlの再描画）をキャンセルする場合は `false` を返します。
+     */
+    onReload?: (win: IWindow) => boolean | void;
 }
 interface GlobalConfigOptions {
     windowSwitchShortcut?: string | null;
@@ -185,6 +221,7 @@ interface WinLetApi {
     getActiveWindow: () => IWindow | null;
     setDefaultConfig: (options: WindowOptions) => void;
     setGlobalConfig: (options: GlobalConfigOptions) => void;
+    get version(): string;
 }
 declare global {
     interface Window {

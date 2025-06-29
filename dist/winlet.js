@@ -193,11 +193,19 @@ var defaultConfig = exports.defaultConfig = {
   closable: true,
   minimizable: true,
   maximizable: true,
+  maximizableOnDblClick: true,
   enableShortcuts: true,
   controlsPosition: "right",
   content: {
     html: "",
-    iframe: "",
+    iframe: {
+      src: "",
+      srcdoc: "",
+      allow: "",
+      referrerPolicy: "",
+      loading: "lazy",
+      sandbox: ""
+    },
     template: ""
   },
   menu: [],
@@ -214,7 +222,8 @@ var defaultConfig = exports.defaultConfig = {
   onFocus: function onFocus() {},
   onBlur: function onBlur() {},
   onResize: function onResize() {},
-  onMove: function onMove() {}
+  onMove: function onMove() {},
+  onReload: function onReload() {}
 };
 
 },{}],18:[function(require,module,exports){
@@ -308,8 +317,11 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       height: 0
     });
     (0, _defineProperty2["default"])(_this, "focused", false);
+    (0, _defineProperty2["default"])(_this, "DRAG_THRESHOLD", 5);
     (0, _defineProperty2["default"])(_this, "tabs", []);
     (0, _defineProperty2["default"])(_this, "addTabBtn", null);
+    (0, _defineProperty2["default"])(_this, "isMenuOpen", false);
+    (0, _defineProperty2["default"])(_this, "boundGlobalClickHandler", null);
     _this.id = options.id || _utils["default"].generateId("window");
     if (options.id) {
       var existingEl = document.getElementById(options.id);
@@ -356,7 +368,6 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.setTitle(this.options.title);
       this.setIcon(this.options.icon);
       this.setSize(this.options.width, this.options.height);
-      this.setPosition(this.options.x, this.options.y);
       this.el.style.minWidth = "".concat(this.options.minWidth, "px");
       this.el.style.minHeight = "".concat(this.options.minHeight, "px");
       if (this.options.controlsPosition === "left") {
@@ -375,22 +386,52 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     key: "renderContent",
     value: function renderContent(container, content) {
       container.innerHTML = "";
-      if (content.iframe) {
-        var iframe = document.createElement("iframe");
-        iframe.src = content.iframe;
-        container.appendChild(iframe);
-      } else if (content.template) {
+      if (content.template) {
         var template = document.querySelector(content.template);
         if ((template === null || template === void 0 ? void 0 : template.tagName) === "TEMPLATE") {
           container.appendChild(template.content.cloneNode(true));
         } else {
           container.innerHTML = "Error: Template not found or invalid.";
+          console.warn("WinLet Warning: Template not found or invalid.");
         }
       } else if (content.html) {
-        var _iframe = document.createElement("iframe");
-        _iframe.srcdoc = content.html;
-        container.appendChild(_iframe);
+        container.innerHTML = content.html;
+      } else if (_utils["default"].isNonEmptyObject(content.iframe)) {
+        var iframe = document.createElement("iframe");
+        var iframeConfig = content.iframe;
+        if (iframeConfig.src) {
+          iframe.src = iframeConfig.src;
+        }
+        if (iframeConfig.srcdoc) {
+          iframe.srcdoc = iframeConfig.srcdoc;
+        }
+        if (iframeConfig.allow) {
+          iframe.allow = iframeConfig.allow;
+        }
+        if (iframeConfig.referrerPolicy) {
+          iframe.referrerPolicy = iframeConfig.referrerPolicy;
+        }
+        if (iframeConfig.loading) {
+          iframe.loading = iframeConfig.loading;
+        }
+        if (iframeConfig.sandbox) {
+          if (!Array.isArray(iframeConfig.sandbox)) {
+            iframeConfig.sandbox = [iframeConfig.sandbox];
+          }
+          if (iframeConfig.sandbox.length > 0) {
+            iframe.setAttribute("sandbox", iframeConfig.sandbox.join(" "));
+          }
+        }
+        container.appendChild(iframe);
       }
+    }
+  }, {
+    key: "closeAllMenus",
+    value: function closeAllMenus() {
+      this.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-menu-item > .").concat(_types.LIBRARY_NAME, "-menu-dropdown")).forEach(function (dd) {
+        dd.style.display = "none";
+      });
+      this.isMenuOpen = false;
     }
   }, {
     key: "createMenu",
@@ -407,21 +448,23 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           var dropdownEl = _this2.createDropdownMenu(menuItemData.items);
           menuItemEl.addEventListener("click", function (e) {
             e.stopPropagation();
-            console.log("close");
-            menuBar.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-menu-dropdown")).forEach(function (dd) {
-              if (dd !== dropdownEl) dd.style.display = "none";
-            });
             var isVisible = dropdownEl.style.display === "block";
-            dropdownEl.style.display = isVisible ? "none" : "block";
+            _this2.closeAllMenus();
+            if (!isVisible) {
+              dropdownEl.style.display = "block";
+              _this2.isMenuOpen = true;
+            }
+          });
+          menuItemEl.addEventListener("mouseenter", function () {
+            if (_this2.isMenuOpen) {
+              _this2.closeAllMenus();
+              dropdownEl.style.display = "block";
+              _this2.isMenuOpen = true;
+            }
           });
           menuItemEl.appendChild(dropdownEl);
         }
         menuBar.appendChild(menuItemEl);
-      });
-      document.addEventListener("click", function () {
-        menuBar.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-menu-dropdown")).forEach(function (dd) {
-          dd.style.display = "none";
-        });
       });
     }
   }, {
@@ -439,16 +482,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           var text = (_itemData$name = itemData.name) !== null && _itemData$name !== void 0 ? _itemData$name : "";
           text = "<span>".concat(text, "</span>");
           if (_this3.options.enableShortcuts && itemData.shortcut) {
-            text += " <span class=\"".concat(_types.LIBRARY_NAME, "-shortcut-text\">(").concat(itemData.shortcut, ")</span>");
+            text += "<span class=\"".concat(_types.LIBRARY_NAME, "-shortcut-text\">(").concat(itemData.shortcut, ")</span>");
           }
           itemEl.innerHTML = "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-dropdown-item\">").concat(text, "</div>");
           itemEl.addEventListener("click", function (e) {
             var _itemData$action;
             e.stopPropagation();
+            _this3.closeAllMenus();
             (_itemData$action = itemData.action) === null || _itemData$action === void 0 || _itemData$action.call(itemData, _this3);
-            _this3.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-menu-dropdown")).forEach(function (dd) {
-              dd.style.display = "none";
-            });
           });
           if (itemData.items) {
             itemEl.classList.add("has-submenu");
@@ -595,6 +636,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.el.addEventListener("focusin", function () {
         return _this6.focus();
       });
+      this.boundGlobalClickHandler = function () {
+        if (_this6.isMenuOpen) {
+          _this6.closeAllMenus();
+        }
+      };
+      document.addEventListener("click", this.boundGlobalClickHandler);
       var closeBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-close-btn"));
       closeBtn === null || closeBtn === void 0 || closeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
@@ -629,32 +676,45 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         if (e.target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-resize-handle, .").concat(_types.LIBRARY_NAME, "-menu-bar, .").concat(_types.LIBRARY_NAME, "-tab-bar"))) return;
         e.preventDefault();
         _this7.focus();
-        if (_this7.state === "maximized") {
-          var restoredWidth = _this7.lastState.width;
-          var clickRatio = e.clientX / _this7.el.offsetWidth;
-          var titleBarRect = _this7.titleBarEl.getBoundingClientRect();
-          var offsetY = e.clientY - titleBarRect.top;
-          var posX = e.clientX - restoredWidth * clickRatio;
-          var posY = e.clientY - offsetY;
-          _this7.restore();
-          _this7.setPosition(posX, posY);
-        }
-        _this7.contentEl.style.pointerEvents = "none";
         var startX = e.clientX,
           startY = e.clientY;
-        var _this7$el = _this7.el,
-          initialLeft = _this7$el.offsetLeft,
-          initialTop = _this7$el.offsetTop;
+        var isDragging = false;
+        var initialLeft;
+        var initialTop;
         var onMouseMove = function onMouseMove(moveE) {
+          if (!isDragging) {
+            var deltaX = Math.abs(moveE.clientX - startX);
+            var deltaY = Math.abs(moveE.clientY - startY);
+            if (deltaX > _this7.DRAG_THRESHOLD || deltaY > _this7.DRAG_THRESHOLD) {
+              isDragging = true;
+              _this7.contentEl.style.pointerEvents = "none";
+              if (_this7.state === "maximized") {
+                var restoredWidth = _this7.lastState.width;
+                var clickRatio = e.clientX / _this7.el.offsetWidth;
+                var titleBarRect = _this7.titleBarEl.getBoundingClientRect();
+                var offsetY = e.clientY - titleBarRect.top;
+                var posX = e.clientX - restoredWidth * clickRatio;
+                var posY = e.clientY - offsetY;
+                _this7.restore();
+                _this7.setPosition(posX, posY);
+              }
+              initialLeft = _this7.el.offsetLeft;
+              initialTop = _this7.el.offsetTop;
+            } else {
+              return;
+            }
+          }
           var newLeft = initialLeft + moveE.clientX - startX;
           var newTop = initialTop + moveE.clientY - startY;
           _this7.setPosition(newLeft, newTop);
         };
         var _onMouseUp = function onMouseUp() {
-          _this7.contentEl.style.pointerEvents = "auto";
           document.removeEventListener("mousemove", onMouseMove);
           document.removeEventListener("mouseup", _onMouseUp);
-          _this7.options.onMove(_this7);
+          if (isDragging) {
+            _this7.contentEl.style.pointerEvents = "auto";
+            _this7.options.onMove(_this7);
+          }
         };
         document.addEventListener("mousemove", onMouseMove);
         document.addEventListener("mouseup", _onMouseUp);
@@ -662,6 +722,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.titleBarEl.addEventListener("mousedown", onMouseDown, {
         passive: false
       });
+      if (this.options.maximizable) {
+        this.titleBarEl.addEventListener("dblclick", function (e) {
+          if (_this7.options.maximizableOnDblClick) {
+            if (e.target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn"))) return;
+            _this7.toggleMaximize();
+          }
+        });
+      }
     }
   }, {
     key: "makeResizable",
@@ -731,6 +799,9 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "close",
     value: function close() {
+      if (this.boundGlobalClickHandler) {
+        document.removeEventListener("click", this.boundGlobalClickHandler);
+      }
       this.options.onClose(this);
       this.manager.destroyWindow(this.id);
     }
@@ -738,6 +809,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     key: "minimize",
     value: function minimize() {
       if (this.state !== "minimized") {
+        if (this.state !== "normal") this.restore();
         this.state = "minimized";
         this.el.classList.add("minimized");
         this.blur();
@@ -752,6 +824,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     key: "maximize",
     value: function maximize() {
       if (this.state !== "maximized") {
+        if (this.state !== "normal") this.restore();
         this.lastState = {
           x: this.el.offsetLeft,
           y: this.el.offsetTop,
@@ -806,6 +879,49 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.options.onBlur(this);
     }
   }, {
+    key: "reload",
+    value: function reload() {
+      var _this9 = this;
+      if (this.options.onReload(this) === false) {
+        return;
+      }
+      var reloadContent = function reloadContent(container, content) {
+        if (content.iframe) {
+          var iframe = container.querySelector("iframe");
+          if (iframe && iframe.src && !content.iframe.srcdoc) {
+            try {
+              var _iframe$contentWindow;
+              (_iframe$contentWindow = iframe.contentWindow) === null || _iframe$contentWindow === void 0 || _iframe$contentWindow.location.reload();
+            } catch (e) {
+              console.warn("WinLet: Cross-origin iframe could not be reloaded directly. Recreating iframe element.", e);
+              _this9.renderContent(container, content);
+            }
+          } else {
+            _this9.renderContent(container, content);
+          }
+        } else {
+          _this9.renderContent(container, content);
+        }
+      };
+      if (this.options.tabs.length > 0) {
+        var activeTabIndex = this.tabs.findIndex(function (tab) {
+          return tab.tabEl.classList.contains("active");
+        });
+        if (activeTabIndex > -1) {
+          var activeTab = this.tabs[activeTabIndex];
+          var tabContentOptions = this.options.tabs[activeTabIndex].content;
+          reloadContent(activeTab.contentEl, tabContentOptions);
+        }
+      } else {
+        reloadContent(this.contentEl, this.options.content);
+      }
+    }
+  }, {
+    key: "getTitle",
+    value: function getTitle() {
+      return this.options.title;
+    }
+  }, {
     key: "setTitle",
     value: function setTitle(title) {
       this.options.title = title;
@@ -829,6 +945,20 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       }
     }
   }, {
+    key: "getPosition",
+    value: function getPosition() {
+      if (this.state === "maximized") {
+        return {
+          x: this.lastState.x,
+          y: this.lastState.y
+        };
+      }
+      return {
+        x: this.el.offsetLeft,
+        y: this.el.offsetTop
+      };
+    }
+  }, {
     key: "setPosition",
     value: function setPosition(x, y) {
       if (!this.manager.container) {
@@ -836,10 +966,54 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         return;
       }
       var parentRect = this.manager.container.getBoundingClientRect();
-      if (x === "center") x = (parentRect.width - this.el.offsetWidth) / 2;
-      if (y === "center") y = (parentRect.height - this.el.offsetHeight) / 2;
-      this.el.style.left = "".concat(Math.min(Math.max(150 - this.el.offsetWidth, x), parentRect.width - 20), "px");
-      this.el.style.top = "".concat(Math.min(Math.max(0, y), parentRect.height - 50), "px");
+      var winWidth = this.el.offsetWidth;
+      var winHeight = this.el.offsetHeight;
+      var finalX;
+      var finalY;
+      switch (x) {
+        case "left":
+          finalX = 0;
+          break;
+        case "center":
+          finalX = (parentRect.width - winWidth) / 2;
+          break;
+        case "right":
+          finalX = parentRect.width - winWidth;
+          break;
+        default:
+          finalX = x;
+          break;
+      }
+      switch (y) {
+        case "top":
+          finalY = 0;
+          break;
+        case "center":
+          finalY = (parentRect.height - winHeight) / 2;
+          break;
+        case "bottom":
+          finalY = parentRect.height - winHeight;
+          break;
+        default:
+          finalY = y;
+          break;
+      }
+      this.el.style.left = "".concat(Math.min(Math.max(150 - winWidth, finalX), parentRect.width - 20), "px");
+      this.el.style.top = "".concat(Math.min(Math.max(0, finalY), parentRect.height - 50), "px");
+    }
+  }, {
+    key: "getSize",
+    value: function getSize() {
+      if (this.state === "maximized") {
+        return {
+          width: this.lastState.width,
+          height: this.lastState.height
+        };
+      }
+      return {
+        width: this.el.offsetWidth,
+        height: this.el.offsetHeight
+      };
     }
   }, {
     key: "setSize",
@@ -886,7 +1060,6 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "activeWindow", null);
     (0, _defineProperty2["default"])(_this, "contextMenuEl", null);
     (0, _defineProperty2["default"])(_this, "isInitialized", false);
-    (0, _defineProperty2["default"])(_this, "isSwitchListenerAttached", false);
     _this.globalConfig = initialConfig;
     return _this;
   }
@@ -1022,7 +1195,6 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
               var item = _step2.value;
               if (item.shortcut) {
                 var _shortcut = _this3.parseShortcut(item.shortcut);
-                console.log(_shortcut, e.key);
                 if (e.key.toUpperCase() === _shortcut.key.toUpperCase() && e.ctrlKey === _shortcut.ctrl && e.altKey === _shortcut.alt && e.shiftKey === _shortcut.shift) {
                   var _item$action;
                   e.preventDefault();
@@ -1089,6 +1261,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       var win = new _window2["default"](options, this);
       this.windows.set(win.id, win);
       this.container.appendChild(win.el);
+      win.setPosition(win.options.x, win.options.y);
       this.focusWindow(win);
       return win;
     }
@@ -1144,12 +1317,12 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         } else {
           var _itemData$name;
           itemEl.textContent = (_itemData$name = itemData.name) !== null && _itemData$name !== void 0 ? _itemData$name : "";
-          itemEl.onclick = function (e) {
+          itemEl.addEventListener("click", function (e) {
             var _itemData$action;
             e.stopPropagation();
             (_itemData$action = itemData.action) === null || _itemData$action === void 0 || _itemData$action.call(itemData, contextWindow);
             _this4.hideContextMenu();
-          };
+          });
         }
         _this4.contextMenuEl.appendChild(itemEl);
       });
@@ -1199,6 +1372,7 @@ exports["default"] = void 0;
 var _config = require("./const/config");
 var _window_manager = _interopRequireDefault(require("./function/window_manager"));
 var _utils = _interopRequireDefault(require("./libs/utils"));
+var _version = require("./version");
 var globalConfig = {
   windowSwitchShortcut: "Ctrl+`"
 };
@@ -1223,12 +1397,15 @@ var api = {
   setGlobalConfig: function setGlobalConfig(options) {
     Object.assign(globalConfig, options);
     manager.applyGlobalConfig(globalConfig);
+  },
+  get version() {
+    return _version.LIB_VERSION;
   }
 };
 window.WinLet = api;
 var _default = exports["default"] = api;
 
-},{"./const/config":17,"./function/window_manager":21,"./libs/utils":24,"@babel/runtime/helpers/interopRequireDefault":8}],23:[function(require,module,exports){
+},{"./const/config":17,"./function/window_manager":21,"./libs/utils":24,"./version":26,"@babel/runtime/helpers/interopRequireDefault":8}],23:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1293,6 +1470,13 @@ var Utils = exports["default"] = function (_WinLetBaseClass) {
       return output;
     }
   }, {
+    key: "isNonEmptyObject",
+    value: function isNonEmptyObject(obj) {
+      if (!obj) return false;
+      for (var _ in obj) return true;
+      return false;
+    }
+  }, {
     key: "sanitizeHTML",
     value: function sanitizeHTML(str) {
       var temp = document.createElement("div");
@@ -1309,8 +1493,17 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
-var styleData = "\n:root {\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n}\n\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n}\n\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px rgba(0,0,0,0.3);\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n.$[prefix]-window.minimized {\n    display: none; /* Simple hide, could be enhanced with a taskbar */\n}\n\n.$[prefix]-window.maximized {\n    border-radius: 0;\n    border: none;\n}\n\n/* Focus State */\n.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    user-select: none;\n    cursor: move;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.controls-left {\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n}\n\n.$[prefix]-icon i {\n        font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n        line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n        text-align: center;\n        display: block;\n        width: 100%;\n        height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n.$[prefix]-main-content {\n    all: initial;\n    display:flex;\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-menu-bar {\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: 14px;\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 5px 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC --- */\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u3092\u6301\u3064\u9805\u76EE\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-menu-dropdown li.has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    right: 10px;\n    font-size: 0.8em;\n    color: inherit;\n}\n\n/* \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E */\n.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F */\n.$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30AD\u30FC\u30C6\u30AD\u30B9\u30C8\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-shortcut-text {\n    color: #666;\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: #e1e1e1;\n    flex-shrink: 0;\n    align-items: flex-end;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: rgba(100, 100, 100, 0.5);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.active .$[prefix]-tab-close-btn:hover {\n    background-color: #ddd;\n}\n\n/* \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-tab.dragging {\n    opacity: 0.5;\n}\n/* \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: #ccc;\n}\n\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n/* \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-add-btn {\n    padding: 4px 8px;\n    font-size: 16px;\n    line-height: 1;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: #e0e0e0;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n}\n\n.$[prefix]-resize-handle.n { top: -4px; left: 0; right: 0; height: 8px; cursor: n-resize; }\n.$[prefix]-resize-handle.s { bottom: -4px; left: 0; right: 0; height: 8px; cursor: s-resize; }\n.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: -4px; width: 8px; cursor: w-resize; }\n.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: -4px; width: 8px; cursor: e-resize; }\n.$[prefix]-resize-handle.nw { top: -4px; left: -4px; width: 8px; height: 8px; cursor: nw-resize; }\n.$[prefix]-resize-handle.ne { top: -4px; right: -4px; width: 8px; height: 8px; cursor: ne-resize; }\n.$[prefix]-resize-handle.sw { bottom: -4px; left: -4px; width: 8px; height: 8px; cursor: sw-resize; }\n.$[prefix]-resize-handle.se { bottom: -4px; right: -4px; width: 8px; height: 8px; cursor: se-resize; }\n\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n";
+var styleData = "\n:root {\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n}\n\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n}\n\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px rgba(0,0,0,0.3);\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n.$[prefix]-window.minimized {\n    display: none; /* Simple hide, could be enhanced with a taskbar */\n}\n\n.$[prefix]-window.maximized {\n    border-radius: 0;\n    border: none;\n}\n\n/* Focus State */\n.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    user-select: none;\n    cursor: move;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.controls-left {\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n}\n\n.$[prefix]-icon i {\n        font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n        line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n        text-align: center;\n        display: block;\n        width: 100%;\n        height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n.$[prefix]-main-content {\n    all: initial;\n    display:flex;\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-menu-bar {\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: 14px;\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 5px 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC --- */\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u3092\u6301\u3064\u9805\u76EE\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-menu-dropdown li.has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: -0.65em;\n    font-size: 0.8em;\n    color: inherit;\n}\n\n/* \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E */\n.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F */\n.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {\n    display: none;\n}\n\n.$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30AD\u30FC\u30C6\u30AD\u30B9\u30C8\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-shortcut-text {\n    color: #666;\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: #e1e1e1;\n    flex-shrink: 0;\n    align-items: flex-end;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: rgba(100, 100, 100, 0.5);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.active .$[prefix]-tab-close-btn:hover {\n    background-color: #ddd;\n}\n\n/* \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-tab.dragging {\n    opacity: 0.5;\n}\n/* \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: #ccc;\n}\n\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n/* \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: #e0e0e0;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n}\n\n.$[prefix]-resize-handle.n { top: -4px; left: 0; right: 0; height: 8px; cursor: n-resize; }\n.$[prefix]-resize-handle.s { bottom: -4px; left: 0; right: 0; height: 8px; cursor: s-resize; }\n.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: -4px; width: 8px; cursor: w-resize; }\n.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: -4px; width: 8px; cursor: e-resize; }\n.$[prefix]-resize-handle.nw { top: -4px; left: -4px; width: 8px; height: 8px; cursor: nw-resize; }\n.$[prefix]-resize-handle.ne { top: -4px; right: -4px; width: 8px; height: 8px; cursor: ne-resize; }\n.$[prefix]-resize-handle.sw { bottom: -4px; left: -4px; width: 8px; height: 8px; cursor: sw-resize; }\n.$[prefix]-resize-handle.se { bottom: -4px; right: -4px; width: 8px; height: 8px; cursor: se-resize; }\n\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n";
 var _default = exports["default"] = styleData;
+
+},{}],26:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.LIB_VERSION = void 0;
+var LIB_VERSION = exports.LIB_VERSION = "v0.0.1.1";
 
 },{}]},{},[22])
 //# sourceMappingURL=winlet.js.map

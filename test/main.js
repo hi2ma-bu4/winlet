@@ -18,8 +18,8 @@ function createBasicWindow() {
 		icon: "https://img.icons8.com/color/48/000000/html-5.png",
 		width: 400,
 		height: 250,
-		x: 50,
-		y: 50,
+		x: "left",
+		y: "top",
 		content: {
 			html: `
                 <div style="padding: 20px;">
@@ -40,7 +40,9 @@ function createIframeWindow() {
 		width: 800,
 		height: 600,
 		content: {
-			iframe: "https://www.wikipedia.org/",
+			iframe: {
+				src: "https://www.wikipedia.org/",
+			},
 		},
 		onClose: (w) => {
 			console.log("Iframe window was closed.", w);
@@ -100,7 +102,16 @@ function createFullFeatureWindow() {
 					{
 						name: "バージョン情報",
 						shortcut: "Ctrl+I",
-						action: () => alert("WinLet Version 0.0.0.1"),
+						action: () => alert(`WinLet Version ${WinLet.version}`),
+					},
+					{
+						name: "開発情報",
+						items: [
+							{
+								name: "開発者情報",
+								action: () => alert("author: @hi2ma-bu4"),
+							},
+						],
 					},
 				],
 			},
@@ -115,7 +126,9 @@ function createFullFeatureWindow() {
 			{
 				title: "タブ 2",
 				content: {
-					html: '<div style="padding:1em;"><h2>タブ2のコンテンツ</h2><p>タブをクリックしてコンテンツを切り替えられます。</p><input type="text" placeholder="テキスト入力..."/></div>',
+					iframe: {
+						srcdoc: '<div style="padding:1em;"><h2>タブ2のコンテンツ</h2><p>タブをクリックしてコンテンツを切り替えられます。</p><input type="text" placeholder="テキスト入力..."/></div>',
+					},
 				},
 			},
 			{

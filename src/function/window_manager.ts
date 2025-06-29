@@ -15,7 +15,6 @@ export default class WindowManager extends WinLetBaseClass {
 	private isInitialized = false;
 
 	private globalConfig: Required<GlobalConfigOptions>;
-	private isSwitchListenerAttached = false;
 
 	constructor(initialConfig: Required<GlobalConfigOptions>) {
 		super();
@@ -162,7 +161,6 @@ export default class WindowManager extends WinLetBaseClass {
 					for (const item of menuItems) {
 						if (item.shortcut) {
 							const shortcut = this.parseShortcut(item.shortcut);
-							console.log(shortcut, e.key);
 							if (e.key.toUpperCase() === shortcut.key.toUpperCase() && e.ctrlKey === shortcut.ctrl && e.altKey === shortcut.alt && e.shiftKey === shortcut.shift) {
 								e.preventDefault();
 								e.stopPropagation();
@@ -227,6 +225,8 @@ export default class WindowManager extends WinLetBaseClass {
 		const win = new WinLetWindow(options, this);
 		this.windows.set(win.id, win);
 		this.container!.appendChild(win.el);
+
+		win.setPosition(win.options.x, win.options.y);
 		this.focusWindow(win);
 		return win;
 	}
@@ -278,11 +278,11 @@ export default class WindowManager extends WinLetBaseClass {
 				itemEl.className = "separator";
 			} else {
 				itemEl.textContent = itemData.name ?? "";
-				itemEl.onclick = (e) => {
+				itemEl.addEventListener("click", (e) => {
 					e.stopPropagation();
 					itemData.action?.(contextWindow);
 					this.hideContextMenu();
-				};
+				});
 			}
 			this.contextMenuEl!.appendChild(itemEl);
 		});
