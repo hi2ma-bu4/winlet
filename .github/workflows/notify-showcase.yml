@@ -1,3 +1,5 @@
+name: Notify Showcase
+
 on:
     push:
         branches: [main]
