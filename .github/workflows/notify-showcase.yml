@@ -10,7 +10,7 @@ jobs:
         steps:
             - name: Dispatch event to RepoShowcase
               run: |
-                  curl -i -X POST https://api.github.com/repos/hi2ma-bu4/RepoShowcase/dispatches \
+                  curl -X POST https://api.github.com/repos/hi2ma-bu4/RepoShowcase/dispatches \
                   -H "Authorization: token ${{ secrets.SHOWCASE_DISPATCH_TOKEN }}" \
                   -H "Accept: application/vnd.github.v3+json" \
                   -d '{"event_type":"child_updated", "client_payload": {"child": "winlet"}}'
