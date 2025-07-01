@@ -25,6 +25,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private isMenuOpen = false;
 	private boundGlobalClickHandler: ((event: MouseEvent) => void) | null = null;
 
+	// モバイル対応
+	private readonly MOBILE_CONTEXT_MENU_TIMEOUT = 700;
+	private contextMenuTimer: number | null = null;
+
 	constructor(options: WindowOptions, manager: WindowManager) {
 		super();
 		this.id = options.id || Utils.generateId("window");
@@ -38,6 +42,15 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.options = Utils.deepMerge(defaultConfig, options) as Required<WindowOptions>;
 
 		this.el = this.createDOM();
+
+		// tabStyleとmenuStyleによってクラスを追加
+		if (this.options.tabStyle === "merged") {
+			this.el.classList.add(`${LIBRARY_NAME}-tab-style-merged`);
+		}
+		if (this.options.menuStyle === "merged") {
+			this.el.classList.add(`${LIBRARY_NAME}-menu-style-merged`);
+		}
+
 		this.titleBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title-bar`)!;
 		this.iconEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-icon`)!;
 		this.titleEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title`)!;
@@ -54,7 +67,6 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		windowEl.className = `${LIBRARY_NAME}-window`;
 		windowEl.id = this.id;
 
-		// --- リサイズハンドルの生成ロジックを更新 ---
 		const handles: string[] = [];
 		if (this.options.resizableY) {
 			handles.push(`<div class="${LIBRARY_NAME}-resize-handle n"></div>`, `<div class="${LIBRARY_NAME}-resize-handle s"></div>`);
@@ -66,19 +78,34 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			handles.push(`<div class="${LIBRARY_NAME}-resize-handle nw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ne"></div>`, `<div class="${LIBRARY_NAME}-resize-handle sw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle se"></div>`);
 		}
 		const resizableHandlesHTML = handles.join("");
+
+		const hasMenu = this.options.menu.length > 0;
+		const hasTabs = this.options.tabs.length > 0;
+		const isMergedMenu = this.options.menuStyle === "merged" && hasMenu;
+		const isMergedTabs = this.options.tabStyle === "merged" && hasTabs;
+
+		const controlsHTML = `
+            <div class="${LIBRARY_NAME}-controls">
+                ${this.options.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" />` : ""}
+                ${this.options.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" />` : ""}
+                ${this.options.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close">` : ""}
+            </div>`;
+
+		const titleBarContentHTML = `
+            <div class="${LIBRARY_NAME}-icon"></div>
+            ${isMergedMenu ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
+            <div class="${LIBRARY_NAME}-title"></div>
+            ${isMergedTabs ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
+            ${controlsHTML}
+        `;
+
 		windowEl.innerHTML = `
-            <div class="${LIBRARY_NAME}-title-bar">
-                <div class="${LIBRARY_NAME}-icon"></div>
-                <div class="${LIBRARY_NAME}-title"></div>
-                <div class="${LIBRARY_NAME}-controls">
-                    ${this.options.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" />` : ""}
-                    ${this.options.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" />` : ""}
-                    ${this.options.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close">` : ""}
-                </div>
+            <div class="${LIBRARY_NAME}-title-bar ${LIBRARY_NAME}-us-none">
+                ${titleBarContentHTML}
             </div>
             <div class="${LIBRARY_NAME}-main-content">
-                ${this.options.menu.length > 0 ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
-                ${this.options.tabs.length > 0 ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
+                ${!isMergedMenu && hasMenu ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
+                ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
                 <div class="${LIBRARY_NAME}-content"></div>
             </div>
             ${resizableHandlesHTML}
@@ -163,7 +190,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		this.options.menu.forEach((menuItemData) => {
 			const menuItemEl = document.createElement("div");
-			menuItemEl.className = `${LIBRARY_NAME}-menu-item`;
+			menuItemEl.className = `${LIBRARY_NAME}-menu-item ${LIBRARY_NAME}-us-none`;
 			menuItemEl.textContent = menuItemData.name ?? "";
 
 			if (menuItemData.items) {
@@ -393,6 +420,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (this.options.movable) this.makeMovable();
 		if (this.options.resizableX || this.options.resizableY) this.makeResizable();
 		if (this.options.contextMenu.length > 0) {
+			// PC用: 右クリック
 			this.el.addEventListener(
 				"contextmenu",
 				(e) => {
@@ -401,12 +429,36 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				},
 				{ passive: false }
 			);
+			// モバイル用: 長押し
+			this.el.addEventListener("pointerdown", (e) => {
+				if (e.pointerType !== "touch") return;
+				this.contextMenuTimer = window.setTimeout(() => {
+					this.contextMenuTimer = null;
+					this.manager.showContextMenu(e.clientX, e.clientY, this.options.contextMenu, this);
+				}, this.MOBILE_CONTEXT_MENU_TIMEOUT);
+			});
+			const clearContextMenuTimer = () => {
+				if (this.contextMenuTimer) {
+					clearTimeout(this.contextMenuTimer);
+					this.contextMenuTimer = null;
+				}
+			};
+			this.el.addEventListener("pointermove", clearContextMenuTimer);
+			this.el.addEventListener("pointerup", clearContextMenuTimer);
+			this.el.addEventListener("pointercancel", clearContextMenuTimer);
 		}
 	}
 
 	private makeMovable(): void {
-		const onMouseDown = (e: MouseEvent) => {
-			if ((e.target as HTMLElement).closest(`.${LIBRARY_NAME}-control-btn, .${LIBRARY_NAME}-resize-handle, .${LIBRARY_NAME}-menu-bar, .${LIBRARY_NAME}-tab-bar`)) return;
+		const onPointerDown = (e: PointerEvent) => {
+			const target = e.target as HTMLElement;
+			// 操作UI要素の上なら移動させない
+			if (target.closest(`.${LIBRARY_NAME}-control-btn, .${LIBRARY_NAME}-resize-handle, .${LIBRARY_NAME}-menu-item, .${LIBRARY_NAME}-tab, .${LIBRARY_NAME}-tab-add-btn`)) {
+				return;
+			}
+
+			// メインボタン（マウスの左ボタン、タッチ）でのみ移動
+			if (e.button !== 0) return;
 
 			e.preventDefault();
 			this.focus();
@@ -418,7 +470,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			let initialLeft: number;
 			let initialTop: number;
 
-			const onMouseMove = (moveE: MouseEvent) => {
+			const onPointerMove = (moveE: PointerEvent) => {
 				if (!isDragging) {
 					const deltaX = Math.abs(moveE.clientX - startX);
 					const deltaY = Math.abs(moveE.clientY - startY);
@@ -426,6 +478,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					// 閾値を超えたらドラッグモードを開始
 					if (deltaX > this.DRAG_THRESHOLD || deltaY > this.DRAG_THRESHOLD) {
 						isDragging = true;
+						this.el.setPointerCapture(e.pointerId);
 						this.contentEl.style.pointerEvents = "none";
 
 						// 最大化状態からのドラッグ開始の場合、ウィンドウを復元
@@ -456,25 +509,26 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				this.setPosition(newLeft, newTop);
 			};
 
-			const onMouseUp = () => {
-				document.removeEventListener("mousemove", onMouseMove);
-				document.removeEventListener("mouseup", onMouseUp);
+			const onPointerUp = () => {
+				document.removeEventListener("pointermove", onPointerMove);
+				document.removeEventListener("pointerup", onPointerMove);
 
 				// ドラッグが発生した場合のみ後処理とコールバック呼び出し
 				if (isDragging) {
+					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
 					this.options.onMove(this);
 				}
 			};
 
-			document.addEventListener("mousemove", onMouseMove);
-			document.addEventListener("mouseup", onMouseUp);
+			document.addEventListener("pointermove", onPointerMove);
+			document.addEventListener("pointerup", onPointerUp);
 		};
 
-		this.titleBarEl.addEventListener("mousedown", onMouseDown, { passive: false });
+		this.titleBarEl.addEventListener("pointerdown", onPointerDown, { passive: false });
 
 		if (this.options.maximizable) {
-			this.titleBarEl.addEventListener("dblclick", (e) => {
+			this.titleBarEl.addEventListener("dblclick", (e: MouseEvent) => {
 				if (this.options.maximizableOnDblClick) {
 					if ((e.target as HTMLElement).closest(`.${LIBRARY_NAME}-control-btn`)) return;
 					this.toggleMaximize();
@@ -486,18 +540,21 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private makeResizable(): void {
 		this.el.querySelectorAll<HTMLElement>(`.${LIBRARY_NAME}-resize-handle`).forEach((handle) => {
 			handle.addEventListener(
-				"mousedown",
-				(e: MouseEvent) => {
+				"pointerdown",
+				(e: PointerEvent) => {
+					if (e.button !== 0) return;
 					e.preventDefault();
+					e.stopPropagation();
 					this.focus();
 					this.contentEl.style.pointerEvents = "none";
+					handle.setPointerCapture(e.pointerId);
 
 					const direction = handle.className.replace(`${LIBRARY_NAME}-resize-handle `, "");
 					const { clientX: startX, clientY: startY } = e;
 					const { offsetWidth: startWidth, offsetHeight: startHeight, offsetLeft: startLeft, offsetTop: startTop } = this.el;
 					const { minWidth, minHeight } = this.options;
 
-					const onMouseMove = (moveE: MouseEvent) => {
+					const onPointerMove = (moveE: PointerEvent) => {
 						let newWidth = startWidth,
 							newHeight = startHeight,
 							newLeft = startLeft,
@@ -518,15 +575,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 						this.setSize(newWidth, newHeight);
 						this.setPosition(newLeft, newTop);
 					};
-					const onMouseUp = () => {
+					const onPointerUp = () => {
+						handle.releasePointerCapture(e.pointerId);
 						this.contentEl.style.pointerEvents = "auto";
 
-						document.removeEventListener("mousemove", onMouseMove);
-						document.removeEventListener("mouseup", onMouseUp);
+						document.removeEventListener("pointermove", onPointerMove);
+						document.removeEventListener("pointerup", onPointerUp);
 						this.options.onResize(this);
 					};
-					document.addEventListener("mousemove", onMouseMove);
-					document.addEventListener("mouseup", onMouseUp);
+					document.addEventListener("pointermove", onPointerMove);
+					document.addEventListener("pointerup", onPointerUp);
 				},
 				{ passive: false }
 			);
@@ -620,7 +678,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 
 		const reloadContent = (container: HTMLElement, content: WindowContentOptions) => {
-			if (content.iframe) {
+			if (Utils.isNonEmptyObject(content.iframe)) {
 				const iframe = container.querySelector("iframe");
 				// srcがあり、srcdocがない場合はiframeのreloadを試みる
 				if (iframe && iframe.src && !content.iframe.srcdoc) {

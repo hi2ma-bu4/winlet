@@ -11,6 +11,10 @@ jasc.on("DOMContentLoaded", () => {
 	});
 });
 
+// TODO: ポップアップウィンドウ機能追加 (タイムアウト付き)
+// TODO: ユーザーアクションで生成されたウィンドウにフォーカスを当てる
+// TODO: ウィンドウ入れ子に対応
+
 class Main {
 	static createBasicWindow() {
 		WinLet.createWindow({
@@ -138,6 +142,7 @@ class Main {
 					}, // 既存のテンプレートも使える
 				},
 			],
+			menuStyle: "merged",
 			tabOptions: {
 				reorderable: true,
 				closable: true,
@@ -154,8 +159,8 @@ class Main {
 			},
 			contextMenu: [
 				{
-					name: "ウィンドウをリロード (ダミー)",
-					action: (win) => console.log(`${win.options.title}をリロードします。`),
+					name: "ウィンドウをリロード(iframe)",
+					action: (win) => win.reload(),
 				},
 				{
 					name: "タイトルを変更",

@@ -71,7 +71,7 @@ export default class WindowManager extends WinLetBaseClass {
 			});
 		});
 		document.addEventListener(
-			"mousedown",
+			"pointerdown",
 			() => {
 				requestAnimationFrame(() => {
 					const activeEl = document.activeElement;
@@ -90,7 +90,7 @@ export default class WindowManager extends WinLetBaseClass {
 		);
 
 		// ウィンドウ外クリックでblurさせる処理を追加
-		this.container!.addEventListener("mousedown", (e) => {
+		this.container!.addEventListener("pointerdown", (e: PointerEvent) => {
 			// クリックされたのがコンテナ自身（ウィンドウやその中身ではない）の場合
 			if (e.target === this.container) {
 				if (this.activeWindow) {
@@ -266,7 +266,13 @@ export default class WindowManager extends WinLetBaseClass {
 		this.container!.appendChild(win.el);
 
 		win.setPosition(creationOptions.x, creationOptions.y);
-		this.focusWindow(win);
+		if (creationOptions.focus) {
+			this.focusWindow(win);
+			win.focus();
+		} else {
+			// フォーカスしない場合でも、z-indexの管理は必要
+			win.el.style.zIndex = `${++this.zIndexCounter}`;
+		}
 		return win;
 	}
 

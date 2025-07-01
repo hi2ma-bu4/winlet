@@ -19,7 +19,22 @@ const styleData: string = `
     --$[prefix]-tab-bg: #dcdcdc;
     --$[prefix]-tab-active-bg: #f0f0f0;
     --$[prefix]-tab-border: #b0b0b0;
+    --$[prefix]-resize-handle-size: 8px;
+    --$[prefix]-resize-handle-offset: -4px;
 }
+
+.$[prefix]-us-none {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.$[prefix]-us-auto {
+    user-select: auto;
+    -webkit-user-select: auto;
+    -ms-user-select: auto;
+}
+
 
 .$[prefix]-container {
     position: fixed;
@@ -45,10 +60,11 @@ const styleData: string = `
     overflow: hidden;
     pointer-events: all;
     transition: opacity 0.1s, transform 0.1s;
+    touch-action: none;
 }
 
 .$[prefix]-window.minimized {
-    display: none; /* Simple hide, could be enhanced with a taskbar */
+    display: none;
 }
 
 .$[prefix]-window.maximized {
@@ -71,9 +87,9 @@ const styleData: string = `
     height: var(--$[prefix]-title-bar-height);
     background-color: var(--$[prefix]-title-bar-bg);
     color: var(--$[prefix]-title-text-color);
-    user-select: none;
     cursor: move;
     flex-shrink: 0;
+    touch-action: none;
 }
 
 .$[prefix]-title-bar.controls-left {
@@ -85,15 +101,16 @@ const styleData: string = `
     height: calc(var(--$[prefix]-title-bar-height) * 0.75);
     margin: 0 4px;
     pointer-events: none;
+    flex-shrink: 0;
 }
 
 .$[prefix]-icon i {
-        font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);
-        line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);
-        text-align: center;
-        display: block;
-        width: 100%;
-        height: 100%;
+    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);
+    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);
+    text-align: center;
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .$[prefix]-icon img {
@@ -121,6 +138,7 @@ const styleData: string = `
     display: flex;
     height: 100%;
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .$[prefix]-title-bar.controls-left .$[prefix]-controls {
@@ -141,6 +159,7 @@ const styleData: string = `
     vertical-align: middle;
     font-family: sans-serif;
     transition: background-color 0.2s;
+    touch-action: auto;
 }
 
 .$[prefix]-control-btn:hover {
@@ -161,11 +180,13 @@ const styleData: string = `
 }
 
 .$[prefix]-menu-bar {
+    color: var(--$[prefix]-menu-item-color);
     display: flex;
     background-color: var(--$[prefix]-bg);
     padding: 2px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--$[prefix]-border);
+    touch-action: auto;
 }
 
 .$[prefix]-menu-item {
@@ -195,10 +216,11 @@ const styleData: string = `
     padding: 4px 0;
     min-width: 150px;
     z-index: 10;
+    touch-action: auto;
 }
 
 .$[prefix]-menu-dropdown li {
-    padding: 5px 20px;
+    padding: 0 20px;
     font-size: 14px;
     cursor: pointer;
 }
@@ -245,10 +267,6 @@ const styleData: string = `
 }
 
 /* サブメニューはホバーで開く */
-.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {
-    display: none;
-}
-
 .$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {
     display: block;
 }
@@ -264,6 +282,7 @@ const styleData: string = `
 
 /* --- タブ --- */
 .$[prefix]-tab-bar {
+    color: var(--$[prefix]-menu-item-color);
     overflow-x: auto;
     overflow-y: hidden;
     -ms-overflow-style: -ms-autohiding-scrollbar;
@@ -272,6 +291,7 @@ const styleData: string = `
     background-color: #e1e1e1;
     flex-shrink: 0;
     align-items: flex-end;
+    touch-action: auto;
 }
 
 .$[prefix]-tab-bar::-webkit-scrollbar{
@@ -350,6 +370,7 @@ const styleData: string = `
     flex-grow: 1;
     position: relative;
     overflow: auto;
+    touch-action: auto;
 }
 
 .$[prefix]-content iframe {
@@ -364,16 +385,17 @@ const styleData: string = `
 .$[prefix]-resize-handle {
     position: absolute;
     z-index: 5;
+    touch-action: none;
 }
 
-.$[prefix]-resize-handle.n { top: -4px; left: 0; right: 0; height: 8px; cursor: n-resize; }
-.$[prefix]-resize-handle.s { bottom: -4px; left: 0; right: 0; height: 8px; cursor: s-resize; }
-.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: -4px; width: 8px; cursor: w-resize; }
-.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: -4px; width: 8px; cursor: e-resize; }
-.$[prefix]-resize-handle.nw { top: -4px; left: -4px; width: 8px; height: 8px; cursor: nw-resize; }
-.$[prefix]-resize-handle.ne { top: -4px; right: -4px; width: 8px; height: 8px; cursor: ne-resize; }
-.$[prefix]-resize-handle.sw { bottom: -4px; left: -4px; width: 8px; height: 8px; cursor: sw-resize; }
-.$[prefix]-resize-handle.se { bottom: -4px; right: -4px; width: 8px; height: 8px; cursor: se-resize; }
+.$[prefix]-resize-handle.n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }
+.$[prefix]-resize-handle.s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }
+.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }
+.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }
+.$[prefix]-resize-handle.nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }
+.$[prefix]-resize-handle.ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }
+.$[prefix]-resize-handle.sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }
+.$[prefix]-resize-handle.se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }
 
 .$[prefix]-context-menu {
     color: var(--$[prefix]-menu-item-color);
@@ -403,6 +425,113 @@ const styleData: string = `
     background-color: var(--$[prefix]-menu-border);
     margin: 4px 0;
     padding: 0;
+}
+
+/* --- Merged Menu/Tab Styles --- */
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {
+    height: auto;
+    align-items: flex-end;
+    padding: 0;
+}
+.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.active .$[prefix]-title-bar {
+    background-color: var(--$[prefix]-title-bar-bg);
+}
+
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {
+    margin-block: auto;
+}
+
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {
+    display: none;
+}
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {
+    flex-grow: 1;
+    margin-block: auto;
+}
+
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {
+    border-bottom: none;
+    background: transparent;
+    padding: 0 6px;
+    align-self: center;
+}
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {
+    line-height: var(--$[prefix]-title-bar-height);
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {
+    color: var(--winlet-menu-item-hover-color);
+}
+.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {
+    background-color: var(--$[prefix]-title-bar-bg);
+    color: var(--$[prefix]-menu-item-color);
+}
+
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {
+    background-color: transparent;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    align-items: flex-end;
+    height: calc(var(--$[prefix]-title-bar-height) + 4px);
+    margin: 0;
+    order: 1; /* controlsより前に配置 */
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{
+    width: 0px;
+    height: 0px;
+}
+
+.$[prefix]-window.$[prefix]-title-bar.controls-left .$[prefix]-tab-bar {
+    order: -1;
+}
+
+
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {
+    border: 1px solid var(--$[prefix]-border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    margin-top: 4px;
+    margin-left: -1px;
+    position: relative;
+    bottom: -1px;
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.active {
+    background-color: var(--$[prefix]-bg);
+    border-color: var(--$[prefix]-border);
+    border-bottom: 1px solid var(--$[prefix]-bg);
+    z-index: 2;
+}
+
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {
+    border: none;
+    align-self: center;
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {
+    border-top: none;
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,
+.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {
+    align-self: flex-start;
+    order: 2;
+}
+
+/* --- Mobile / Touch Device Adjustments --- */
+@media (pointer: coarse), (max-width: 768px) {
+    :root {
+        --$[prefix]-resize-handle-size: 16px;
+        --$[prefix]-resize-handle-offset: -8px;
+    }
+    .$[prefix]-control-btn {
+        width: calc(var(--$[prefix]-title-bar-height) * 1.5);
+    }
 }
 `;
 

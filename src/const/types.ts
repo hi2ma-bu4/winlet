@@ -160,9 +160,21 @@ export interface WindowOptions {
 	 */
 	menu?: MenuItem[];
 	/**
+	 * メニューの表示形式
+	 * - default: 通常のメニューバー
+	 * - merged: タイトルバーに統合
+	 */
+	menuStyle?: "default" | "merged";
+	/**
 	 * タブ
 	 */
 	tabs?: TabItem[];
+	/**
+	 * タブの表示形式
+	 * - default: 通常のタブバー
+	 * - merged: タイトルバーに統合されたChrome風タブ
+	 */
+	tabStyle?: "default" | "merged";
 	tabOptions?: {
 		/**
 		 * タブの入れ替え
@@ -185,6 +197,10 @@ export interface WindowOptions {
 	 * 右クリックメニュー
 	 */
 	contextMenu?: ContextMenuItem[];
+	/**
+	 * 作成時にウィンドウにフォーカスを当てるか
+	 */
+	focus?: boolean;
 	/**
 	 * ウィンドウオープン時
 	 */

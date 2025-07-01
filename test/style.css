@@ -6,6 +6,7 @@ body {
 	background-size: auto;
 	color: #fff;
 	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	overscroll-behavior: contain;
 	padding: 20px;
 }
 

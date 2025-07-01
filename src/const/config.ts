@@ -34,7 +34,9 @@ export const defaultConfig: Required<WindowOptions> = {
 		template: "",
 	},
 	menu: [],
+	menuStyle: "default",
 	tabs: [],
+	tabStyle: "default",
 	tabOptions: {
 		reorderable: false,
 		closable: false,
@@ -42,6 +44,7 @@ export const defaultConfig: Required<WindowOptions> = {
 		onAdd: undefined,
 	},
 	contextMenu: [],
+	focus: true,
 	onOpen: () => {},
 	onClose: () => {},
 	onFocus: () => {},
