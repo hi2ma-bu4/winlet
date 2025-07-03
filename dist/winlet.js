@@ -1,15 +1,28 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+function _arrayLikeToArray(r, a) {
+  (null == a || a > r.length) && (a = r.length);
+  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
+  return n;
+}
+module.exports = _arrayLikeToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{}],2:[function(require,module,exports){
+var arrayLikeToArray = require("./arrayLikeToArray.js");
+function _arrayWithoutHoles(r) {
+  if (Array.isArray(r)) return arrayLikeToArray(r);
+}
+module.exports = _arrayWithoutHoles, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{"./arrayLikeToArray.js":1}],3:[function(require,module,exports){
 function _assertThisInitialized(e) {
   if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
   return e;
 }
 module.exports = _assertThisInitialized, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],2:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 function _classCallCheck(a, n) {
   if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
 }
 module.exports = _classCallCheck, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 var isNativeReflectConstruct = require("./isNativeReflectConstruct.js");
 var setPrototypeOf = require("./setPrototypeOf.js");
 function _construct(t, e, r) {
@@ -20,7 +33,7 @@ function _construct(t, e, r) {
   return r && setPrototypeOf(p, r.prototype), p;
 }
 module.exports = _construct, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./isNativeReflectConstruct.js":10,"./setPrototypeOf.js":12}],4:[function(require,module,exports){
+},{"./isNativeReflectConstruct.js":12,"./setPrototypeOf.js":16}],6:[function(require,module,exports){
 var toPropertyKey = require("./toPropertyKey.js");
 function _defineProperties(e, r) {
   for (var t = 0; t < r.length; t++) {
@@ -34,7 +47,7 @@ function _createClass(e, r, t) {
   }), e;
 }
 module.exports = _createClass, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./toPropertyKey.js":14}],5:[function(require,module,exports){
+},{"./toPropertyKey.js":19}],7:[function(require,module,exports){
 var toPropertyKey = require("./toPropertyKey.js");
 function _defineProperty(e, r, t) {
   return (r = toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
@@ -45,14 +58,14 @@ function _defineProperty(e, r, t) {
   }) : e[r] = t, e;
 }
 module.exports = _defineProperty, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./toPropertyKey.js":14}],6:[function(require,module,exports){
+},{"./toPropertyKey.js":19}],8:[function(require,module,exports){
 function _getPrototypeOf(t) {
   return module.exports = _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) {
     return t.__proto__ || Object.getPrototypeOf(t);
   }, module.exports.__esModule = true, module.exports["default"] = module.exports, _getPrototypeOf(t);
 }
 module.exports = _getPrototypeOf, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var setPrototypeOf = require("./setPrototypeOf.js");
 function _inherits(t, e) {
   if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function");
@@ -67,14 +80,14 @@ function _inherits(t, e) {
   }), e && setPrototypeOf(t, e);
 }
 module.exports = _inherits, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./setPrototypeOf.js":12}],8:[function(require,module,exports){
+},{"./setPrototypeOf.js":16}],10:[function(require,module,exports){
 function _interopRequireDefault(e) {
   return e && e.__esModule ? e : {
     "default": e
   };
 }
 module.exports = _interopRequireDefault, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function _isNativeFunction(t) {
   try {
     return -1 !== Function.toString.call(t).indexOf("[native code]");
@@ -83,7 +96,7 @@ function _isNativeFunction(t) {
   }
 }
 module.exports = _isNativeFunction, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 function _isNativeReflectConstruct() {
   try {
     var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {}));
@@ -93,7 +106,17 @@ function _isNativeReflectConstruct() {
   }, module.exports.__esModule = true, module.exports["default"] = module.exports)();
 }
 module.exports = _isNativeReflectConstruct, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
+function _iterableToArray(r) {
+  if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
+}
+module.exports = _iterableToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{}],14:[function(require,module,exports){
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+}
+module.exports = _nonIterableSpread, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{}],15:[function(require,module,exports){
 var _typeof = require("./typeof.js")["default"];
 var assertThisInitialized = require("./assertThisInitialized.js");
 function _possibleConstructorReturn(t, e) {
@@ -102,14 +125,23 @@ function _possibleConstructorReturn(t, e) {
   return assertThisInitialized(t);
 }
 module.exports = _possibleConstructorReturn, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./assertThisInitialized.js":1,"./typeof.js":15}],12:[function(require,module,exports){
+},{"./assertThisInitialized.js":3,"./typeof.js":20}],16:[function(require,module,exports){
 function _setPrototypeOf(t, e) {
   return module.exports = _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) {
     return t.__proto__ = e, t;
   }, module.exports.__esModule = true, module.exports["default"] = module.exports, _setPrototypeOf(t, e);
 }
 module.exports = _setPrototypeOf, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],13:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
+var arrayWithoutHoles = require("./arrayWithoutHoles.js");
+var iterableToArray = require("./iterableToArray.js");
+var unsupportedIterableToArray = require("./unsupportedIterableToArray.js");
+var nonIterableSpread = require("./nonIterableSpread.js");
+function _toConsumableArray(r) {
+  return arrayWithoutHoles(r) || iterableToArray(r) || unsupportedIterableToArray(r) || nonIterableSpread();
+}
+module.exports = _toConsumableArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{"./arrayWithoutHoles.js":2,"./iterableToArray.js":13,"./nonIterableSpread.js":14,"./unsupportedIterableToArray.js":21}],18:[function(require,module,exports){
 var _typeof = require("./typeof.js")["default"];
 function toPrimitive(t, r) {
   if ("object" != _typeof(t) || !t) return t;
@@ -122,7 +154,7 @@ function toPrimitive(t, r) {
   return ("string" === r ? String : Number)(t);
 }
 module.exports = toPrimitive, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./typeof.js":15}],14:[function(require,module,exports){
+},{"./typeof.js":20}],19:[function(require,module,exports){
 var _typeof = require("./typeof.js")["default"];
 var toPrimitive = require("./toPrimitive.js");
 function toPropertyKey(t) {
@@ -130,7 +162,7 @@ function toPropertyKey(t) {
   return "symbol" == _typeof(i) ? i : i + "";
 }
 module.exports = toPropertyKey, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./toPrimitive.js":13,"./typeof.js":15}],15:[function(require,module,exports){
+},{"./toPrimitive.js":18,"./typeof.js":20}],20:[function(require,module,exports){
 function _typeof(o) {
   "@babel/helpers - typeof";
 
@@ -141,7 +173,17 @@ function _typeof(o) {
   }, module.exports.__esModule = true, module.exports["default"] = module.exports, _typeof(o);
 }
 module.exports = _typeof, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{}],16:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
+var arrayLikeToArray = require("./arrayLikeToArray.js");
+function _unsupportedIterableToArray(r, a) {
+  if (r) {
+    if ("string" == typeof r) return arrayLikeToArray(r, a);
+    var t = {}.toString.call(r).slice(8, -1);
+    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? arrayLikeToArray(r, a) : void 0;
+  }
+}
+module.exports = _unsupportedIterableToArray, module.exports.__esModule = true, module.exports["default"] = module.exports;
+},{"./arrayLikeToArray.js":1}],22:[function(require,module,exports){
 var getPrototypeOf = require("./getPrototypeOf.js");
 var setPrototypeOf = require("./setPrototypeOf.js");
 var isNativeFunction = require("./isNativeFunction.js");
@@ -169,7 +211,7 @@ function _wrapNativeSuper(t) {
   }, module.exports.__esModule = true, module.exports["default"] = module.exports, _wrapNativeSuper(t);
 }
 module.exports = _wrapNativeSuper, module.exports.__esModule = true, module.exports["default"] = module.exports;
-},{"./construct.js":3,"./getPrototypeOf.js":6,"./isNativeFunction.js":9,"./setPrototypeOf.js":12}],17:[function(require,module,exports){
+},{"./construct.js":5,"./getPrototypeOf.js":8,"./isNativeFunction.js":11,"./setPrototypeOf.js":16}],23:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -204,7 +246,8 @@ var defaultConfig = exports.defaultConfig = {
       allow: "",
       referrerPolicy: "",
       loading: "lazy",
-      sandbox: ""
+      sandbox: "",
+      loadWinLet: false
     },
     template: ""
   },
@@ -216,7 +259,11 @@ var defaultConfig = exports.defaultConfig = {
     reorderable: false,
     closable: false,
     addable: false,
-    onAdd: undefined
+    detachable: false,
+    mergeable: false,
+    allowIncomingMerge: false,
+    onAdd: undefined,
+    onMergeAttempt: undefined
   },
   contextMenu: [],
   focus: true,
@@ -226,10 +273,12 @@ var defaultConfig = exports.defaultConfig = {
   onBlur: function onBlur() {},
   onResize: function onResize() {},
   onMove: function onMove() {},
-  onReload: function onReload() {}
+  onReload: function onReload() {},
+  _isPopup: false,
+  _parent: null
 };
 
-},{}],18:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -277,16 +326,18 @@ var WinLetError = exports.WinLetError = function (_SimpleError) {
   return (0, _createClass2["default"])(WinLetError);
 }(SimpleError);
 
-},{"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11,"@babel/runtime/helpers/wrapNativeSuper":16}],19:[function(require,module,exports){
+},{"@babel/runtime/helpers/classCallCheck":4,"@babel/runtime/helpers/createClass":6,"@babel/runtime/helpers/getPrototypeOf":8,"@babel/runtime/helpers/inherits":9,"@babel/runtime/helpers/interopRequireDefault":10,"@babel/runtime/helpers/possibleConstructorReturn":15,"@babel/runtime/helpers/wrapNativeSuper":22}],25:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.LIBRARY_NAME = void 0;
+exports.TIMEOUT_RESULT = exports.LIBRARY_NAME = exports.CLOSE_BUTTON_RESULT = void 0;
 var LIBRARY_NAME = exports.LIBRARY_NAME = "winlet";
+var TIMEOUT_RESULT = exports.TIMEOUT_RESULT = Symbol("timeout");
+var CLOSE_BUTTON_RESULT = exports.CLOSE_BUTTON_RESULT = Symbol("close");
 
-},{}],20:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -294,6 +345,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
+var _toConsumableArray2 = _interopRequireDefault(require("@babel/runtime/helpers/toConsumableArray"));
 var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
 var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
 var _possibleConstructorReturn2 = _interopRequireDefault(require("@babel/runtime/helpers/possibleConstructorReturn"));
@@ -305,6 +357,7 @@ var _errors = require("../const/errors");
 var _types = require("../const/types");
 var _baseclass = _interopRequireDefault(require("../libs/baseclass"));
 var _utils = _interopRequireDefault(require("../libs/utils"));
+var _window_manager = _interopRequireDefault(require("./window_manager"));
 function _callSuper(t, o, e) { return o = (0, _getPrototypeOf2["default"])(o), (0, _possibleConstructorReturn2["default"])(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], (0, _getPrototypeOf2["default"])(t).constructor) : o.apply(t, e)); }
 function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); } catch (t) {} return (_isNativeReflectConstruct = function _isNativeReflectConstruct() { return !!t; })(); }
 var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
@@ -327,6 +380,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "boundGlobalClickHandler", null);
     (0, _defineProperty2["default"])(_this, "MOBILE_CONTEXT_MENU_TIMEOUT", 700);
     (0, _defineProperty2["default"])(_this, "contextMenuTimer", null);
+    (0, _defineProperty2["default"])(_this, "popupCloseCallback", null);
+    (0, _defineProperty2["default"])(_this, "childManager", null);
     _this.id = options.id || _utils["default"].generateId("window");
     if (options.id) {
       var existingEl = document.getElementById(options.id);
@@ -336,7 +391,11 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     }
     _this.manager = manager;
     _this.options = _utils["default"].deepMerge(_config.defaultConfig, options);
+    _this.parentWindow = options._parent || null;
     _this.el = _this.createDOM();
+    if (_this.options._isPopup) {
+      _this.el.classList.add("".concat(_types.LIBRARY_NAME, "-popup-window"));
+    }
     if (_this.options.tabStyle === "merged") {
       _this.el.classList.add("".concat(_types.LIBRARY_NAME, "-tab-style-merged"));
     }
@@ -420,7 +479,18 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           iframe.src = iframeConfig.src;
         }
         if (iframeConfig.srcdoc) {
-          iframe.srcdoc = iframeConfig.srcdoc;
+          var finalSrcDoc = iframeConfig.srcdoc;
+          if (iframeConfig.loadWinLet) {
+            var globalConfig = this.manager.getGlobalConfig();
+            if (globalConfig.libraryPath) {
+              var scriptTag = "<script src=\"".concat(globalConfig.libraryPath, "\"></script>");
+              var initScript = "<script>document.addEventListener('DOMContentLoaded', () => window.WinLet.init({ container: document.body }));</script>";
+              finalSrcDoc = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">".concat(scriptTag).concat(initScript, "</head><body>").concat(iframeConfig.srcdoc, "</body></html>");
+            } else {
+              console.warn("WinLet Warning: `loadWinLet` is true, but `libraryPath` is not set in global config.");
+            }
+          }
+          iframe.srcdoc = finalSrcDoc;
         }
         if (iframeConfig.allow) {
           iframe.allow = iframeConfig.allow;
@@ -538,21 +608,68 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           var _tabOpts$onAdd;
           var newTabItem = (_tabOpts$onAdd = tabOpts.onAdd) === null || _tabOpts$onAdd === void 0 ? void 0 : _tabOpts$onAdd.call(tabOpts, _this4);
           if (newTabItem) {
-            _this4.options.tabs.push(newTabItem);
-            var newIndex = _this4.options.tabs.length - 1;
-            _this4.createTabElement(newTabItem, newIndex);
-            _this4.activateTab(newIndex);
+            _this4.addTab(newTabItem);
           }
         });
         tabBar.appendChild(this.addTabBtn);
       }
+      this.setupTabBarDropZone();
       if (this.tabs.length > 0) this.activateTab(0);
+    }
+  }, {
+    key: "setupTabBarDropZone",
+    value: function setupTabBarDropZone() {
+      var _this5 = this;
+      var tabBar = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-tab-bar"));
+      if (!tabBar || !this.options.tabOptions.reorderable) return;
+      tabBar.addEventListener("dragover", function (e) {
+        var _e$dataTransfer;
+        if ((_e$dataTransfer = e.dataTransfer) !== null && _e$dataTransfer !== void 0 && _e$dataTransfer.types.includes("application/winlet-tab")) {
+          e.preventDefault();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+          tabBar.classList.add("drag-over");
+        }
+      });
+      tabBar.addEventListener("dragleave", function () {
+        tabBar.classList.remove("drag-over");
+      });
+      tabBar.addEventListener("drop", function (e) {
+        var _e$dataTransfer2, _e$dataTransfer3, _e$dataTransfer4, _this5$manager$contai;
+        e.preventDefault();
+        tabBar.classList.remove("drag-over");
+        var tabDataJSON = (_e$dataTransfer2 = e.dataTransfer) === null || _e$dataTransfer2 === void 0 ? void 0 : _e$dataTransfer2.getData("application/winlet-tab");
+        var sourceWindowId = (_e$dataTransfer3 = e.dataTransfer) === null || _e$dataTransfer3 === void 0 ? void 0 : _e$dataTransfer3.getData("application/winlet-source-window-id");
+        var sourceTabId = (_e$dataTransfer4 = e.dataTransfer) === null || _e$dataTransfer4 === void 0 ? void 0 : _e$dataTransfer4.getData("text/plain");
+        if (!tabDataJSON || !sourceWindowId || !sourceTabId) return;
+        var draggingEl = (_this5$manager$contai = _this5.manager.container) === null || _this5$manager$contai === void 0 ? void 0 : _this5$manager$contai.querySelector(".".concat(_types.LIBRARY_NAME, "-tab.dragging"));
+        if (sourceWindowId === _this5.id) {
+          if (draggingEl) {
+            _this5.updateTabOrderFromDOM();
+          }
+          return;
+        }
+        var sourceWindow = _this5.manager.getWindow(sourceWindowId);
+        if (sourceWindow) {
+          var _sourceOpts$mergeable, _targetOpts$allowInco;
+          var sourceOpts = sourceWindow.options.tabOptions;
+          var targetOpts = _this5.options.tabOptions;
+          var isMergeable = (_sourceOpts$mergeable = sourceOpts.mergeable) !== null && _sourceOpts$mergeable !== void 0 ? _sourceOpts$mergeable : sourceOpts.detachable;
+          var allowsIncoming = (_targetOpts$allowInco = targetOpts.allowIncomingMerge) !== null && _targetOpts$allowInco !== void 0 ? _targetOpts$allowInco : true;
+          var customFilterPassed = !targetOpts.onMergeAttempt || targetOpts.onMergeAttempt(sourceWindow, _this5);
+          if (!isMergeable || !allowsIncoming || !customFilterPassed) {
+            return;
+          }
+          var tabData = JSON.parse(tabDataJSON);
+          _this5.addTab(tabData, true);
+          sourceWindow.closeTab(parseInt(sourceTabId, 10));
+        }
+      });
     }
   }, {
     key: "createTabElement",
     value: function createTabElement(tabData, index) {
       var _this$options$tabOpti2,
-        _this5 = this;
+        _this6 = this;
       var tabBar = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-tab-bar"));
       var tabOpts = (_this$options$tabOpti2 = this.options.tabOptions) !== null && _this$options$tabOpti2 !== void 0 ? _this$options$tabOpti2 : {};
       var tabEl = document.createElement("div");
@@ -568,7 +685,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         closeBtn.innerHTML = "&times;";
         closeBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          _this5.closeTab(index);
+          var indexToClose = _this6.tabs.findIndex(function (t) {
+            return t.tabEl === tabEl;
+          });
+          if (indexToClose !== -1) {
+            _this6.closeTab(indexToClose);
+          }
         });
         tabEl.appendChild(closeBtn);
       }
@@ -577,7 +699,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.contentEl.appendChild(tabContentEl);
       this.renderContent(tabContentEl, tabData.content);
       tabEl.addEventListener("click", function (e) {
-        _this5.activateTab(+tabEl.dataset.tabId);
+        _this6.activateTab(+tabEl.dataset.tabId);
       });
       this.tabs.splice(index, 0, {
         tabEl: tabEl,
@@ -590,15 +712,30 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "makeTabReorderable",
     value: function makeTabReorderable(tabEl) {
+      var _this7 = this;
       tabEl.draggable = true;
       tabEl.addEventListener("dragstart", function (e) {
         e.dataTransfer.setData("text/plain", tabEl.dataset.tabId);
         tabEl.classList.add("dragging");
+        if (_this7.options.tabOptions.detachable) {
+          var tabIndex = parseInt(tabEl.dataset.tabId, 10);
+          if (!isNaN(tabIndex) && _this7.options.tabs[tabIndex]) {
+            var tabData = _this7.options.tabs[tabIndex];
+            e.dataTransfer.setData("application/winlet-tab", JSON.stringify(tabData));
+            e.dataTransfer.setData("application/winlet-source-window-id", _this7.id);
+            _this7.manager.onTabDragStart(_this7.id);
+          }
+        }
       });
       tabEl.addEventListener("dragend", function () {
-        return tabEl.classList.remove("dragging");
+        tabEl.classList.remove("dragging");
+        _this7.manager.onTabDragEnd();
       });
       tabEl.addEventListener("dragover", function (e) {
+        var _this7$manager$draggi;
+        if (((_this7$manager$draggi = _this7.manager.draggingTabInfo) === null || _this7$manager$draggi === void 0 ? void 0 : _this7$manager$draggi.sourceWindowId) !== _this7.id) {
+          return;
+        }
         e.preventDefault();
         var draggingEl = document.querySelector(".".concat(_types.LIBRARY_NAME, "-tab.dragging"));
         if (draggingEl && draggingEl !== tabEl) {
@@ -623,6 +760,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "closeTab",
     value: function closeTab(index) {
+      var _this$tabs$index;
+      var wasActive = (_this$tabs$index = this.tabs[index]) === null || _this$tabs$index === void 0 ? void 0 : _this$tabs$index.tabEl.classList.contains("active");
       this.tabs[index].tabEl.remove();
       this.tabs[index].contentEl.remove();
       this.tabs.splice(index, 1);
@@ -631,8 +770,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         return tab.tabEl.dataset.tabId = i.toString();
       });
       if (this.tabs.length > 0) {
-        var newActiveIndex = Math.max(0, index - 1);
-        this.activateTab(newActiveIndex);
+        if (wasActive) {
+          var newActiveIndex = Math.max(0, index - 1);
+          this.activateTab(newActiveIndex);
+        }
+      } else {
+        this.close();
       }
     }
   }, {
@@ -644,56 +787,100 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       });
     }
   }, {
+    key: "addTab",
+    value: function addTab(tabItem) {
+      var setActive = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+      this.options.tabs.push(tabItem);
+      var newIndex = this.options.tabs.length - 1;
+      this.createTabElement(tabItem, newIndex);
+      if (setActive) {
+        this.activateTab(newIndex);
+        this.focus();
+      }
+    }
+  }, {
+    key: "getTabs",
+    value: function getTabs() {
+      return this.tabs;
+    }
+  }, {
+    key: "updateTabOrderFromDOM",
+    value: function updateTabOrderFromDOM() {
+      var tabElements = Array.from(this.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-tab-bar > .").concat(_types.LIBRARY_NAME, "-tab")));
+      var newTabs = [];
+      var newOptionsTabs = [];
+      var oldTabs = (0, _toConsumableArray2["default"])(this.tabs);
+      var oldOptionsTabs = (0, _toConsumableArray2["default"])(this.options.tabs);
+      tabElements.forEach(function (tabEl) {
+        var oldIndex = oldTabs.findIndex(function (t) {
+          return t.tabEl === tabEl;
+        });
+        if (oldIndex !== -1) {
+          newTabs.push(oldTabs[oldIndex]);
+          newOptionsTabs.push(oldOptionsTabs[oldIndex]);
+        }
+      });
+      this.tabs = newTabs;
+      this.options.tabs = newOptionsTabs;
+      this.tabs.forEach(function (tab, i) {
+        return tab.tabEl.dataset.tabId = i.toString();
+      });
+    }
+  }, {
     key: "setupEventListeners",
     value: function setupEventListeners() {
-      var _this6 = this;
+      var _this8 = this;
       this.el.addEventListener("click", function () {
-        return _this6.focus();
+        return _this8.focus();
       }, true);
       this.el.addEventListener("focusin", function () {
-        return _this6.focus();
+        return _this8.focus();
       });
       this.boundGlobalClickHandler = function () {
-        if (_this6.isMenuOpen) {
-          _this6.closeAllMenus();
+        if (_this8.isMenuOpen) {
+          _this8.closeAllMenus();
         }
       };
       document.addEventListener("click", this.boundGlobalClickHandler);
       var closeBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-close-btn"));
       closeBtn === null || closeBtn === void 0 || closeBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        _this6.close();
+        if (_this8.options._isPopup) {
+          var _this8$popupCloseCall;
+          (_this8$popupCloseCall = _this8.popupCloseCallback) === null || _this8$popupCloseCall === void 0 || _this8$popupCloseCall.call(_this8, _types.CLOSE_BUTTON_RESULT);
+        }
+        _this8.close();
       });
       var maxBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
       maxBtn === null || maxBtn === void 0 || maxBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        _this6.toggleMaximize();
+        _this8.toggleMaximize();
       });
       var minBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-minimize-btn"));
       minBtn === null || minBtn === void 0 || minBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        _this6.minimize();
+        _this8.minimize();
       });
       if (this.options.movable) this.makeMovable();
       if (this.options.resizableX || this.options.resizableY) this.makeResizable();
       if (this.options.contextMenu.length > 0) {
         this.el.addEventListener("contextmenu", function (e) {
           e.preventDefault();
-          _this6.manager.showContextMenu(e.clientX, e.clientY, _this6.options.contextMenu, _this6);
+          _this8.manager.showContextMenu(e.clientX, e.clientY, _this8.options.contextMenu, _this8);
         }, {
           passive: false
         });
         this.el.addEventListener("pointerdown", function (e) {
           if (e.pointerType !== "touch") return;
-          _this6.contextMenuTimer = window.setTimeout(function () {
-            _this6.contextMenuTimer = null;
-            _this6.manager.showContextMenu(e.clientX, e.clientY, _this6.options.contextMenu, _this6);
-          }, _this6.MOBILE_CONTEXT_MENU_TIMEOUT);
+          _this8.contextMenuTimer = window.setTimeout(function () {
+            _this8.contextMenuTimer = null;
+            _this8.manager.showContextMenu(e.clientX, e.clientY, _this8.options.contextMenu, _this8);
+          }, _this8.MOBILE_CONTEXT_MENU_TIMEOUT);
         });
         var clearContextMenuTimer = function clearContextMenuTimer() {
-          if (_this6.contextMenuTimer) {
-            clearTimeout(_this6.contextMenuTimer);
-            _this6.contextMenuTimer = null;
+          if (_this8.contextMenuTimer) {
+            clearTimeout(_this8.contextMenuTimer);
+            _this8.contextMenuTimer = null;
           }
         };
         this.el.addEventListener("pointermove", clearContextMenuTimer);
@@ -704,7 +891,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "makeMovable",
     value: function makeMovable() {
-      var _this7 = this;
+      var _this9 = this;
       var onPointerDown = function onPointerDown(e) {
         var target = e.target;
         if (target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-resize-handle, .").concat(_types.LIBRARY_NAME, "-menu-item, .").concat(_types.LIBRARY_NAME, "-tab, .").concat(_types.LIBRARY_NAME, "-tab-add-btn"))) {
@@ -712,47 +899,49 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         }
         if (e.button !== 0) return;
         e.preventDefault();
-        _this7.focus();
+        _this9.focus();
         var startX = e.clientX,
           startY = e.clientY;
         var isDragging = false;
         var initialLeft;
         var initialTop;
         var onPointerMove = function onPointerMove(moveE) {
+          var _this9$el;
+          if (!((_this9$el = _this9.el) !== null && _this9$el !== void 0 && _this9$el.isConnected)) return;
           if (!isDragging) {
             var deltaX = Math.abs(moveE.clientX - startX);
             var deltaY = Math.abs(moveE.clientY - startY);
-            if (deltaX > _this7.DRAG_THRESHOLD || deltaY > _this7.DRAG_THRESHOLD) {
+            if (deltaX > _this9.DRAG_THRESHOLD || deltaY > _this9.DRAG_THRESHOLD) {
               isDragging = true;
-              _this7.el.setPointerCapture(e.pointerId);
-              _this7.contentEl.style.pointerEvents = "none";
-              if (_this7.state === "maximized") {
-                var restoredWidth = _this7.lastState.width;
-                var clickRatio = e.clientX / _this7.el.offsetWidth;
-                var titleBarRect = _this7.titleBarEl.getBoundingClientRect();
+              _this9.el.setPointerCapture(e.pointerId);
+              _this9.contentEl.style.pointerEvents = "none";
+              if (_this9.state === "maximized") {
+                var restoredWidth = _this9.lastState.width;
+                var clickRatio = e.clientX / _this9.el.offsetWidth;
+                var titleBarRect = _this9.titleBarEl.getBoundingClientRect();
                 var offsetY = e.clientY - titleBarRect.top;
                 var posX = e.clientX - restoredWidth * clickRatio;
                 var posY = e.clientY - offsetY;
-                _this7.restore();
-                _this7.setPosition(posX, posY);
+                _this9.restore();
+                _this9.setPosition(posX, posY);
               }
-              initialLeft = _this7.el.offsetLeft;
-              initialTop = _this7.el.offsetTop;
+              initialLeft = _this9.el.offsetLeft;
+              initialTop = _this9.el.offsetTop;
             } else {
               return;
             }
           }
           var newLeft = initialLeft + moveE.clientX - startX;
           var newTop = initialTop + moveE.clientY - startY;
-          _this7.setPosition(newLeft, newTop);
+          _this9.setPosition(newLeft, newTop);
         };
         var onPointerUp = function onPointerUp() {
           document.removeEventListener("pointermove", onPointerMove);
           document.removeEventListener("pointerup", onPointerMove);
           if (isDragging) {
-            _this7.el.releasePointerCapture(e.pointerId);
-            _this7.contentEl.style.pointerEvents = "auto";
-            _this7.options.onMove(_this7);
+            _this9.el.releasePointerCapture(e.pointerId);
+            _this9.contentEl.style.pointerEvents = "auto";
+            _this9.options.onMove(_this9);
           }
         };
         document.addEventListener("pointermove", onPointerMove);
@@ -763,9 +952,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       });
       if (this.options.maximizable) {
         this.titleBarEl.addEventListener("dblclick", function (e) {
-          if (_this7.options.maximizableOnDblClick) {
-            if (e.target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn"))) return;
-            _this7.toggleMaximize();
+          if (_this9.options.maximizableOnDblClick) {
+            var target = e.target;
+            if (target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-menu-item, .").concat(_types.LIBRARY_NAME, "-tab"))) {
+              return;
+            }
+            _this9.toggleMaximize();
           }
         });
       }
@@ -773,26 +965,26 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "makeResizable",
     value: function makeResizable() {
-      var _this8 = this;
+      var _this0 = this;
       this.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-resize-handle")).forEach(function (handle) {
         handle.addEventListener("pointerdown", function (e) {
-          if (e.button !== 0) return;
+          if (e.button !== 0 || !(handle !== null && handle !== void 0 && handle.isConnected)) return;
           e.preventDefault();
           e.stopPropagation();
-          _this8.focus();
-          _this8.contentEl.style.pointerEvents = "none";
+          _this0.focus();
+          _this0.contentEl.style.pointerEvents = "none";
           handle.setPointerCapture(e.pointerId);
           var direction = handle.className.replace("".concat(_types.LIBRARY_NAME, "-resize-handle "), "");
           var startX = e.clientX,
             startY = e.clientY;
-          var _this8$el = _this8.el,
-            startWidth = _this8$el.offsetWidth,
-            startHeight = _this8$el.offsetHeight,
-            startLeft = _this8$el.offsetLeft,
-            startTop = _this8$el.offsetTop;
-          var _this8$options = _this8.options,
-            minWidth = _this8$options.minWidth,
-            minHeight = _this8$options.minHeight;
+          var _this0$el = _this0.el,
+            startWidth = _this0$el.offsetWidth,
+            startHeight = _this0$el.offsetHeight,
+            startLeft = _this0$el.offsetLeft,
+            startTop = _this0$el.offsetTop;
+          var _this0$options = _this0.options,
+            minWidth = _this0$options.minWidth,
+            minHeight = _this0$options.minHeight;
           var onPointerMove = function onPointerMove(moveE) {
             var newWidth = startWidth,
               newHeight = startHeight,
@@ -810,15 +1002,15 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               newHeight = Math.max(minHeight, startHeight - deltaY);
               newTop = startTop + deltaY;
             }
-            _this8.setSize(newWidth, newHeight);
-            _this8.setPosition(newLeft, newTop);
+            _this0.setSize(newWidth, newHeight);
+            _this0.setPosition(newLeft, newTop);
           };
           var _onPointerUp = function onPointerUp() {
             handle.releasePointerCapture(e.pointerId);
-            _this8.contentEl.style.pointerEvents = "auto";
+            _this0.contentEl.style.pointerEvents = "auto";
             document.removeEventListener("pointermove", onPointerMove);
             document.removeEventListener("pointerup", _onPointerUp);
-            _this8.options.onResize(_this8);
+            _this0.options.onResize(_this0);
           };
           document.addEventListener("pointermove", onPointerMove);
           document.addEventListener("pointerup", _onPointerUp);
@@ -908,6 +1100,9 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     key: "focus",
     value: function focus() {
       if (this.focused) return;
+      if (this.parentWindow) {
+        this.parentWindow.focus();
+      }
       this.manager.focusWindow(this);
       this.focused = true;
       this.el.classList.add("active");
@@ -924,7 +1119,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "reload",
     value: function reload() {
-      var _this9 = this;
+      var _this1 = this;
       if (this.options.onReload(this) === false) {
         return;
       }
@@ -937,13 +1132,13 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               (_iframe$contentWindow = iframe.contentWindow) === null || _iframe$contentWindow === void 0 || _iframe$contentWindow.location.reload();
             } catch (e) {
               console.warn("WinLet: Cross-origin iframe could not be reloaded directly. Recreating iframe element.", e);
-              _this9.renderContent(container, content);
+              _this1.renderContent(container, content);
             }
           } else {
-            _this9.renderContent(container, content);
+            _this1.renderContent(container, content);
           }
         } else {
-          _this9.renderContent(container, content);
+          _this1.renderContent(container, content);
         }
       };
       if (this.options.tabs.length > 0) {
@@ -958,6 +1153,61 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       } else {
         reloadContent(this.contentEl, this.options.content);
       }
+    }
+  }, {
+    key: "getContent",
+    value: function getContent() {
+      var contentContainer;
+      var activeTabIndex = this.tabs.findIndex(function (tab) {
+        return tab.tabEl.classList.contains("active");
+      });
+      if (activeTabIndex > -1) {
+        contentContainer = this.tabs[activeTabIndex].contentEl;
+      } else {
+        contentContainer = this.contentEl;
+      }
+      var iframe = contentContainer.querySelector("iframe");
+      return iframe || contentContainer;
+    }
+  }, {
+    key: "getChildManager",
+    value: function getChildManager() {
+      if (!this.childManager) {
+        var childConfig = {};
+        this.childManager = new _window_manager["default"](childConfig);
+        this.childManager.applyGlobalConfig({
+          container: this.contentEl
+        });
+        this.childManager.init();
+      }
+      return this.childManager;
+    }
+  }, {
+    key: "createWindow",
+    value: function createWindow() {
+      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      var iframe = this.contentEl.querySelector("iframe");
+      if (iframe && iframe.contentWindow) {
+        var message = {
+          type: "winlet:createWindow",
+          options: options
+        };
+        iframe.contentWindow.postMessage(message, "*");
+        console.warn("WinLet: Window creation inside an iframe is asynchronous and does not return an instance directly.");
+        return null;
+      }
+      var manager = this.getChildManager();
+      options._parent = this;
+      return manager.createWindow(options);
+    }
+  }, {
+    key: "createPopup",
+    value: function createPopup(options) {
+      var manager = this.getChildManager();
+      var winOptions = {
+        _parent: this
+      };
+      return manager.popup(Object.assign(options, winOptions));
     }
   }, {
     key: "getTitle",
@@ -1067,7 +1317,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }]);
 }(_baseclass["default"]);
 
-},{"../const/config":17,"../const/errors":18,"../const/types":19,"../libs/baseclass":23,"../libs/utils":24,"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/defineProperty":5,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11}],21:[function(require,module,exports){
+},{"../const/config":23,"../const/errors":24,"../const/types":25,"../libs/baseclass":29,"../libs/utils":30,"./window_manager":27,"@babel/runtime/helpers/classCallCheck":4,"@babel/runtime/helpers/createClass":6,"@babel/runtime/helpers/defineProperty":7,"@babel/runtime/helpers/getPrototypeOf":8,"@babel/runtime/helpers/inherits":9,"@babel/runtime/helpers/interopRequireDefault":10,"@babel/runtime/helpers/possibleConstructorReturn":15,"@babel/runtime/helpers/toConsumableArray":17}],27:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1104,27 +1354,51 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "zIndexCounter", 1000);
     (0, _defineProperty2["default"])(_this, "activeWindow", null);
     (0, _defineProperty2["default"])(_this, "contextMenuEl", null);
-    (0, _defineProperty2["default"])(_this, "isInitialized", false);
+    (0, _defineProperty2["default"])(_this, "_isInitialized", false);
     (0, _defineProperty2["default"])(_this, "lastAutoPosition", null);
+    (0, _defineProperty2["default"])(_this, "lastPopupPosition", null);
     (0, _defineProperty2["default"])(_this, "CASCADE_OFFSET", 30);
+    (0, _defineProperty2["default"])(_this, "draggingTabInfo", null);
     _this.globalConfig = initialConfig;
     return _this;
   }
   (0, _inherits2["default"])(WindowManager, _WinLetBaseClass);
   return (0, _createClass2["default"])(WindowManager, [{
+    key: "isInitialized",
+    get: function get() {
+      return this._isInitialized;
+    }
+  }, {
     key: "applyGlobalConfig",
     value: function applyGlobalConfig(options) {
       Object.assign(this.globalConfig, options);
     }
   }, {
+    key: "getGlobalConfig",
+    value: function getGlobalConfig() {
+      return this.globalConfig;
+    }
+  }, {
     key: "init",
     value: function init() {
       var _this2 = this;
-      if (this.isInitialized) {
+      if (this._isInitialized) {
         return;
       }
-      if (!document.body) {
-        throw new _errors.WinLetError("Cannot initialize before document.body is ready. Please call WinLet.init() after DOMContentLoaded.");
+      var parentEl = null;
+      if (typeof this.globalConfig.container === "string") {
+        parentEl = document.querySelector(this.globalConfig.container);
+        if (!parentEl) {
+          throw new _errors.WinLetError("WinLet: The specified container \"".concat(this.globalConfig.container, "\" was not found."));
+        }
+      } else if (this.globalConfig.container instanceof HTMLElement) {
+        parentEl = this.globalConfig.container;
+      }
+      if (!parentEl) {
+        if (!document.body) {
+          throw new _errors.WinLetError("Cannot initialize before document.body is ready. Please call WinLet.init() after DOMContentLoaded.");
+        }
+        parentEl = document.body;
       }
       if (!document.getElementById("".concat(_types.LIBRARY_NAME, "-styles"))) {
         var styleTag = document.createElement("style");
@@ -1132,29 +1406,37 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         styleTag.innerHTML = this.getStyleData();
         document.head.appendChild(styleTag);
       }
-      var containerEl = document.querySelector(".".concat(_types.LIBRARY_NAME, "-container"));
+      var containerEl = parentEl.querySelector(".".concat(_types.LIBRARY_NAME, "-container"));
       if (!containerEl) {
         containerEl = document.createElement("div");
         containerEl.className = "".concat(_types.LIBRARY_NAME, "-container");
-        document.body.appendChild(containerEl);
+        parentEl.appendChild(containerEl);
       }
       this.container = containerEl;
+      if (parentEl !== document.body) {
+        this.container.classList.add("".concat(_types.LIBRARY_NAME, "-is-nested"));
+        var computedStyle = window.getComputedStyle(parentEl);
+        if (computedStyle.position === "static") {
+          parentEl.style.position = "relative";
+        }
+      }
       window.addEventListener("blur", function () {
-        requestAnimationFrame(function () {
-          var activeEl = document.activeElement;
-          if ((activeEl === null || activeEl === void 0 ? void 0 : activeEl.tagName) === "IFRAME") {
-            var winEl = activeEl.closest(".".concat(_types.LIBRARY_NAME, "-window"));
-            if (winEl) {
-              var win = _this2.windows.get(winEl.id);
-              if (win && _this2.activeWindow !== win) {
-                win.focus();
+        return (requestAnimationFrame(function () {
+            var activeEl = document.activeElement;
+            if ((activeEl === null || activeEl === void 0 ? void 0 : activeEl.tagName) === "IFRAME") {
+              var winEl = activeEl.closest(".".concat(_types.LIBRARY_NAME, "-window"));
+              if (winEl) {
+                var win = _this2.windows.get(winEl.id);
+                if (win && _this2.activeWindow !== win) {
+                  win.focus();
+                }
               }
             }
-          }
-        });
+          })
+        );
       });
       document.addEventListener("pointerdown", function () {
-        requestAnimationFrame(function () {
+        return requestAnimationFrame(function () {
           var activeEl = document.activeElement;
           if ((activeEl === null || activeEl === void 0 ? void 0 : activeEl.tagName) === "IFRAME") {
             var winEl = activeEl.closest(".".concat(_types.LIBRARY_NAME, "-window"));
@@ -1182,6 +1464,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       window.addEventListener("message", function (event) {
         if (event.data && event.data.type === "winlet:createWindow" && (0, _typeof2["default"])(event.data.options) === "object") {
           var isSourceValid = false;
+          var sourceWindow = null;
           var _iterator = _createForOfIteratorHelper(_this2.windows.values()),
             _step;
           try {
@@ -1190,6 +1473,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
               var iframe = win.el.querySelector("iframe");
               if (iframe && iframe.contentWindow === event.source) {
                 isSourceValid = true;
+                sourceWindow = win;
                 break;
               }
             }
@@ -1199,20 +1483,60 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
             _iterator.f();
           }
           if (isSourceValid) {
-            _this2.createWindow(event.data.options);
+            if (sourceWindow) {
+              sourceWindow.createWindow(event.data.options);
+            } else {
+              _this2.createWindow(event.data.options);
+            }
           } else {
             console.warn("WinLet: Untrusted source attempted to create a window.", event.origin);
           }
         }
       });
-      this.isInitialized = true;
+      this._isInitialized = true;
       this.setupShortcutListeners();
+      this.container.addEventListener("dragover", function (e) {
+        var _e$dataTransfer;
+        if ((_e$dataTransfer = e.dataTransfer) !== null && _e$dataTransfer !== void 0 && _e$dataTransfer.types.includes("application/winlet-tab")) {
+          e.preventDefault();
+        }
+      });
+      this.container.addEventListener("drop", function (e) {
+        var _e$dataTransfer2, _e$dataTransfer3, _e$dataTransfer4;
+        var targetEl = e.target;
+        if (targetEl.closest(".".concat(_types.LIBRARY_NAME, "-window"))) {
+          return;
+        }
+        e.preventDefault();
+        var tabDataJSON = (_e$dataTransfer2 = e.dataTransfer) === null || _e$dataTransfer2 === void 0 ? void 0 : _e$dataTransfer2.getData("application/winlet-tab");
+        var sourceWindowId = (_e$dataTransfer3 = e.dataTransfer) === null || _e$dataTransfer3 === void 0 ? void 0 : _e$dataTransfer3.getData("application/winlet-source-window-id");
+        var sourceTabId = (_e$dataTransfer4 = e.dataTransfer) === null || _e$dataTransfer4 === void 0 ? void 0 : _e$dataTransfer4.getData("text/plain");
+        if (tabDataJSON && sourceWindowId && sourceTabId) {
+          var sourceWindow = _this2.windows.get(sourceWindowId);
+          if (!sourceWindow || !sourceWindow.options.tabOptions.detachable) return;
+          var tabData = JSON.parse(tabDataJSON);
+          var newTab = {
+            title: tabData.title,
+            content: tabData.content
+          };
+          var mergedWindowOptions = _utils["default"].deepMerge(sourceWindow.options, {
+            tabs: [newTab],
+            x: e.clientX,
+            y: e.clientY,
+            width: sourceWindow.getSize().width,
+            height: sourceWindow.getSize().height
+          });
+          _this2.createWindow(mergedWindowOptions);
+          sourceWindow.closeTab(parseInt(sourceTabId, 10));
+        }
+      });
     }
   }, {
     key: "setupShortcutListeners",
     value: function setupShortcutListeners() {
       var _this3 = this;
       document.addEventListener("keydown", function (e) {
+        var _targetWindow$options, _targetWindow$options2;
         if (_this3.globalConfig.windowSwitchShortcut) {
           var shortcut = _this3.parseShortcut(_this3.globalConfig.windowSwitchShortcut);
           if (e.key.toLowerCase() === shortcut.key.toLowerCase() && e.ctrlKey === shortcut.ctrl && e.altKey === shortcut.alt && e.shiftKey === shortcut.shift) {
@@ -1233,6 +1557,25 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         var targetWindow = _this3.activeWindow;
         if (!targetWindow || !targetWindow.options.enableShortcuts) {
           return;
+        }
+        if (e.ctrlKey && e.shiftKey && ((_targetWindow$options = (_targetWindow$options2 = targetWindow.options.tabs) === null || _targetWindow$options2 === void 0 ? void 0 : _targetWindow$options2.length) !== null && _targetWindow$options !== void 0 ? _targetWindow$options : 0) > 0) {
+          if (e.code.startsWith("Digit")) {
+            e.preventDefault();
+            e.stopPropagation();
+            var keyNum = parseInt(e.code.replace("Digit", ""), 10);
+            var tabs = targetWindow.getTabs();
+            var numTabs = tabs.length;
+            var tabIndex = -1;
+            if (keyNum >= 1 && keyNum <= 8) {
+              tabIndex = keyNum - 1;
+            } else if (keyNum === 9) {
+              tabIndex = numTabs - 1;
+            }
+            if (tabIndex >= 0 && tabIndex < numTabs) {
+              targetWindow.activateTab(tabIndex);
+            }
+            return;
+          }
         }
         var _findAndExecShortcut = function findAndExecShortcut(menuItems) {
           var _iterator2 = _createForOfIteratorHelper(menuItems),
@@ -1269,7 +1612,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "ensureInitialized",
     value: function ensureInitialized() {
-      if (!this.isInitialized) {
+      if (!this._isInitialized) {
         this.init();
       }
     }
@@ -1334,6 +1677,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       }
       var win = new _window2["default"](creationOptions, this);
       this.windows.set(win.id, win);
+      WindowManager.allWindows.set(win.id, win);
       this.container.appendChild(win.el);
       win.setPosition(creationOptions.x, creationOptions.y);
       if (creationOptions.focus) {
@@ -1345,6 +1689,147 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       return win;
     }
   }, {
+    key: "popup",
+    value: function popup(options) {
+      var _this4 = this;
+      this.ensureInitialized();
+      var buttons;
+      var buttonPresets = {
+        Ok: [{
+          text: "OK",
+          value: 1
+        }],
+        OkCancel: [{
+          text: "OK",
+          value: 1
+        }, {
+          text: "Cancel",
+          value: 2
+        }],
+        Yes: [{
+          text: "Yes",
+          value: 6
+        }],
+        YesNo: [{
+          text: "Yes",
+          value: 6
+        }, {
+          text: "No",
+          value: 7
+        }],
+        YesNoCancel: [{
+          text: "Yes",
+          value: 6
+        }, {
+          text: "No",
+          value: 7
+        }, {
+          text: "Cancel",
+          value: 2
+        }],
+        Retry: [{
+          text: "Retry",
+          value: 4
+        }],
+        RetryCancel: [{
+          text: "Retry",
+          value: 4
+        }, {
+          text: "Cancel",
+          value: 2
+        }],
+        AbortRetryIgnore: [{
+          text: "Abort",
+          value: 3
+        }, {
+          text: "Retry",
+          value: 4
+        }, {
+          text: "Ignore",
+          value: 5
+        }]
+      };
+      if (Array.isArray(options.buttons)) {
+        buttons = options.buttons;
+      } else {
+        buttons = buttonPresets[options.buttons || "Ok"] || buttonPresets.Ok;
+      }
+      var timeoutId = null;
+      var closeCallback = function closeCallback(result) {
+        var _options$onClose;
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = null;
+        (_options$onClose = options.onClose) === null || _options$onClose === void 0 || _options$onClose.call(options, result);
+      };
+      var messageHTML = "<div class=\"".concat(_types.LIBRARY_NAME, "-popup-message\">").concat(_utils["default"].sanitizeHTML(options.message), "</div>");
+      var buttonsHTML = buttons.map(function (btn, index) {
+        return "<input class=\"".concat(_types.LIBRARY_NAME, "-popup-button\" data-index=\"").concat(index, "\" type=\"button\" value=\"").concat(_utils["default"].sanitizeHTML(btn.text), "\"/>");
+      }).join("");
+      var contentHTML = "".concat(messageHTML, "<div class=\"").concat(_types.LIBRARY_NAME, "-popup-buttons\">").concat(buttonsHTML, "</div>");
+      var winOptions = {
+        id: "popup-".concat(_utils["default"].generateId()),
+        title: options.title || "",
+        icon: options.icon,
+        resizableX: false,
+        resizableY: false,
+        movable: true,
+        closable: true,
+        minimizable: false,
+        maximizable: false,
+        maximizableOnDblClick: false,
+        enableShortcuts: false,
+        content: {
+          html: contentHTML
+        },
+        focus: options.focus,
+        _isPopup: true
+      };
+      if (options.onFocus) winOptions.onFocus = options.onFocus;
+      if (options.onBlur) winOptions.onBlur = options.onBlur;
+      if (options.autoWidth) {
+        var _this$container, _this$container2;
+        var temp = document.createElement("span");
+        temp.style.visibility = "hidden";
+        temp.style.position = "absolute";
+        temp.style.whiteSpace = "pre";
+        temp.className = "".concat(_types.LIBRARY_NAME, "-popup-message");
+        temp.innerHTML = _utils["default"].sanitizeHTML(options.message);
+        (_this$container = this.container) === null || _this$container === void 0 || _this$container.appendChild(temp);
+        winOptions.width = temp.offsetWidth + 80;
+        (_this$container2 = this.container) === null || _this$container2 === void 0 || _this$container2.removeChild(temp);
+      } else {
+        winOptions.width = 300;
+      }
+      winOptions.height = 150;
+      winOptions.x = "center";
+      winOptions.y = "center";
+      var win = this.createWindow(winOptions);
+      var winPosition = win.getPosition();
+      if (this.lastPopupPosition && this.lastPopupPosition.x === winPosition.x && this.lastPopupPosition.y === winPosition.y) {
+        win.setPosition(this.lastPopupPosition.x + this.CASCADE_OFFSET, this.lastPopupPosition.y + this.CASCADE_OFFSET);
+        winPosition = win.getPosition();
+      }
+      this.lastPopupPosition = winPosition;
+      win.popupCloseCallback = closeCallback;
+      win.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-popup-button")).forEach(function (button) {
+        button.addEventListener("click", function () {
+          var index = parseInt(button.dataset.index, 10);
+          var result = buttons[index].value;
+          closeCallback(result);
+          win.close();
+        });
+      });
+      if (options.timeout && options.timeout > 0) {
+        timeoutId = window.setTimeout(function () {
+          if (_this4.windows.has(win.id)) {
+            closeCallback(_types.TIMEOUT_RESULT);
+            win.close();
+          }
+        }, options.timeout);
+      }
+      return win;
+    }
+  }, {
     key: "destroyWindow",
     value: function destroyWindow(id) {
       this.ensureInitialized();
@@ -1352,6 +1837,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       if (win) {
         win.el.remove();
         this.windows["delete"](id);
+        WindowManager.allWindows["delete"](id);
         if (this.activeWindow === win) {
           this.activeWindow = null;
           var nextWin = Array.from(this.windows.values()).pop();
@@ -1376,15 +1862,41 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       return this.windows.get(id);
     }
   }, {
+    key: "getWindowFromElement",
+    value: function getWindowFromElement(element) {
+      this.ensureInitialized();
+      var winEl = element.closest(".".concat(_types.LIBRARY_NAME, "-window"));
+      if (winEl !== null && winEl !== void 0 && winEl.id) {
+        return WindowManager.allWindows.get(winEl.id);
+      }
+      return undefined;
+    }
+  }, {
     key: "getActiveWindow",
     value: function getActiveWindow() {
       this.ensureInitialized();
       return this.activeWindow;
     }
   }, {
+    key: "onTabDragStart",
+    value: function onTabDragStart(sourceWindowId) {
+      var _this$container3;
+      (_this$container3 = this.container) === null || _this$container3 === void 0 || _this$container3.classList.add("".concat(_types.LIBRARY_NAME, "-is-tab-dragging"));
+      this.draggingTabInfo = {
+        sourceWindowId: sourceWindowId
+      };
+    }
+  }, {
+    key: "onTabDragEnd",
+    value: function onTabDragEnd() {
+      var _this$container4;
+      (_this$container4 = this.container) === null || _this$container4 === void 0 || _this$container4.classList.remove("".concat(_types.LIBRARY_NAME, "-is-tab-dragging"));
+      this.draggingTabInfo = null;
+    }
+  }, {
     key: "showContextMenu",
     value: function showContextMenu(x, y, menuItems, contextWindow) {
-      var _this4 = this;
+      var _this5 = this;
       this.ensureInitialized();
       this.hideContextMenu();
       this.contextMenuEl = document.createElement("ul");
@@ -1400,10 +1912,10 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
             var _itemData$action;
             e.stopPropagation();
             (_itemData$action = itemData.action) === null || _itemData$action === void 0 || _itemData$action.call(itemData, contextWindow);
-            _this4.hideContextMenu();
+            _this5.hideContextMenu();
           });
         }
-        _this4.contextMenuEl.appendChild(itemEl);
+        _this5.contextMenuEl.appendChild(itemEl);
       });
       this.container.appendChild(this.contextMenuEl);
       var _this$contextMenuEl = this.contextMenuEl,
@@ -1439,8 +1951,9 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     }
   }]);
 }(_baseclass["default"]);
+(0, _defineProperty2["default"])(WindowManager, "allWindows", new Map());
 
-},{"../const/config":17,"../const/errors":18,"../const/types":19,"../libs/baseclass":23,"../libs/utils":24,"../style/styles":25,"./window":20,"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/defineProperty":5,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11,"@babel/runtime/helpers/typeof":15}],22:[function(require,module,exports){
+},{"../const/config":23,"../const/errors":24,"../const/types":25,"../libs/baseclass":29,"../libs/utils":30,"../style/styles":31,"./window":26,"@babel/runtime/helpers/classCallCheck":4,"@babel/runtime/helpers/createClass":6,"@babel/runtime/helpers/defineProperty":7,"@babel/runtime/helpers/getPrototypeOf":8,"@babel/runtime/helpers/inherits":9,"@babel/runtime/helpers/interopRequireDefault":10,"@babel/runtime/helpers/possibleConstructorReturn":15,"@babel/runtime/helpers/typeof":20}],28:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1449,23 +1962,35 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports["default"] = void 0;
 var _config = require("./const/config");
+var _types = require("./const/types");
 var _window_manager = _interopRequireDefault(require("./function/window_manager"));
 var _utils = _interopRequireDefault(require("./libs/utils"));
 var _version = require("./version");
+var _document;
+var selfUrl = ((_document = document) === null || _document === void 0 || (_document = _document.currentScript) === null || _document === void 0 ? void 0 : _document.src) || "";
 var globalConfig = {
-  windowSwitchShortcut: "Ctrl+`"
+  windowSwitchShortcut: "Ctrl+`",
+  libraryPath: selfUrl
 };
 var manager = new _window_manager["default"](globalConfig);
 var api = {
   init: function init() {
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    api.setGlobalConfig(options);
     manager.init();
   },
   createWindow: function createWindow() {
     var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     return manager.createWindow(options);
   },
+  createPopup: function createPopup(options) {
+    return manager.popup(options);
+  },
   getWindow: function getWindow(id) {
     return manager.getWindow(id);
+  },
+  getWindowFromElement: function getWindowFromElement(element) {
+    return manager.getWindowFromElement(element);
   },
   getActiveWindow: function getActiveWindow() {
     return manager.getActiveWindow();
@@ -1474,17 +1999,25 @@ var api = {
     _utils["default"].deepMerge(_config.defaultConfig, options);
   },
   setGlobalConfig: function setGlobalConfig(options) {
+    if (manager.isInitialized && options.container) {
+      console.warn("WinLet: The container cannot be changed after initialization.");
+      delete options.container;
+    }
     Object.assign(globalConfig, options);
     manager.applyGlobalConfig(globalConfig);
   },
   get version() {
     return _version.LIB_VERSION;
-  }
+  },
+  POPUP_TIMEOUT_RESULT: _types.TIMEOUT_RESULT,
+  POPUP_CLOSE_BUTTON_RESULT: _types.CLOSE_BUTTON_RESULT
 };
-window.WinLet = api;
+if (typeof window !== "undefined") {
+  window.WinLet = api;
+}
 var _default = exports["default"] = api;
 
-},{"./const/config":17,"./function/window_manager":21,"./libs/utils":24,"./version":26,"@babel/runtime/helpers/interopRequireDefault":8}],23:[function(require,module,exports){
+},{"./const/config":23,"./const/types":25,"./function/window_manager":27,"./libs/utils":30,"./version":32,"@babel/runtime/helpers/interopRequireDefault":10}],29:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1498,7 +2031,7 @@ var WinLetBaseClass = exports["default"] = (0, _createClass2["default"])(functio
   (0, _classCallCheck2["default"])(this, WinLetBaseClass);
 });
 
-},{"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/interopRequireDefault":8}],24:[function(require,module,exports){
+},{"@babel/runtime/helpers/classCallCheck":4,"@babel/runtime/helpers/createClass":6,"@babel/runtime/helpers/interopRequireDefault":10}],30:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
@@ -1565,24 +2098,24 @@ var Utils = exports["default"] = function (_WinLetBaseClass) {
   }]);
 }(_baseclass["default"]);
 
-},{"./baseclass":23,"@babel/runtime/helpers/classCallCheck":2,"@babel/runtime/helpers/createClass":4,"@babel/runtime/helpers/defineProperty":5,"@babel/runtime/helpers/getPrototypeOf":6,"@babel/runtime/helpers/inherits":7,"@babel/runtime/helpers/interopRequireDefault":8,"@babel/runtime/helpers/possibleConstructorReturn":11}],25:[function(require,module,exports){
+},{"./baseclass":29,"@babel/runtime/helpers/classCallCheck":4,"@babel/runtime/helpers/createClass":6,"@babel/runtime/helpers/defineProperty":7,"@babel/runtime/helpers/getPrototypeOf":8,"@babel/runtime/helpers/inherits":9,"@babel/runtime/helpers/interopRequireDefault":10,"@babel/runtime/helpers/possibleConstructorReturn":15}],31:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
-var styleData = "\n:root {\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n}\n\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n}\n\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px rgba(0,0,0,0.3);\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.1s, transform 0.1s;\n    touch-action: none;\n}\n\n.$[prefix]-window.minimized {\n    display: none;\n}\n\n.$[prefix]-window.maximized {\n    border-radius: 0;\n    border: none;\n}\n\n/* Focus State */\n.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n\n.$[prefix]-title-bar.controls-left {\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n.$[prefix]-main-content {\n    all: initial;\n    display:flex;\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: 14px;\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC --- */\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u3092\u6301\u3064\u9805\u76EE\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-menu-dropdown li.has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: -0.65em;\n    font-size: 0.8em;\n    color: inherit;\n}\n\n/* \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E */\n.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F */\n.$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30AD\u30FC\u30C6\u30AD\u30B9\u30C8\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-shortcut-text {\n    color: #666;\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: #e1e1e1;\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: rgba(100, 100, 100, 0.5);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.active .$[prefix]-tab-close-btn:hover {\n    background-color: #ddd;\n}\n\n/* \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-tab.dragging {\n    opacity: 0.5;\n}\n/* \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: #ccc;\n}\n\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n/* \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: #e0e0e0;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* --- Merged Menu/Tab Styles --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 0px;\n    height: 0px;\n}\n\n.$[prefix]-window.$[prefix]-title-bar.controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* --- Mobile / Touch Device Adjustments --- */\n@media (pointer: coarse), (max-width: 768px) {\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n";
+var styleData = "\n:root {\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n}\n\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n}\n\n.$[prefix]-container.$[prefix]-is-nested {\n    position: absolute;\n}\n\n.$[prefix]-container.$[prefix]-is-tab-dragging {\n    pointer-events: auto;\n}\n\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px rgba(0,0,0,0.3);\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.1s, transform 0.1s;\n    touch-action: none;\n}\n\n.$[prefix]-window.minimized {\n    display: none;\n}\n\n.$[prefix]-window.maximized {\n    border-radius: 0;\n    border: none;\n}\n\n.$[prefix]-window.maximized > .$[prefix]-resize-handle {\n    display: none;\n}\n\n/* Focus State */\n.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n\n.$[prefix]-title-bar.controls-left {\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon:empty {\n    display: none;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n.$[prefix]-main-content {\n    all: initial;\n    display:flex;\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: 14px;\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    line-height: 1.6em;\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC --- */\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u3092\u6301\u3064\u9805\u76EE\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-menu-dropdown li.has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: -0.65em;\n    font-size: 0.8em;\n    color: inherit;\n}\n\n/* \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E */\n.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n\n/* \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F */\n.$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30AD\u30FC\u30C6\u30AD\u30B9\u30C8\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-shortcut-text {\n    color: #666;\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: #e1e1e1;\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: rgba(100, 100, 100, 0.5);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.active .$[prefix]-tab-close-btn:hover {\n    background-color: #ddd;\n}\n\n/* \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB */\n.$[prefix]-tab.dragging {\n    opacity: 0.5;\n}\n/* \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: #ccc;\n}\n\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n/* \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3 */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: #e0e0e0;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.15);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* --- Popup Styles --- */\n.$[prefix]-popup-window .$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    padding: 20px;\n    box-sizing: border-box;\n}\n.$[prefix]-popup-message {\n    font-family: sans-serif;\n    font-size: 14px;\n    line-height: 1.5;\n    flex-grow: 1;\n    word-wrap: break-word;\n}\n.$[prefix]-popup-buttons {\n    display: flex;\n    justify-content: flex-end;\n    gap: 10px;\n    margin-top: 20px;\n    flex-shrink: 0;\n    touch-action: auto;\n}\n.$[prefix]-popup-button {\n    min-width: 80px;\n    padding: 8px 12px;\n    margin: 0;\n    border: 1px solid #ccc;\n    border-radius: 3px;\n    background-color: #f0f0f0;\n    cursor: pointer;\n    font-size: 14px;\n    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);\n}\n.$[prefix]-popup-button:hover {\n    border-color: #bbb;\n    background-color: #e9e9e9;\n}\n.$[prefix]-popup-button:active {\n    background-color: #dcdcdc;\n}\n\n/* --- Merged Menu/Tab Styles --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n\n.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 0px;\n    height: 0px;\n}\n\n.$[prefix]-window.$[prefix]-title-bar.controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* --- Mobile / Touch Device Adjustments --- */\n@media (pointer: coarse), (max-width: 768px) {\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n";
 var _default = exports["default"] = styleData;
 
-},{}],26:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.1.0";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.1.1";
 
-},{}]},{},[22])
+},{}]},{},[28])
 //# sourceMappingURL=winlet.js.map

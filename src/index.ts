@@ -1,13 +1,16 @@
 // src/index.ts
 
 import { defaultConfig } from "./const/config";
-import { GlobalConfigOptions, IWindow, WindowOptions, WinLetApi } from "./const/types";
+import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
 import { LIB_VERSION } from "./version";
 
-const globalConfig: Required<GlobalConfigOptions> = {
+const selfUrl = (document?.currentScript as HTMLScriptElement)?.src || "";
+
+const globalConfig: GlobalConfigOptions = {
 	windowSwitchShortcut: "Ctrl+`", // デフォルトショートカット（バッククォート）
+	libraryPath: selfUrl,
 };
 
 // シングルトンインスタンス
@@ -18,8 +21,11 @@ const api: WinLetApi = {
 	/**
 	 * ライブラリを初期化します。DOMの準備ができた後に呼び出してください。
 	 * (例: document.addEventListener('DOMContentLoaded', WinLet.init);)
+	 *
+	 * @param options - グローバル設定。コンテナ要素などを指定できます。
 	 */
-	init: (): void => {
+	init: (options: GlobalConfigOptions = {}): void => {
+		api.setGlobalConfig(options);
 		manager.init();
 	},
 
@@ -31,10 +37,24 @@ const api: WinLetApi = {
 	},
 
 	/**
+	 * 新しいポップアップウィンドウを作成
+	 */
+	createPopup: (options: PopupOptions): IWindow => {
+		return manager.popup(options);
+	},
+
+	/**
 	 * ウィンドウを取得
 	 */
 	getWindow: (id: string): IWindow | undefined => {
 		return manager.getWindow(id);
+	},
+
+	/**
+	 * 指定されたDOM要素を内包するウィンドウインスタンスを取得します。
+	 */
+	getWindowFromElement: (element: HTMLElement): IWindow | undefined => {
+		return manager.getWindowFromElement(element);
 	},
 
 	/**
@@ -55,6 +75,11 @@ const api: WinLetApi = {
 	 * グローバル設定を変更
 	 */
 	setGlobalConfig: (options: GlobalConfigOptions): void => {
+		// 初期化後にコンテナを変更しようとした場合は警告を出す
+		if (manager.isInitialized && options.container) {
+			console.warn("WinLet: The container cannot be changed after initialization.");
+			delete options.container;
+		}
 		Object.assign(globalConfig, options);
 		manager.applyGlobalConfig(globalConfig);
 	},
@@ -65,10 +90,21 @@ const api: WinLetApi = {
 	get version() {
 		return LIB_VERSION;
 	},
+
+	/**
+	 * ポップアップウィンドウのタイムアウト結果
+	 */
+	POPUP_TIMEOUT_RESULT: TIMEOUT_RESULT,
+	/**
+	 * ポップアップウィンドウの閉じるボタンの結果
+	 */
+	POPUP_CLOSE_BUTTON_RESULT: CLOSE_BUTTON_RESULT,
 };
 
 // グローバルスコープにAPIをアタッチ
-window.WinLet = api;
+if (typeof window !== "undefined") {
+	window.WinLet = api;
+}
 
 // モジュールとしてエクスポートも可能
 export default api;

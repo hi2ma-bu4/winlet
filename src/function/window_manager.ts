@@ -2,7 +2,7 @@
 
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, WindowOptions } from "../const/types";
+import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, PopupButton, PopupButtonPreset, PopupOptions, PopupResult, TabItem, TIMEOUT_RESULT, WindowOptions } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import styleData from "../style/styles";
@@ -10,32 +10,62 @@ import WinLetWindow from "./window";
 
 export default class WindowManager extends WinLetBaseClass {
 	public container: HTMLElement | null = null;
+	private static allWindows = new Map<string, WinLetWindow>();
 	private windows = new Map<string, WinLetWindow>();
 	private zIndexCounter = 1000;
 	private activeWindow: WinLetWindow | null = null;
 	private contextMenuEl: HTMLElement | null = null;
-	private isInitialized = false;
+	private _isInitialized = false;
 
-	private globalConfig: Required<GlobalConfigOptions>;
+	private globalConfig: GlobalConfigOptions;
 
 	private lastAutoPosition: { x: number; y: number } | null = null;
+	private lastPopupPosition: { x: number; y: number } | null = null;
 	private readonly CASCADE_OFFSET = 30;
 
-	constructor(initialConfig: Required<GlobalConfigOptions>) {
+	public draggingTabInfo: { sourceWindowId: string } | null = null;
+
+	constructor(initialConfig: GlobalConfigOptions) {
 		super();
 		this.globalConfig = initialConfig;
+	}
+
+	/**
+	 * ライブラリが初期化済みかどうかを取得します。
+	 */
+	public get isInitialized(): boolean {
+		return this._isInitialized;
 	}
 
 	public applyGlobalConfig(options: GlobalConfigOptions) {
 		Object.assign(this.globalConfig, options);
 	}
 
+	public getGlobalConfig(): GlobalConfigOptions {
+		return this.globalConfig;
+	}
+
 	public init(): void {
-		if (this.isInitialized) {
+		if (this._isInitialized) {
 			return;
 		}
-		if (!document.body) {
-			throw new WinLetError("Cannot initialize before document.body is ready. Please call WinLet.init() after DOMContentLoaded.");
+
+		let parentEl: HTMLElement | null = null;
+		if (typeof this.globalConfig.container === "string") {
+			parentEl = document.querySelector<HTMLElement>(this.globalConfig.container);
+			if (!parentEl) {
+				throw new WinLetError(`WinLet: The specified container "${this.globalConfig.container}" was not found.`);
+			}
+		} else if (this.globalConfig.container instanceof HTMLElement) {
+			parentEl = this.globalConfig.container;
+		}
+
+		// 親が指定されていない場合は、デフォルトでbodyに設定
+		if (!parentEl) {
+			if (!document.body) {
+				throw new WinLetError("Cannot initialize before document.body is ready. Please call WinLet.init() after DOMContentLoaded.");
+			}
+			parentEl = document.body;
 		}
 
 		if (!document.getElementById(`${LIBRARY_NAME}-styles`)) {
@@ -44,15 +74,25 @@ export default class WindowManager extends WinLetBaseClass {
 			styleTag.innerHTML = this.getStyleData();
 			document.head.appendChild(styleTag);
 		}
-		let containerEl = document.querySelector<HTMLElement>(`.${LIBRARY_NAME}-container`);
+		let containerEl = parentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-container`);
 		if (!containerEl) {
 			containerEl = document.createElement("div");
 			containerEl.className = `${LIBRARY_NAME}-container`;
-			document.body.appendChild(containerEl);
+			parentEl.appendChild(containerEl);
 		}
 		this.container = containerEl;
 
-		window.addEventListener("blur", () => {
+		if (parentEl !== document.body) {
+			this.container.classList.add(`${LIBRARY_NAME}-is-nested`);
+
+			// Ensure the parent can act as a positioning context
+			const computedStyle = window.getComputedStyle(parentEl);
+			if (computedStyle.position === "static") {
+				parentEl.style.position = "relative";
+			}
+		}
+
+		window.addEventListener("blur", () =>
 			// 次のイベントサイクルでアクティブな要素を取得
 			requestAnimationFrame(() => {
 				const activeEl = document.activeElement;
@@ -68,11 +108,11 @@ export default class WindowManager extends WinLetBaseClass {
 						}
 					}
 				}
-			});
-		});
+			})
+		);
 		document.addEventListener(
 			"pointerdown",
-			() => {
+			() =>
 				requestAnimationFrame(() => {
 					const activeEl = document.activeElement;
 					if (activeEl?.tagName === "IFRAME") {
@@ -84,8 +124,7 @@ export default class WindowManager extends WinLetBaseClass {
 							}
 						}
 					}
-				});
-			},
+				}),
 			true
 		);
 
@@ -108,24 +147,80 @@ export default class WindowManager extends WinLetBaseClass {
 			if (event.data && event.data.type === "winlet:createWindow" && typeof event.data.options === "object") {
 				// メッセージの送信元が管理下のiframeか検証（セキュリティ対策）
 				let isSourceValid = false;
+				let sourceWindow: WinLetWindow | null = null;
 				for (const win of this.windows.values()) {
 					const iframe = win.el.querySelector("iframe");
 					if (iframe && iframe.contentWindow === event.source) {
 						isSourceValid = true;
+						// メッセージの送信元ウィンドウを特定
+						sourceWindow = win;
 						break;
 					}
 				}
 
 				if (isSourceValid) {
-					this.createWindow(event.data.options);
+					// 送信元ウィンドウ(sourceWindow)が存在すれば、それは親ウィンドウであり、
+					// その中に新しいウィンドウを作成する。
+					if (sourceWindow) {
+						// iframeの親ウィンドウのcreateWindowを呼び出す
+						sourceWindow.createWindow(event.data.options);
+					} else {
+						// 通常のトップレベルでのウィンドウ作成
+						this.createWindow(event.data.options);
+					}
 				} else {
 					console.warn("WinLet: Untrusted source attempted to create a window.", event.origin);
 				}
 			}
 		});
 
-		this.isInitialized = true;
+		this._isInitialized = true;
 		this.setupShortcutListeners();
+
+		// タブ分離機能のためのグローバルなD&Dリスナー
+		this.container!.addEventListener("dragover", (e) => {
+			if (e.dataTransfer?.types.includes("application/winlet-tab")) {
+				e.preventDefault();
+			}
+		});
+
+		this.container!.addEventListener("drop", (e) => {
+			// ドロップ先がウィンドウやタブバーの中なら何もしない
+			const targetEl = e.target as HTMLElement;
+			if (targetEl.closest(`.${LIBRARY_NAME}-window`)) {
+				return;
+			}
+			e.preventDefault();
+
+			const tabDataJSON = e.dataTransfer?.getData("application/winlet-tab");
+			const sourceWindowId = e.dataTransfer?.getData("application/winlet-source-window-id");
+			const sourceTabId = e.dataTransfer?.getData("text/plain");
+
+			if (tabDataJSON && sourceWindowId && sourceTabId) {
+				const sourceWindow = this.windows.get(sourceWindowId);
+				if (!sourceWindow || !sourceWindow.options.tabOptions.detachable) return;
+
+				const tabData: TabItem = JSON.parse(tabDataJSON);
+				const newTab: TabItem = {
+					title: tabData.title,
+					content: tabData.content,
+				};
+
+				const mergedWindowOptions = Utils.deepMerge(sourceWindow.options, {
+					tabs: [newTab],
+					x: e.clientX,
+					y: e.clientY,
+					width: sourceWindow.getSize().width,
+					height: sourceWindow.getSize().height,
+				});
+
+				// 新しいウィンドウを作成
+				this.createWindow(mergedWindowOptions);
+
+				// 元のウィンドウからタブを削除
+				sourceWindow.closeTab(parseInt(sourceTabId, 10));
+			}
+		});
 	}
 
 	// ショートカットキーのリスナーを統合
@@ -161,7 +256,33 @@ export default class WindowManager extends WinLetBaseClass {
 					return;
 				}
 
-				// --- 3. ショートカットキーを検索して実行 ---
+				// --- 3. タブ切り替えショートカット (Ctrl+Shift+[1-9]) ---
+				if (e.ctrlKey && e.shiftKey && (targetWindow.options.tabs?.length ?? 0) > 0) {
+					// Shiftキーの影響を受けない e.code で判定する
+					if (e.code.startsWith("Digit")) {
+						e.preventDefault();
+						e.stopPropagation();
+
+						const keyNum = parseInt(e.code.replace("Digit", ""), 10);
+
+						const tabs = targetWindow.getTabs();
+						const numTabs = tabs.length;
+						let tabIndex = -1;
+
+						if (keyNum >= 1 && keyNum <= 8) {
+							tabIndex = keyNum - 1;
+						} else if (keyNum === 9) {
+							tabIndex = numTabs - 1;
+						}
+
+						if (tabIndex >= 0 && tabIndex < numTabs) {
+							targetWindow.activateTab(tabIndex);
+						}
+						return; // 他のショートカットと重複しないようにreturn
+					}
+				}
+
+				// --- 4. ショートカットキーを検索して実行 ---
 				const findAndExecShortcut = (menuItems: MenuItem[]) => {
 					for (const item of menuItems) {
 						if (item.shortcut) {
@@ -188,7 +309,7 @@ export default class WindowManager extends WinLetBaseClass {
 
 	// 未初期化の場合に自動でinitを呼び出すヘルパー
 	private ensureInitialized(): void {
-		if (!this.isInitialized) {
+		if (!this._isInitialized) {
 			this.init();
 		}
 	}
@@ -263,6 +384,7 @@ export default class WindowManager extends WinLetBaseClass {
 
 		const win = new WinLetWindow(creationOptions, this);
 		this.windows.set(win.id, win);
+		WindowManager.allWindows.set(win.id, win);
 		this.container!.appendChild(win.el);
 
 		win.setPosition(creationOptions.x, creationOptions.y);
@@ -276,12 +398,127 @@ export default class WindowManager extends WinLetBaseClass {
 		return win;
 	}
 
+	public popup(options: PopupOptions): WinLetWindow {
+		this.ensureInitialized();
+		let buttons: PopupButton[];
+		const buttonPresets: { [key in PopupButtonPreset]: PopupButton[] } = {
+			Ok: [{ text: "OK", value: 1 }],
+			OkCancel: [
+				{ text: "OK", value: 1 },
+				{ text: "Cancel", value: 2 },
+			],
+			Yes: [{ text: "Yes", value: 6 }],
+			YesNo: [
+				{ text: "Yes", value: 6 },
+				{ text: "No", value: 7 },
+			],
+			YesNoCancel: [
+				{ text: "Yes", value: 6 },
+				{ text: "No", value: 7 },
+				{ text: "Cancel", value: 2 },
+			],
+			Retry: [{ text: "Retry", value: 4 }],
+			RetryCancel: [
+				{ text: "Retry", value: 4 },
+				{ text: "Cancel", value: 2 },
+			],
+			AbortRetryIgnore: [
+				{ text: "Abort", value: 3 },
+				{ text: "Retry", value: 4 },
+				{ text: "Ignore", value: 5 },
+			],
+		};
+		if (Array.isArray(options.buttons)) {
+			buttons = options.buttons;
+		} else {
+			buttons = buttonPresets[options.buttons || "Ok"] || buttonPresets.Ok;
+		}
+
+		let timeoutId: number | null = null;
+		const closeCallback = (result: PopupResult) => {
+			if (timeoutId) clearTimeout(timeoutId);
+			timeoutId = null;
+			options.onClose?.(result);
+		};
+
+		const messageHTML = `<div class="${LIBRARY_NAME}-popup-message">${Utils.sanitizeHTML(options.message)}</div>`;
+		const buttonsHTML = buttons.map((btn, index) => `<input class="${LIBRARY_NAME}-popup-button" data-index="${index}" type="button" value="${Utils.sanitizeHTML(btn.text)}"/>`).join("");
+		const contentHTML = `${messageHTML}<div class="${LIBRARY_NAME}-popup-buttons">${buttonsHTML}</div>`;
+
+		const winOptions: WindowOptions = {
+			id: `popup-${Utils.generateId()}`,
+			title: options.title || "",
+			icon: options.icon,
+			resizableX: false,
+			resizableY: false,
+			movable: true,
+			closable: true,
+			minimizable: false,
+			maximizable: false,
+			maximizableOnDblClick: false,
+			enableShortcuts: false,
+			content: { html: contentHTML },
+			focus: options.focus,
+			_isPopup: true,
+		};
+		if (options.onFocus) winOptions.onFocus = options.onFocus;
+		if (options.onBlur) winOptions.onBlur = options.onBlur;
+
+		if (options.autoWidth) {
+			const temp = document.createElement("span");
+			temp.style.visibility = "hidden";
+			temp.style.position = "absolute";
+			temp.style.whiteSpace = "pre";
+			temp.className = `${LIBRARY_NAME}-popup-message`;
+			temp.innerHTML = Utils.sanitizeHTML(options.message);
+			this.container?.appendChild(temp);
+			winOptions.width = temp.offsetWidth + 80; // メッセージ幅 + パディング
+			this.container?.removeChild(temp);
+		} else {
+			winOptions.width = 300;
+		}
+		winOptions.height = 150;
+
+		winOptions.x = "center";
+		winOptions.y = "center";
+
+		const win = this.createWindow(winOptions);
+		// 計算が面倒なので前回1回分のみで判断
+		let winPosition = win.getPosition();
+		if (this.lastPopupPosition && this.lastPopupPosition.x === winPosition.x && this.lastPopupPosition.y === winPosition.y) {
+			win.setPosition(this.lastPopupPosition.x + this.CASCADE_OFFSET, this.lastPopupPosition.y + this.CASCADE_OFFSET);
+			winPosition = win.getPosition();
+		}
+		this.lastPopupPosition = winPosition;
+		win.popupCloseCallback = closeCallback;
+
+		win.el.querySelectorAll<HTMLButtonElement>(`.${LIBRARY_NAME}-popup-button`).forEach((button) => {
+			button.addEventListener("click", () => {
+				const index = parseInt(button.dataset.index!, 10);
+				const result = buttons[index].value;
+				closeCallback(result);
+				win.close();
+			});
+		});
+
+		if (options.timeout && options.timeout > 0) {
+			timeoutId = window.setTimeout(() => {
+				if (this.windows.has(win.id)) {
+					closeCallback(TIMEOUT_RESULT);
+					win.close();
+				}
+			}, options.timeout);
+		}
+		return win;
+	}
+
 	public destroyWindow(id: string): void {
 		this.ensureInitialized();
 		const win = this.windows.get(id);
 		if (win) {
 			win.el.remove();
 			this.windows.delete(id);
+			WindowManager.allWindows.delete(id);
 			if (this.activeWindow === win) {
 				this.activeWindow = null;
 				const nextWin = Array.from(this.windows.values()).pop();
@@ -294,6 +531,7 @@ export default class WindowManager extends WinLetBaseClass {
 		this.ensureInitialized();
 		if (this.activeWindow === win) return;
 
+		// 自身が管理する他のウィンドウをぼかす
 		this.activeWindow?.blur();
 		this.activeWindow = win;
 		win.el.style.zIndex = `${++this.zIndexCounter}`;
@@ -305,9 +543,28 @@ export default class WindowManager extends WinLetBaseClass {
 		return this.windows.get(id);
 	}
 
+	public getWindowFromElement(element: HTMLElement): WinLetWindow | undefined {
+		this.ensureInitialized();
+		const winEl = element.closest<HTMLElement>(`.${LIBRARY_NAME}-window`);
+		if (winEl?.id) {
+			return WindowManager.allWindows.get(winEl.id);
+		}
+		return undefined;
+	}
+
 	public getActiveWindow(): WinLetWindow | null {
 		this.ensureInitialized();
 		return this.activeWindow;
+	}
+
+	public onTabDragStart(sourceWindowId: string): void {
+		this.container?.classList.add(`${LIBRARY_NAME}-is-tab-dragging`);
+		this.draggingTabInfo = { sourceWindowId };
+	}
+
+	public onTabDragEnd(): void {
+		this.container?.classList.remove(`${LIBRARY_NAME}-is-tab-dragging`);
+		this.draggingTabInfo = null;
 	}
 
 	public showContextMenu(x: number, y: number, menuItems: ContextMenuItem[], contextWindow: IWindow): void {

@@ -47,6 +47,14 @@ const styleData: string = `
     z-index: 999;
 }
 
+.$[prefix]-container.$[prefix]-is-nested {
+    position: absolute;
+}
+
+.$[prefix]-container.$[prefix]-is-tab-dragging {
+    pointer-events: auto;
+}
+
 .$[prefix]-window {
     position: absolute;
     display: flex;
@@ -70,6 +78,10 @@ const styleData: string = `
 .$[prefix]-window.maximized {
     border-radius: 0;
     border: none;
+}
+
+.$[prefix]-window.maximized > .$[prefix]-resize-handle {
+    display: none;
 }
 
 /* Focus State */
@@ -102,6 +114,10 @@ const styleData: string = `
     margin: 0 4px;
     pointer-events: none;
     flex-shrink: 0;
+}
+
+.$[prefix]-icon:empty {
+    display: none;
 }
 
 .$[prefix]-icon i {
@@ -204,6 +220,7 @@ const styleData: string = `
 
 .$[prefix]-menu-dropdown {
     color: var(--$[prefix]-menu-item-color);
+    line-height: 1.6em;
     display: none;
     position: absolute;
     top: 100%;
@@ -425,6 +442,48 @@ const styleData: string = `
     background-color: var(--$[prefix]-menu-border);
     margin: 4px 0;
     padding: 0;
+}
+
+/* --- Popup Styles --- */
+.$[prefix]-popup-window .$[prefix]-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.$[prefix]-popup-message {
+    font-family: sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    flex-grow: 1;
+    word-wrap: break-word;
+}
+.$[prefix]-popup-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    flex-shrink: 0;
+    touch-action: auto;
+}
+.$[prefix]-popup-button {
+    min-width: 80px;
+    padding: 8px 12px;
+    margin: 0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+.$[prefix]-popup-button:hover {
+    border-color: #bbb;
+    background-color: #e9e9e9;
+}
+.$[prefix]-popup-button:active {
+    background-color: #dcdcdc;
 }
 
 /* --- Merged Menu/Tab Styles --- */

@@ -1,6 +1,6 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { IWindow, LIBRARY_NAME, MenuItem, TabItem, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
+import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, TabItem, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";
@@ -29,6 +29,12 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private readonly MOBILE_CONTEXT_MENU_TIMEOUT = 700;
 	private contextMenuTimer: number | null = null;
 
+	// Popup用
+	public popupCloseCallback: ((result: PopupResult) => void) | null = null;
+
+	private childManager: WindowManager | null = null;
+	private parentWindow: IWindow | null;
+
 	constructor(options: WindowOptions, manager: WindowManager) {
 		super();
 		this.id = options.id || Utils.generateId("window");
@@ -40,9 +46,14 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 		this.manager = manager;
 		this.options = Utils.deepMerge(defaultConfig, options) as Required<WindowOptions>;
+		this.parentWindow = options._parent || null;
 
 		this.el = this.createDOM();
 
+		// _isPopupによってクラスを追加
+		if (this.options._isPopup) {
+			this.el.classList.add(`${LIBRARY_NAME}-popup-window`);
+		}
 		// tabStyleとmenuStyleによってクラスを追加
 		if (this.options.tabStyle === "merged") {
 			this.el.classList.add(`${LIBRARY_NAME}-tab-style-merged`);
@@ -154,7 +165,18 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				iframe.src = iframeConfig.src;
 			}
 			if (iframeConfig.srcdoc) {
-				iframe.srcdoc = iframeConfig.srcdoc;
+				let finalSrcDoc = iframeConfig.srcdoc;
+				if (iframeConfig.loadWinLet) {
+					const globalConfig = this.manager.getGlobalConfig();
+					if (globalConfig.libraryPath) {
+						const scriptTag = `<script src="${globalConfig.libraryPath}"><\/script>`;
+						const initScript = `<script>document.addEventListener('DOMContentLoaded', () => window.WinLet.init({ container: document.body }));<\/script>`;
+						finalSrcDoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">${scriptTag}${initScript}</head><body>${iframeConfig.srcdoc}</body></html>`;
+					} else {
+						console.warn("WinLet Warning: `loadWinLet` is true, but `libraryPath` is not set in global config.");
+					}
+				}
+				iframe.srcdoc = finalSrcDoc;
 			}
 			if (iframeConfig.allow) {
 				iframe.allow = iframeConfig.allow;
@@ -268,16 +290,71 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			this.addTabBtn.addEventListener("click", (e) => {
 				const newTabItem = tabOpts.onAdd?.(this);
 				if (newTabItem) {
-					this.options.tabs.push(newTabItem);
-					const newIndex = this.options.tabs.length - 1;
-					this.createTabElement(newTabItem, newIndex);
-					this.activateTab(newIndex);
+					this.addTab(newTabItem);
 				}
 			});
 			tabBar.appendChild(this.addTabBtn);
 		}
+		// タブの並び替えと統合のためのドロップゾーンを設定
+		this.setupTabBarDropZone();
 
 		if (this.tabs.length > 0) this.activateTab(0);
+	}
+
+	private setupTabBarDropZone(): void {
+		const tabBar = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab-bar`)!;
+		if (!tabBar || !this.options.tabOptions.reorderable) return;
+
+		tabBar.addEventListener("dragover", (e) => {
+			if (e.dataTransfer?.types.includes("application/winlet-tab")) {
+				e.preventDefault();
+				if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+				tabBar.classList.add("drag-over");
+			}
+		});
+		tabBar.addEventListener("dragleave", () => {
+			tabBar.classList.remove("drag-over");
+		});
+		tabBar.addEventListener("drop", (e) => {
+			e.preventDefault();
+			tabBar.classList.remove("drag-over");
+
+			const tabDataJSON = e.dataTransfer?.getData("application/winlet-tab");
+			const sourceWindowId = e.dataTransfer?.getData("application/winlet-source-window-id");
+			const sourceTabId = e.dataTransfer?.getData("text/plain");
+			if (!tabDataJSON || !sourceWindowId || !sourceTabId) return;
+
+			const draggingEl = this.manager.container?.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.dragging`);
+
+			// 自分自身のウィンドウ内での並び替え
+			if (sourceWindowId === this.id) {
+				if (draggingEl) {
+					// ドロップされた位置に挿入
+					this.updateTabOrderFromDOM();
+				}
+				return;
+			}
+
+			// 外部ウィンドウからのタブ統合
+			const sourceWindow = this.manager.getWindow(sourceWindowId);
+			if (sourceWindow) {
+				const sourceOpts = sourceWindow.options.tabOptions;
+				const targetOpts = this.options.tabOptions;
+
+				const isMergeable = sourceOpts.mergeable ?? sourceOpts.detachable; // ソースをマージできるかどうかを確認
+				const allowsIncoming = targetOpts.allowIncomingMerge ?? true; // ターゲットが受け入れるかどうかを確認
+				const customFilterPassed = !targetOpts.onMergeAttempt || targetOpts.onMergeAttempt(sourceWindow, this);
+
+				if (!isMergeable || !allowsIncoming || !customFilterPassed) {
+					return; // 条件が満たされていない場合は、マージを中止
+				}
+
+				const tabData: TabItem = JSON.parse(tabDataJSON);
+				this.addTab(tabData, true);
+
+				sourceWindow.closeTab(parseInt(sourceTabId, 10));
+			}
+		});
 	}
 
 	private createTabElement(tabData: TabItem, index: number): void {
@@ -301,7 +378,11 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			closeBtn.innerHTML = "&times;";
 			closeBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
-				this.closeTab(index);
+				// クロージャのindexに依存せず、クリックされた時点の最新のインデックスを探す
+				const indexToClose = this.tabs.findIndex((t) => t.tabEl === tabEl);
+				if (indexToClose !== -1) {
+					this.closeTab(indexToClose);
+				}
 			});
 			tabEl.appendChild(closeBtn);
 		}
@@ -327,12 +408,31 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		tabEl.addEventListener("dragstart", (e) => {
 			e.dataTransfer!.setData("text/plain", tabEl.dataset.tabId!);
 			tabEl.classList.add("dragging");
+
+			// 分離機能が有効な場合、追加情報をセット
+			if (this.options.tabOptions.detachable) {
+				const tabIndex = parseInt(tabEl.dataset.tabId!, 10);
+				if (!isNaN(tabIndex) && this.options.tabs[tabIndex]) {
+					const tabData = this.options.tabs[tabIndex];
+					e.dataTransfer!.setData("application/winlet-tab", JSON.stringify(tabData));
+					e.dataTransfer!.setData("application/winlet-source-window-id", this.id);
+
+					this.manager.onTabDragStart(this.id);
+				}
+			}
 		});
-		tabEl.addEventListener("dragend", () => tabEl.classList.remove("dragging"));
+		tabEl.addEventListener("dragend", () => {
+			tabEl.classList.remove("dragging");
+			this.manager.onTabDragEnd();
+		});
 
 		tabEl.addEventListener(
 			"dragover",
 			(e) => {
+				if (this.manager.draggingTabInfo?.sourceWindowId !== this.id) {
+					return; //タブが別のウィンドウからである場合、何もしない
+				}
+
 				e.preventDefault();
 				const draggingEl = document.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.dragging`);
 				if (draggingEl && draggingEl !== tabEl) {
@@ -360,7 +460,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	}
 
 	// タブを閉じるロジック
-	private closeTab(index: number) {
+	public closeTab(index: number) {
+		// アクティブなタブが閉じられるかチェック
+		const wasActive = this.tabs[index]?.tabEl.classList.contains("active");
+
 		// DOMから要素を削除
 		this.tabs[index].tabEl.remove();
 		this.tabs[index].contentEl.remove();
@@ -373,16 +476,61 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		// アクティブなタブを再設定
 		if (this.tabs.length > 0) {
-			const newActiveIndex = Math.max(0, index - 1);
-			this.activateTab(newActiveIndex);
+			if (wasActive) {
+				const newActiveIndex = Math.max(0, index - 1);
+				this.activateTab(newActiveIndex);
+			}
+		} else {
+			// タブが0になったらウィンドウを閉じる
+			this.close();
 		}
 	}
 
-	private activateTab(index: number): void {
+	public activateTab(index: number): void {
 		this.tabs.forEach((tab, i) => {
 			tab.tabEl.classList.toggle("active", i === index);
 			tab.contentEl.classList.toggle("active", i === index);
 		});
+	}
+
+	public addTab(tabItem: TabItem, setActive: boolean = true): void {
+		this.options.tabs.push(tabItem);
+		const newIndex = this.options.tabs.length - 1;
+		this.createTabElement(tabItem, newIndex);
+		if (setActive) {
+			this.activateTab(newIndex);
+			// タブが追加されアクティブになったウィンドウにフォーカスを当てる
+			this.focus();
+		}
+	}
+
+	public getTabs(): { tabEl: HTMLElement; contentEl: HTMLElement }[] {
+		return this.tabs;
+	}
+
+	private updateTabOrderFromDOM(): void {
+		const tabElements = Array.from(this.el.querySelectorAll<HTMLElement>(`.${LIBRARY_NAME}-tab-bar > .${LIBRARY_NAME}-tab`));
+
+		const newTabs: typeof this.tabs = [];
+		const newOptionsTabs: TabItem[] = [];
+
+		const oldTabs = [...this.tabs];
+		const oldOptionsTabs = [...this.options.tabs];
+
+		tabElements.forEach((tabEl) => {
+			// dataset.tabIdはもはや信頼できない可能性があるため、DOM要素で直接比較する
+			const oldIndex = oldTabs.findIndex((t) => t.tabEl === tabEl);
+			if (oldIndex !== -1) {
+				newTabs.push(oldTabs[oldIndex]);
+				newOptionsTabs.push(oldOptionsTabs[oldIndex]);
+			}
+		});
+
+		this.tabs = newTabs;
+		this.options.tabs = newOptionsTabs;
+
+		// 新しい順序でdataset.tabIdを再設定
+		this.tabs.forEach((tab, i) => (tab.tabEl.dataset.tabId = i.toString()));
 	}
 
 	private setupEventListeners(): void {
@@ -402,6 +550,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const closeBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-close-btn`);
 		closeBtn?.addEventListener("click", (e) => {
 			e.stopPropagation();
+			if (this.options._isPopup) {
+				this.popupCloseCallback?.(CLOSE_BUTTON_RESULT);
+			}
 			this.close();
 		});
 
@@ -471,6 +622,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			let initialTop: number;
 
 			const onPointerMove = (moveE: PointerEvent) => {
+				if (!this.el?.isConnected) return;
 				if (!isDragging) {
 					const deltaX = Math.abs(moveE.clientX - startX);
 					const deltaY = Math.abs(moveE.clientY - startY);
@@ -530,7 +682,11 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (this.options.maximizable) {
 			this.titleBarEl.addEventListener("dblclick", (e: MouseEvent) => {
 				if (this.options.maximizableOnDblClick) {
-					if ((e.target as HTMLElement).closest(`.${LIBRARY_NAME}-control-btn`)) return;
+					const target = e.target as HTMLElement;
+					// 操作UI（コントロールボタン、メニュー、タブ）の上では発火しないようにする
+					if (target.closest(`.${LIBRARY_NAME}-control-btn, .${LIBRARY_NAME}-menu-item, .${LIBRARY_NAME}-tab`)) {
+						return;
+					}
 					this.toggleMaximize();
 				}
 			});
@@ -542,7 +698,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			handle.addEventListener(
 				"pointerdown",
 				(e: PointerEvent) => {
-					if (e.button !== 0) return;
+					if (e.button !== 0 || !handle?.isConnected) return;
 					e.preventDefault();
 					e.stopPropagation();
 					this.focus();
@@ -658,6 +814,12 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	public focus(): void {
 		if (this.focused) return;
+
+		// 階層を遡ってすべての親ウィンドウをフォーカスする
+		if (this.parentWindow) {
+			this.parentWindow.focus();
+		}
+
 		this.manager.focusWindow(this);
 		this.focused = true;
 		this.el.classList.add("active");
@@ -710,6 +872,76 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		} else {
 			reloadContent(this.contentEl, this.options.content);
 		}
+	}
+
+	public getContent(): HTMLElement | HTMLIFrameElement {
+		let contentContainer: HTMLElement;
+		const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains("active"));
+
+		if (activeTabIndex > -1) {
+			// If there's an active tab, use its content element
+			contentContainer = this.tabs[activeTabIndex].contentEl;
+		} else {
+			// Otherwise, use the main content element
+			contentContainer = this.contentEl;
+		}
+
+		const iframe = contentContainer.querySelector("iframe");
+		return iframe || contentContainer;
+	}
+
+	/**
+	 * 子ウィンドウマネージャを初期化または取得します。
+	 */
+	private getChildManager(): WindowManager {
+		if (!this.childManager) {
+			// WindowManagerのコンストラクタとGlobalConfigの整合性を取る必要がある
+			// ここでは簡易的に空のconfigで生成
+			const childConfig = {};
+			this.childManager = new WindowManager(childConfig);
+
+			// 子マネージャのコンテナとして、このウィンドウのcontentElを指定
+			this.childManager.applyGlobalConfig({ container: this.contentEl });
+			this.childManager.init();
+		}
+		return this.childManager;
+	}
+
+	/**
+	 * このウィンドウ内に新しいウィンドウを作成します。
+	 */
+	public createWindow(options: WindowOptions = {}): IWindow {
+		// iframeコンテンツの場合は、直接DOM操作する代わりにpostMessageを使用
+		const iframe = this.contentEl.querySelector("iframe");
+		if (iframe && iframe.contentWindow) {
+			const message = {
+				type: "winlet:createWindow",
+				options: options,
+			};
+			// iframeのオリジンを尊重
+			iframe.contentWindow.postMessage(message, "*");
+			// postMessageでは直接インスタンスを返せないため、暫定的にnullを返すか、Promiseベースの設計にする必要がある
+			// ここでは未対応とし、コンソールに警告を出す
+			console.warn("WinLet: Window creation inside an iframe is asynchronous and does not return an instance directly.");
+			// ダミーのインスタンスを返すか、APIの戻り値をvoidにするなどの検討が必要
+			return null as any; // 暫定
+		}
+
+		// 通常のHTMLコンテンツの場合
+		const manager = this.getChildManager();
+		// 新しいウィンドウに自身を親として設定
+		options._parent = this;
+		return manager.createWindow(options);
+	}
+
+	/**
+	 * このウィンドウ内に新しいポップアップを作成します。
+	 */
+	public createPopup(options: PopupOptions): IWindow {
+		const manager = this.getChildManager();
+		// ポップアップにも自身を親として設定
+		const winOptions: WindowOptions = { _parent: this };
+		return manager.popup(Object.assign(options, winOptions));
 	}
 
 	public getTitle(): string {

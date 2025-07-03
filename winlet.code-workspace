@@ -17,7 +17,8 @@
 			"minimizable",
 			"reorderable",
 			"windowmanager",
-			"winlet"
+			"winlet",
+			"yesnocancel"
 		]
 	}
 }

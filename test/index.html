@@ -27,8 +27,8 @@
 		<div class="sample-content">
 			<h2>Templateから読み込まれたコンテンツ</h2>
 			<p>これは <code>&lt;template&gt;</code> タグ内のHTMLです。</p>
-			<p>カウンター: <span id="counter">0</span></p>
-			<button onclick="document.getElementById('counter').innerText++">カウントアップ</button>
+			<p>カウンター: <span class="counter">0</span></p>
+			<button onclick="WinLet.getWindowFromElement(event.target).getContent().querySelector('.counter').innerText++">カウントアップ</button>
 		</div>
 	</template>
 </body>

@@ -30,6 +30,7 @@ export const defaultConfig: Required<WindowOptions> = {
 			referrerPolicy: "",
 			loading: "lazy",
 			sandbox: "",
+			loadWinLet: false,
 		},
 		template: "",
 	},
@@ -41,7 +42,11 @@ export const defaultConfig: Required<WindowOptions> = {
 		reorderable: false,
 		closable: false,
 		addable: false,
+		detachable: false,
+		mergeable: false,
+		allowIncomingMerge: false,
 		onAdd: undefined,
+		onMergeAttempt: undefined,
 	},
 	contextMenu: [],
 	focus: true,
@@ -52,4 +57,7 @@ export const defaultConfig: Required<WindowOptions> = {
 	onResize: () => {},
 	onMove: () => {},
 	onReload: () => {},
+
+	_isPopup: false,
+	_parent: null,
 };

@@ -4,16 +4,12 @@ try {
 } catch (e) {}
 
 jasc.on("DOMContentLoaded", () => {
-	WinLet.init();
-
-	WinLet.setGlobalConfig({
+	WinLet.init({
 		windowSwitchShortcut: "Ctrl+@",
 	});
 });
 
-// TODO: ポップアップウィンドウ機能追加 (タイムアウト付き)
-// TODO: ユーザーアクションで生成されたウィンドウにフォーカスを当てる
-// TODO: ウィンドウ入れ子に対応
+// TODO: ウィンドウ以外クリック時にウィンドウをblur(現在の処理はcontainerがcssでpointer-events: none;なので無反応)
 
 class Main {
 	static createBasicWindow() {
@@ -70,7 +66,7 @@ class Main {
 
 	static createFullFeatureWindow() {
 		WinLet.createWindow({
-			id: "full-feature-window",
+			//id: "full-feature-window",
 			title: "フル機能ウィンドウ",
 			icon: "fas fa-star",
 			width: 700,
@@ -139,14 +135,33 @@ class Main {
 					title: "フォーム",
 					content: {
 						template: "#my-template",
-					}, // 既存のテンプレートも使える
+					},
+				},
+				{
+					title: "入れ子",
+					content: {
+						iframe: {
+							srcdoc: `
+								<div style="padding:1em;">
+									<h2>入れ子のコンテンツ</h2>
+									<p>WinLetを入れ子にすることができます。</p>
+									<input type="button" value="子ウィンドウを開く" onclick="WinLet.createWindow({ title: '子ウィンドウ', content: { html: '<div style=&quot;padding:1em;&quot;><h2>子ウィンドウ</h2><p>子ウィンドウのコンテンツ</p></div>' } })">
+									<input type="button" value="ポップアップを開く" onclick="WinLet.createPopup({ title: 'ポップアップ', message: 'ポップアップのメッセージです', buttons: 'OkCancel', timeout: 5000 })">
+								</div>`,
+							loadWinLet: true,
+						},
+					},
 				},
 			],
 			menuStyle: "merged",
+			// tabStyle: "merged",
 			tabOptions: {
 				reorderable: true,
 				closable: true,
 				addable: true,
+				detachable: true,
+				mergeable: true,
+				allowIncomingMerge: true,
 				onAdd: (win) => {
 					const newTab = {
 						title: "新しいタブ",

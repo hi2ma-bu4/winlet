@@ -17,6 +17,11 @@ export interface WindowContentOptions {
 		referrerPolicy?: HTMLIFrameElement["referrerPolicy"];
 		loading?: HTMLIFrameElement["loading"];
 		sandbox?: string[] | string;
+		/**
+		 * srcdocで生成されるiframe内にWinLetライブラリ自身を読み込むかどうか。
+		 * trueにする場合、GlobalConfigOptionsでlibraryPathを指定する必要があります。
+		 */
+		loadWinLet?: boolean;
 	};
 	/**
 	 * HTMLテンプレートのselector
@@ -47,6 +52,26 @@ export interface IWindow {
 	getSize(): { width: number; height: number };
 	setSize(width: number | string, height: number | string): void;
 	reload(): void;
+
+	/**
+	 * ウィンドウのコンテンツ要素（またはiframe要素）を取得します。
+	 * @returns コンテンツを内包するHTMLElement、またはiframeウィンドウの場合はHTMLIFrameElement
+	 */
+	getContent(): HTMLElement | HTMLIFrameElement;
+
+	/**
+	 * このウィンドウの内部に新しいウィンドウを作成します。
+	 * @param options - 新しいウィンドウのオプション
+	 * @returns 作成されたIWindowインスタンス
+	 */
+	createWindow(options?: WindowOptions): IWindow;
+
+	/**
+	 * このウィンドウの内部に新しいポップアップを作成します。
+	 * @param options - 新しいポップアップのオプション
+	 * @returns 作成されたIWindowインスタンス
+	 */
+	createPopup(options: PopupOptions): IWindow;
 }
 
 export interface MenuItem {
@@ -189,9 +214,28 @@ export interface WindowOptions {
 		 */
 		addable?: boolean;
 		/**
+		 * タブをドラッグして新しいウィンドウとして分離できるようにするか
+		 */
+		detachable?: boolean;
+		/**
+		 * タブを別の既存のウィンドウにマージすることができます。
+		 */
+		mergeable?: boolean;
+		/**
+		 * このウィンドウが他のウィンドウからマージされたタブを受け入れることができます。
+		 */
+		allowIncomingMerge?: boolean;
+		/**
 		 * 追加ボタン押下時の処理
 		 */
 		onAdd?: (win: IWindow) => TabItem;
+		/**
+		 * マージが許可されているかどうかを動的に決定するコールバック関数。
+		 * @param sourceWindow タブの元ウィンドウ
+		 * @param targetWindow ドロップされたタブのウィンドウ
+		 * @returns true:マージ許可 false:マージ禁止
+		 */
+		onMergeAttempt?: (sourceWindow: IWindow, targetWindow: IWindow) => boolean;
 	};
 	/**
 	 * 右クリックメニュー
@@ -231,21 +275,106 @@ export interface WindowOptions {
 	 * デフォルトのリロード動作（iframeの再読み込みやhtmlの再描画）をキャンセルする場合は `false` を返します。
 	 */
 	onReload?: (win: IWindow) => boolean | void;
+
+	// 内部利用フラグ
+	_isPopup?: boolean;
+	/**
+	 * 親ウィンドウのインスタンス (内部利用)
+	 */
+	_parent?: IWindow | null;
+}
+
+// --- Popup ---
+export const TIMEOUT_RESULT = Symbol("timeout");
+export const CLOSE_BUTTON_RESULT = Symbol("close");
+
+export type PopupResult = string | number | symbol | null;
+
+export interface PopupButton {
+	text: string;
+	value: PopupResult;
+}
+
+export type PopupButtonPreset = "Ok" | "OkCancel" | "Yes" | "YesNo" | "YesNoCancel" | "Retry" | "RetryCancel" | "AbortRetryIgnore";
+
+export interface PopupOptions {
+	message: string;
+	title?: string;
+	icon?: string | null;
+	buttons?: PopupButton[] | PopupButtonPreset;
+	timeout?: number;
+	autoWidth?: boolean;
+	focus?: boolean;
+
+	/**
+	 * ウィンドウクローズ時
+	 */
+	onClose?: (result: PopupResult) => void;
+	/**
+	 * ウィンドウフォーカス時
+	 */
+	onFocus?: (win: IWindow) => void;
+	/**
+	 * ウィンドウブラー時
+	 */
+	onBlur?: (win: IWindow) => void;
 }
 
 export interface GlobalConfigOptions {
 	windowSwitchShortcut?: string | null; // 例: "Ctrl+`"
+	/**
+	 * ウィンドウマネージャを内包する親要素。
+	 * セレクタ文字列またはHTMLElementを指定します。
+	 * 未指定の場合はbody直下に配置されます。
+	 */
+	container?: string | HTMLElement;
+	/**
+	 * `srcdoc` iframeでWinLetを自己読込する場合のライブラリのパス。
+	 */
+	libraryPath?: string;
 }
 
 // WinLetの公開APIの型
 export interface WinLetApi {
-	init: () => void;
+	init: (options?: GlobalConfigOptions) => void;
+	/**
+	 * ウィンドウを作成します。
+	 */
 	createWindow: (options?: WindowOptions) => IWindow;
+	/**
+	 * ポップアップウィンドウを作成します。
+	 */
+	createPopup: (options: PopupOptions) => IWindow;
+	/**
+	 * 指定されたIDのウィンドウインスタンスを取得します。
+	 * @param id - 取得するウィンドウのID
+	 */
 	getWindow: (id: string) => IWindow | undefined;
+	/**
+	 * 指定されたDOM要素を内包するウィンドウインスタンスを取得します。
+	 * 入れ子ウィンドウの場合、最も内側にある子ウィンドウを返します。
+	 * @param element - 検索の起点となるDOM要素
+	 * @returns 発見されたIWindowインスタンス、またはundefined
+	 */
+	getWindowFromElement: (element: HTMLElement) => IWindow | undefined;
+	/**
+	 * 現在アクティブなウィンドウを取得します。
+	 */
 	getActiveWindow: () => IWindow | null;
+	/**
+	 * ウィンドウのデフォルトの設定を変更します。
+	 */
 	setDefaultConfig: (options: WindowOptions) => void;
+	/**
+	 * グローバル設定を変更します。
+	 */
 	setGlobalConfig: (options: GlobalConfigOptions) => void;
+	/**
+	 * WinLetのバージョンを取得します。
+	 */
 	get version(): string;
+	POPUP_TIMEOUT_RESULT: typeof TIMEOUT_RESULT;
+	POPUP_CLOSE_BUTTON_RESULT: typeof CLOSE_BUTTON_RESULT;
 }
 
 // グローバルスコープのWindowにWinLetプロパティを追加
