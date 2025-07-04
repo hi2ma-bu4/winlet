@@ -10,6 +10,48 @@ export default class Utils extends WinLetBaseClass {
 		return `${prefix}-${Math.random().toString(36).substring(2, 9)}`;
 	}
 
+	public static deepCopy<T>(value: T, seen: WeakMap<object, any> = new WeakMap()): T {
+		if (value === null || typeof value !== "object") return value;
+
+		if (value instanceof Date) return new Date(value.getTime()) as T;
+
+		if (value instanceof Map) {
+			const copiedMap = new Map();
+			value.forEach((v, k) => {
+				copiedMap.set(this.deepCopy(k, seen), this.deepCopy(v, seen));
+			});
+			return copiedMap as T;
+		}
+
+		if (value instanceof Set) {
+			const copiedSet = new Set();
+			value.forEach((v) => {
+				copiedSet.add(this.deepCopy(v, seen));
+			});
+			return copiedSet as T;
+		}
+
+		if (Array.isArray(value)) {
+			if (seen.has(value)) return seen.get(value);
+			const arrCopy: any[] = [];
+			seen.set(value, arrCopy);
+			for (const item of value) {
+				arrCopy.push(this.deepCopy(item, seen));
+			}
+			return arrCopy as T;
+		}
+
+		if (seen.has(value)) return seen.get(value);
+		const copiedObj: { [key: string]: any } = {};
+		seen.set(value, copiedObj);
+		for (const key in value) {
+			if (Object.prototype.hasOwnProperty.call(value, key)) {
+				copiedObj[key] = this.deepCopy((value as any)[key], seen);
+			}
+		}
+		return copiedObj as T;
+	}
+
 	/**
 	 * オブジェクトをディープマージします。
 	 */

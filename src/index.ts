@@ -1,7 +1,7 @@
 // src/index.ts
 
 import { defaultConfig } from "./const/config";
-import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
+import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
 import { LIB_VERSION } from "./version";
@@ -82,6 +82,13 @@ const api: WinLetApi = {
 		}
 		Object.assign(globalConfig, options);
 		manager.applyGlobalConfig(globalConfig);
+	},
+
+	/**
+	 * 表示テーマを変更します。
+	 */
+	setTheme: (theme: string | Theme): void => {
+		manager.setTheme(theme);
 	},
 
 	/**

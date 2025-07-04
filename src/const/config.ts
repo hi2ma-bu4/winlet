@@ -50,6 +50,9 @@ export const defaultConfig: Required<WindowOptions> = {
 	},
 	contextMenu: [],
 	focus: true,
+	alwaysOnTop: false,
+	useGhostWindow: false,
+	modal: false,
 	onOpen: () => {},
 	onClose: () => {},
 	onFocus: () => {},
@@ -60,4 +63,5 @@ export const defaultConfig: Required<WindowOptions> = {
 
 	_isPopup: false,
 	_parent: null,
+	_taskbarItem: null,
 };

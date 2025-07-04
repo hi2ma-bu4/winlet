@@ -21,6 +21,11 @@ const styleData: string = `
     --$[prefix]-tab-border: #b0b0b0;
     --$[prefix]-resize-handle-size: 8px;
     --$[prefix]-resize-handle-offset: -4px;
+    --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);
+    --$[prefix]-taskbar-border: #a0a0a0;
+    --$[prefix]-taskbar-item-bg: #d0d0d0;
+    --$[prefix]-taskbar-item-active-bg: #0078d7;
+    --$[prefix]-taskbar-item-active-color: #fff;
 }
 
 .$[prefix]-us-none {
@@ -67,21 +72,52 @@ const styleData: string = `
     border-radius: 5px;
     overflow: hidden;
     pointer-events: all;
-    transition: opacity 0.1s, transform 0.1s;
+    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out; /* transitionを更新 */
     touch-action: none;
 }
 
+.$[prefix]-window.$[prefix]-is-dragging,
+.$[prefix]-window.$[prefix]-is-resizing {
+    transition: opacity 0.1s, transform 0.1s;
+}
+
 .$[prefix]-window.minimized {
-    display: none;
+    transform: scale(0.5);
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
 }
 
 .$[prefix]-window.maximized {
-    border-radius: 0;
-    border: none;
+    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
 }
 
 .$[prefix]-window.maximized > .$[prefix]-resize-handle {
     display: none;
+}
+
+.$[prefix]-window.is-restoring {
+    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
+}
+
+/* 常に手前に表示 */
+.$[prefix]-window.always-on-top .$[prefix]-title-bar {
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 4px,
+        rgba(255, 255, 255, 0.05) 4px,
+        rgba(255, 255, 255, 0.05) 8px
+    );
+}
+
+/* --- ゴーストウィンドウ --- */
+.$[prefix]-ghost-window {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2px dashed var(--$[prefix]-title-bar-active-bg);
+    background-color: rgba(0, 120, 215, 0.1);
+    z-index: 99999;
+    pointer-events: none;
 }
 
 /* Focus State */
@@ -580,6 +616,49 @@ const styleData: string = `
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {
     align-self: flex-start;
     order: 2;
+}
+
+/* --- タスクバー --- */
+.$[prefix]-taskbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background-color: var(--$[prefix]-taskbar-bg);
+    border-top: 1px solid var(--$[prefix]-taskbar-border);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    z-index: 50000;
+    gap: 5px;
+    overflow-x: auto;
+    backdrop-filter: blur(5px);
+}
+.$[prefix]-taskbar-item {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 10px;
+    border-radius: 3px;
+    background-color: var(--$[prefix]-taskbar-item-bg);
+    cursor: pointer;
+    flex-shrink: 0;
+    max-width: 150px;
+    transition: background-color 0.2s;
+    font-family: sans-serif;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.$[prefix]-taskbar-item.active {
+    background-color: var(--$[prefix]-taskbar-item-active-bg);
+    color: var(--$[prefix]-taskbar-item-active-color);
+}
+.$[prefix]-taskbar-item.minimized {
+    opacity: 0.7;
 }
 
 /* --- Mobile / Touch Device Adjustments --- */

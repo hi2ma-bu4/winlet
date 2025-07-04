@@ -68,6 +68,11 @@ interface IWindow {
      * @returns 作成されたIWindowインスタンス
      */
     createPopup(options: PopupOptions): IWindow;
+    /**
+     * ウィンドウのオプションを動的に変更します。
+     * @param options - 変更したいオプション
+     */
+    setOptions(options: Partial<WindowOptions>): void;
 }
 interface MenuItem {
     name?: string;
@@ -238,6 +243,19 @@ interface WindowOptions {
      */
     focus?: boolean;
     /**
+     * ウィンドウを常に最前面に表示するかどうか
+     */
+    alwaysOnTop?: boolean;
+    /**
+     * ドラッグ・リサイズ時にゴーストウィンドウ（輪郭）を表示するか
+     */
+    useGhostWindow?: boolean;
+    /**
+     * ウィンドウをモーダルとして扱うか
+     * trueの場合、このウィンドウ以外は操作できなくなります。
+     */
+    modal?: boolean;
+    /**
      * ウィンドウオープン時
      */
     onOpen?: (win: IWindow) => void;
@@ -272,6 +290,10 @@ interface WindowOptions {
      * 親ウィンドウのインスタンス (内部利用)
      */
     _parent?: IWindow | null;
+    /**
+     * タスクバーのアイテム要素 (内部利用)
+     */
+    _taskbarItem?: HTMLElement | null;
 }
 declare const TIMEOUT_RESULT: unique symbol;
 declare const CLOSE_BUTTON_RESULT: unique symbol;
@@ -314,6 +336,30 @@ interface GlobalConfigOptions {
      * `srcdoc` iframeでWinLetを自己読込する場合のライブラリのパス。
      */
     libraryPath?: string;
+    /**
+     * ウィンドウ操作時のアニメーションを有効にするか
+     */
+    enableAnimations?: boolean;
+    /**
+     * タスクバーを表示するか
+     */
+    enableTaskbar?: boolean;
+    /**
+     * モーダルウィンドウのフォーカストラップを有効にするか
+     */
+    enableFocusTrapping?: boolean;
+    /**
+     * 初期テーマ
+     * 'dark'などの登録済みテーマ名、またはThemeオブジェクトを指定
+     */
+    theme?: string | Theme;
+}
+/**
+ * テーマの定義
+ */
+interface Theme {
+    name: string;
+    variables: Record<string, string>;
 }
 interface WinLetApi {
     init: (options?: GlobalConfigOptions) => void;
@@ -349,6 +395,11 @@ interface WinLetApi {
      * グローバル設定を変更します。
      */
     setGlobalConfig: (options: GlobalConfigOptions) => void;
+    /**
+     * 表示テーマを変更します。
+     * @param theme - 登録済みのテーマ名（'default', 'dark'など）またはThemeオブジェクト
+     */
+    setTheme: (theme: string | Theme) => void;
     /**
      * WinLetのバージョンを取得します。
      */

@@ -2,17 +2,21 @@
 
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, PopupButton, PopupButtonPreset, PopupOptions, PopupResult, TabItem, TIMEOUT_RESULT, WindowOptions } from "../const/types";
+import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, PopupButton, PopupButtonPreset, PopupOptions, PopupResult, TabItem, Theme, TIMEOUT_RESULT, WindowOptions } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import styleData from "../style/styles";
+import { darkTheme } from "../style/themes/dark";
+import { defaultTheme } from "../style/themes/default";
 import WinLetWindow from "./window";
 
 export default class WindowManager extends WinLetBaseClass {
 	public container: HTMLElement | null = null;
 	private static allWindows = new Map<string, WinLetWindow>();
 	private windows = new Map<string, WinLetWindow>();
+	// z-indexを通常と最前面で分離
 	private zIndexCounter = 1000;
+	private zIndexCounterOnTop = 50000;
 	private activeWindow: WinLetWindow | null = null;
 	private contextMenuEl: HTMLElement | null = null;
 	private _isInitialized = false;
@@ -25,9 +29,16 @@ export default class WindowManager extends WinLetBaseClass {
 
 	public draggingTabInfo: { sourceWindowId: string } | null = null;
 
+	private taskbarEl: HTMLElement | null = null;
+	private themes = new Map<string, Theme>();
+	private activeTheme: Theme | null = null;
+	private boundTabPressHandler: ((e: KeyboardEvent) => void) | null = null;
+
 	constructor(initialConfig: GlobalConfigOptions) {
 		super();
 		this.globalConfig = initialConfig;
+		this.registerTheme(defaultTheme);
+		this.registerTheme(darkTheme);
 	}
 
 	/**
@@ -92,6 +103,16 @@ export default class WindowManager extends WinLetBaseClass {
 			}
 		}
 
+		if (this.globalConfig.enableTaskbar) {
+			this.createTaskbar();
+		}
+
+		if (this.globalConfig.theme) {
+			this.setTheme(this.globalConfig.theme);
+		} else {
+			this.setTheme("Default");
+		}
+
 		window.addEventListener("blur", () =>
 			// 次のイベントサイクルでアクティブな要素を取得
 			requestAnimationFrame(() => {
@@ -129,14 +150,23 @@ export default class WindowManager extends WinLetBaseClass {
 		);
 
 		// ウィンドウ外クリックでblurさせる処理を追加
-		this.container!.addEventListener("pointerdown", (e: PointerEvent) => {
-			// クリックされたのがコンテナ自身（ウィンドウやその中身ではない）の場合
-			if (e.target === this.container) {
-				if (this.activeWindow) {
-					const active = this.activeWindow;
-					this.activeWindow = null; // 先にnullにしてからblurを呼ぶ
-					active.blur();
-				}
+		document.addEventListener("pointerdown", (e: PointerEvent) => {
+			// e.targetがHTMLElementでない場合や、アクティブなウィンドウがない場合は何もしない
+			if (!(e.target instanceof HTMLElement) || !this.activeWindow || this.activeWindow.options.modal) {
+				return;
+			}
+
+			// クリックされた場所がウィンドウまたはコンテキストメニューの内側かどうかを判定
+			const clickedWindow = e.target.closest(`.${LIBRARY_NAME}-window`);
+			const clickedContextMenu = e.target.closest(`.${LIBRARY_NAME}-context-menu`);
+			const clickedTaskbar = e.target.closest(`.${LIBRARY_NAME}-taskbar`);
+
+			// ウィンドウやコンテキストメニューの外側がクリックされた場合
+			if (!clickedWindow && !clickedContextMenu && !clickedTaskbar) {
+				// アクティブなウィンドウのフォーカスを外す
+				const active = this.activeWindow;
+				this.activeWindow = null;
+				active.blur();
 			}
 		});
 
@@ -206,7 +236,7 @@ export default class WindowManager extends WinLetBaseClass {
 					content: tabData.content,
 				};
 
-				const mergedWindowOptions = Utils.deepMerge(sourceWindow.options, {
+				const mergedWindowOptions = Utils.deepMerge(Utils.deepCopy(sourceWindow.options), {
 					tabs: [newTab],
 					x: e.clientX,
 					y: e.clientY,
@@ -348,7 +378,7 @@ export default class WindowManager extends WinLetBaseClass {
 			}
 		}
 
-		const creationOptions: Required<WindowOptions> = Utils.deepMerge(defaultConfig, options);
+		const creationOptions: Required<WindowOptions> = Utils.deepMerge(Utils.deepCopy(defaultConfig), options);
 		if (creationOptions.x === "auto" || creationOptions.y === "auto") {
 			const winWidth = creationOptions.width;
 			const winHeight = creationOptions.height;
@@ -387,13 +417,17 @@ export default class WindowManager extends WinLetBaseClass {
 		WindowManager.allWindows.set(win.id, win);
 		this.container!.appendChild(win.el);
 
+		if (this.taskbarEl) {
+			this.createTaskbarItem(win);
+		}
+
 		win.setPosition(creationOptions.x, creationOptions.y);
 		if (creationOptions.focus) {
 			this.focusWindow(win);
 			win.focus();
 		} else {
 			// フォーカスしない場合でも、z-indexの管理は必要
-			win.el.style.zIndex = `${++this.zIndexCounter}`;
+			win.el.style.zIndex = `${win.options.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
 		}
 		return win;
 	}
@@ -516,6 +550,13 @@ export default class WindowManager extends WinLetBaseClass {
 		this.ensureInitialized();
 		const win = this.windows.get(id);
 		if (win) {
+			if (win.options._taskbarItem) {
+				win.options._taskbarItem.remove();
+			}
+			if (win.options.modal) {
+				this.deactivateFocusTrap();
+			}
+
 			win.el.remove();
 			this.windows.delete(id);
 			WindowManager.allWindows.delete(id);
@@ -529,12 +570,24 @@ export default class WindowManager extends WinLetBaseClass {
 
 	public focusWindow(win: WinLetWindow): void {
 		this.ensureInitialized();
-		if (this.activeWindow === win) return;
+		if (this.activeWindow === win && !win.options.modal) return;
 
 		// 自身が管理する他のウィンドウをぼかす
 		this.activeWindow?.blur();
+
+		// モーダルかつフォーカストラップ有効ならトラップ開始
+		if (win.options.modal && this.globalConfig.enableFocusTrapping) {
+			this.activateFocusTrap(win);
+		} else {
+			// そうでなければ既存のトラップは解除
+			this.deactivateFocusTrap();
+		}
+
 		this.activeWindow = win;
-		win.el.style.zIndex = `${++this.zIndexCounter}`;
+		win.el.style.zIndex = `${win.options.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
+
+		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove("active"));
+		win.options._taskbarItem?.classList.add("active");
 		// focus()はWindowクラス側で呼ばれるので不要
 	}
 
@@ -601,6 +654,105 @@ export default class WindowManager extends WinLetBaseClass {
 	public hideContextMenu(): void {
 		this.contextMenuEl?.remove();
 		this.contextMenuEl = null;
+	}
+
+	public registerTheme(theme: Theme): void {
+		this.themes.set(theme.name, theme);
+	}
+
+	public setTheme(theme: string | Theme): void {
+		const themeObj = typeof theme === "string" ? this.themes.get(theme) : theme;
+		if (!themeObj) {
+			console.warn(`WinLet: Theme "${theme}" not found.`);
+			return;
+		}
+		this.activeTheme = themeObj;
+		if (this.container) {
+			for (const [key, value] of Object.entries(themeObj.variables)) {
+				this.container.style.setProperty(key, value);
+			}
+		}
+	}
+
+	private createTaskbar(): void {
+		if (!this.container) return;
+		this.taskbarEl = document.createElement("div");
+		this.taskbarEl.className = `${LIBRARY_NAME}-taskbar`;
+		this.container.appendChild(this.taskbarEl);
+	}
+
+	private createTaskbarItem(win: WinLetWindow): void {
+		if (!this.taskbarEl) return;
+		const item = document.createElement("div");
+		item.className = `${LIBRARY_NAME}-taskbar-item`;
+		item.textContent = win.getTitle();
+		item.title = win.getTitle();
+		item.dataset.windowId = win.id;
+
+		item.addEventListener("click", () => {
+			if (win.state === "minimized") {
+				win.restore();
+			} else {
+				if (this.activeWindow === win) {
+					win.minimize();
+				} else {
+					win.focus();
+				}
+			}
+		});
+
+		win.options._taskbarItem = item;
+		this.taskbarEl.appendChild(item);
+	}
+
+	public updateTaskbarItem(win: WinLetWindow, state: "minimized" | "restored" | "titleChanged"): void {
+		const item = win.options._taskbarItem;
+		if (!item) return;
+
+		switch (state) {
+			case "minimized":
+				item.classList.add("minimized");
+				break;
+			case "restored":
+				item.classList.remove("minimized");
+				break;
+			case "titleChanged":
+				item.textContent = win.getTitle();
+				item.title = win.getTitle();
+				break;
+		}
+	}
+
+	private activateFocusTrap(win: WinLetWindow): void {
+		this.deactivateFocusTrap(); // 念のため既存のリスナーを解除
+
+		this.boundTabPressHandler = (e: KeyboardEvent) => {
+			if (e.key === "Tab") {
+				e.preventDefault();
+				const focusableElements = Array.from(win.el.querySelectorAll<HTMLElement>('a[href], button, input, textarea, select, details, [tabindex]:not([tabindex="-1"])')).filter((el) => !el.hasAttribute("disabled") && !el.closest(".minimized"));
+
+				if (focusableElements.length === 0) return;
+
+				const currentIndex = focusableElements.indexOf(document.activeElement as HTMLElement);
+				let nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1;
+
+				if (nextIndex >= focusableElements.length) {
+					nextIndex = 0;
+				}
+				if (nextIndex < 0) {
+					nextIndex = focusableElements.length - 1;
+				}
+				focusableElements[nextIndex].focus();
+			}
+		};
+		document.addEventListener("keydown", this.boundTabPressHandler);
+	}
+
+	private deactivateFocusTrap(): void {
+		if (this.boundTabPressHandler) {
+			document.removeEventListener("keydown", this.boundTabPressHandler);
+			this.boundTabPressHandler = null;
+		}
 	}
 
 	/**

@@ -45,7 +45,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			}
 		}
 		this.manager = manager;
-		this.options = Utils.deepMerge(defaultConfig, options) as Required<WindowOptions>;
+		this.options = Utils.deepMerge(Utils.deepCopy(defaultConfig), options) as Required<WindowOptions>;
 		this.parentWindow = options._parent || null;
 
 		this.el = this.createDOM();
@@ -60,6 +60,13 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 		if (this.options.menuStyle === "merged") {
 			this.el.classList.add(`${LIBRARY_NAME}-menu-style-merged`);
+		}
+		// 最前面/モーダル指定によりクラスを追加
+		if (this.options.alwaysOnTop) {
+			this.el.classList.add(`${LIBRARY_NAME}-always-on-top`);
+		}
+		if (this.options.modal) {
+			this.el.classList.add(`${LIBRARY_NAME}-modal`);
 		}
 
 		this.titleBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title-bar`)!;
@@ -158,7 +165,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			}
 		} else if (content.html) {
 			container.innerHTML = content.html;
-		} else if (Utils.isNonEmptyObject(content.iframe)) {
+		} else if (Utils.isNonEmptyObject(content.iframe) && (content.iframe.src || content.iframe.srcdoc)) {
 			const iframe = document.createElement("iframe");
 			const iframeConfig = content.iframe;
 			if (iframeConfig.src) {
@@ -196,6 +203,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				}
 			}
 			container.appendChild(iframe);
+		} else {
+			container.innerHTML = "";
 		}
 	}
 
@@ -621,6 +630,20 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			let initialLeft: number;
 			let initialTop: number;
 
+			// --- ゴーストウィンドウ処理 ---
+			let ghostEl: HTMLElement | null = null;
+			if (this.options.useGhostWindow) {
+				ghostEl = document.createElement("div");
+				ghostEl.className = `${LIBRARY_NAME}-ghost-window`;
+				this.manager.container?.appendChild(ghostEl);
+				ghostEl.style.left = `${this.el.offsetLeft}px`;
+				ghostEl.style.top = `${this.el.offsetTop}px`;
+				ghostEl.style.width = `${this.el.offsetWidth}px`;
+				ghostEl.style.height = `${this.el.offsetHeight}px`;
+			}
+
+			this.el.classList.add(`${LIBRARY_NAME}-is-dragging`);
+
 			const onPointerMove = (moveE: PointerEvent) => {
 				if (!this.el?.isConnected) return;
 				if (!isDragging) {
@@ -658,19 +681,30 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				// ドラッグ中の移動処理
 				const newLeft = initialLeft + moveE.clientX - startX;
 				const newTop = initialTop + moveE.clientY - startY;
-				this.setPosition(newLeft, newTop);
+				if (ghostEl) {
+					ghostEl.style.left = `${newLeft}px`;
+					ghostEl.style.top = `${newTop}px`;
+				} else {
+					this.setPosition(newLeft, newTop);
+				}
 			};
 
 			const onPointerUp = () => {
 				document.removeEventListener("pointermove", onPointerMove);
 				document.removeEventListener("pointerup", onPointerMove);
 
+				if (ghostEl) {
+					this.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
+					ghostEl.remove();
+				}
 				// ドラッグが発生した場合のみ後処理とコールバック呼び出し
 				if (isDragging) {
 					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
 					this.options.onMove(this);
 				}
+
+				this.el.classList.remove(`${LIBRARY_NAME}-is-dragging`);
 			};
 
 			document.addEventListener("pointermove", onPointerMove);
@@ -705,6 +739,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					this.contentEl.style.pointerEvents = "none";
 					handle.setPointerCapture(e.pointerId);
 
+					this.el.classList.add(`${LIBRARY_NAME}-is-resizing`);
+
+					// --- ゴーストウィンドウ処理 ---
+					let ghostEl: HTMLElement | null = null;
+					if (this.options.useGhostWindow) {
+						ghostEl = document.createElement("div");
+						ghostEl.className = `${LIBRARY_NAME}-ghost-window`;
+						this.manager.container?.appendChild(ghostEl);
+					}
+
 					const direction = handle.className.replace(`${LIBRARY_NAME}-resize-handle `, "");
 					const { clientX: startX, clientY: startY } = e;
 					const { offsetWidth: startWidth, offsetHeight: startHeight, offsetLeft: startLeft, offsetTop: startTop } = this.el;
@@ -728,16 +772,31 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 							newHeight = Math.max(minHeight, startHeight - deltaY);
 							newTop = startTop + deltaY;
 						}
-						this.setSize(newWidth, newHeight);
-						this.setPosition(newLeft, newTop);
+						if (ghostEl) {
+							ghostEl.style.left = `${newLeft}px`;
+							ghostEl.style.top = `${newTop}px`;
+							ghostEl.style.width = `${newWidth}px`;
+							ghostEl.style.height = `${newHeight}px`;
+						} else {
+							this.setSize(newWidth, newHeight);
+							this.setPosition(newLeft, newTop);
+						}
 					};
 					const onPointerUp = () => {
 						handle.releasePointerCapture(e.pointerId);
 						this.contentEl.style.pointerEvents = "auto";
 
+						if (ghostEl) {
+							this.setSize(ghostEl.offsetWidth, ghostEl.offsetHeight);
+							this.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
+							ghostEl.remove();
+						}
+
 						document.removeEventListener("pointermove", onPointerMove);
 						document.removeEventListener("pointerup", onPointerUp);
 						this.options.onResize(this);
+
+						this.el.classList.remove(`${LIBRARY_NAME}-is-resizing`);
 					};
 					document.addEventListener("pointermove", onPointerMove);
 					document.addEventListener("pointerup", onPointerUp);
@@ -768,9 +827,21 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public minimize(): void {
 		if (this.state !== "minimized") {
 			if (this.state !== "normal") this.restore();
-			this.state = "minimized";
-			this.el.classList.add("minimized");
-			this.blur();
+
+			const doMinimize = () => {
+				this.state = "minimized";
+				this.el.classList.add("minimized");
+				this.el.classList.remove("is-minimizing");
+				this.manager.updateTaskbarItem(this, "minimized");
+				this.blur();
+			};
+
+			if (this.manager.getGlobalConfig().enableAnimations) {
+				this.el.classList.add("is-minimizing");
+				this.el.addEventListener("transitionend", doMinimize, { once: true });
+			} else {
+				doMinimize();
+			}
 		}
 	}
 
@@ -784,8 +855,25 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			this.lastState = { x: this.el.offsetLeft, y: this.el.offsetTop, width: this.el.offsetWidth, height: this.el.offsetHeight };
 			this.state = "maximized";
 			this.el.classList.add("maximized");
-			this.setPosition(0, 0);
-			this.setSize("100%", "100%");
+
+			const doMaximize = () => {
+				this.el.classList.remove("is-maximizing");
+				this.setPosition(0, 0);
+				this.setSize("100%", "100%");
+			};
+
+			if (this.manager.getGlobalConfig().enableAnimations) {
+				this.el.classList.add("is-maximizing");
+				// アニメーションのために先にサイズと位置を設定
+				this.el.style.top = "0px";
+				this.el.style.left = "0px";
+				this.el.style.width = "100%";
+				this.el.style.height = "100%";
+				this.el.addEventListener("transitionend", doMaximize, { once: true });
+			} else {
+				doMaximize();
+			}
+
 			const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
 			if (maxBtn) {
 				maxBtn.title = "Restore";
@@ -795,19 +883,32 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	}
 
 	public restore(): void {
+		const wasMinimized = this.state === "minimized";
 		if (this.state === "minimized") {
 			this.state = "normal";
 			this.el.classList.remove("minimized");
+			this.manager.updateTaskbarItem(this, "restored");
 			this.focus();
 		} else if (this.state === "maximized") {
-			this.state = "normal";
-			this.el.classList.remove("maximized");
-			this.setSize(this.lastState.width, this.lastState.height);
-			this.setPosition(this.lastState.x, this.lastState.y);
-			const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
-			if (maxBtn) {
-				maxBtn.title = "Maximize";
-				maxBtn.value = "\u25a1";
+			const doRestore = () => {
+				this.state = "normal";
+				this.el.classList.remove("maximized", "is-restoring");
+				const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
+				if (maxBtn) {
+					maxBtn.title = "Maximize";
+					maxBtn.value = "\u25a1";
+				}
+			};
+
+			if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
+				this.el.classList.add("is-restoring");
+				this.setSize(this.lastState.width, this.lastState.height);
+				this.setPosition(this.lastState.x, this.lastState.y);
+				this.el.addEventListener("transitionend", doRestore, { once: true });
+			} else {
+				this.setSize(this.lastState.width, this.lastState.height);
+				this.setPosition(this.lastState.x, this.lastState.y);
+				doRestore();
 			}
 		}
 	}
@@ -840,7 +941,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 
 		const reloadContent = (container: HTMLElement, content: WindowContentOptions) => {
-			if (Utils.isNonEmptyObject(content.iframe)) {
+			if (Utils.isNonEmptyObject(content.iframe) && (content.iframe.src || content.iframe.srcdoc)) {
 				const iframe = container.querySelector("iframe");
 				// srcがあり、srcdocがない場合はiframeのreloadを試みる
 				if (iframe && iframe.src && !content.iframe.srcdoc) {
@@ -951,6 +1052,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public setTitle(title: string): void {
 		this.options.title = title;
 		this.titleEl.textContent = Utils.sanitizeHTML(title);
+		this.manager.updateTaskbarItem(this, "titleChanged");
 	}
 
 	public setIcon(icon: string | null): void {
@@ -1023,7 +1125,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 
 		// 画面外にはみ出さないようにする既存のロジックを適用
-		this.el.style.left = `${Math.min(Math.max(150 - winWidth, finalX), parentRect.width - 20)}px`;
+		this.el.style.left = `${Math.min(Math.max(150 - winWidth, finalX), parentRect.width - 150)}px`;
 		this.el.style.top = `${Math.min(Math.max(0, finalY), parentRect.height - 50)}px`;
 	}
 
@@ -1037,5 +1139,28 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public setSize(width: number | string, height: number | string): void {
 		this.el.style.width = typeof width === "number" ? `${width}px` : width;
 		this.el.style.height = typeof height === "number" ? `${height}px` : height;
+	}
+
+	public setOptions(options: Partial<WindowOptions>): void {
+		// タイトル
+		if (typeof options.title === "string") {
+			this.setTitle(options.title);
+		}
+		// アイコン
+		if (typeof options.icon === "string" || options.icon === null) {
+			this.setIcon(options.icon);
+		}
+		// 常に手前に表示
+		if (typeof options.alwaysOnTop === "boolean") {
+			this.options.alwaysOnTop = options.alwaysOnTop;
+			this.el.classList.toggle(`${LIBRARY_NAME}-always-on-top`, this.options.alwaysOnTop);
+			// z-indexを再評価するためにフォーカスする
+			this.focus();
+		}
+		// ゴーストウィンドウ
+		if (typeof options.useGhostWindow === "boolean") {
+			this.options.useGhostWindow = options.useGhostWindow;
+		}
+		// リサイズ可否など、他のプロパティもここに追加可能...
 	}
 }
