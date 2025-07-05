@@ -11,6 +11,8 @@ const selfUrl = (document?.currentScript as HTMLScriptElement)?.src || "";
 const globalConfig: GlobalConfigOptions = {
 	windowSwitchShortcut: "Ctrl+`", // デフォルトショートカット（バッククォート）
 	libraryPath: selfUrl,
+	enableAnimations: true,
+	enableFocusTrapping: true,
 };
 
 // シングルトンインスタンス
@@ -85,10 +87,31 @@ const api: WinLetApi = {
 	},
 
 	/**
+	 * 表示テーマを登録します。
+	 */
+	registerTheme: (theme: Theme): void => {
+		manager.registerTheme(theme);
+	},
+
+	/**
+	 * 登録済みのテーマ名の配列を取得します。
+	 */
+	getRegisteredThemes: () => {
+		return manager.getRegisteredThemes();
+	},
+
+	/**
 	 * 表示テーマを変更します。
 	 */
 	setTheme: (theme: string | Theme): void => {
 		manager.setTheme(theme);
+	},
+
+	/**
+	 * 現在の表示テーマを取得します。
+	 */
+	getTheme: (): Theme | null => {
+		return manager.getTheme();
 	},
 
 	/**

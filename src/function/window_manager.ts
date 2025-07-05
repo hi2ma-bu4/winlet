@@ -50,6 +50,10 @@ export default class WindowManager extends WinLetBaseClass {
 
 	public applyGlobalConfig(options: GlobalConfigOptions) {
 		Object.assign(this.globalConfig, options);
+		// アニメーション設定をコンテナクラスに反映
+		if (this.container) {
+			this.container.classList.toggle(`${LIBRARY_NAME}-animations-disabled`, !this.globalConfig.enableAnimations);
+		}
 	}
 
 	public getGlobalConfig(): GlobalConfigOptions {
@@ -93,6 +97,9 @@ export default class WindowManager extends WinLetBaseClass {
 		}
 		this.container = containerEl;
 
+		// 初期設定を適用
+		this.applyGlobalConfig(this.globalConfig);
+
 		if (parentEl !== document.body) {
 			this.container.classList.add(`${LIBRARY_NAME}-is-nested`);
 
@@ -110,7 +117,7 @@ export default class WindowManager extends WinLetBaseClass {
 		if (this.globalConfig.theme) {
 			this.setTheme(this.globalConfig.theme);
 		} else {
-			this.setTheme("Default");
+			this.setTheme("default");
 		}
 
 		window.addEventListener("blur", () =>
@@ -348,7 +355,14 @@ export default class WindowManager extends WinLetBaseClass {
 	 * スタイルシートを取得
 	 */
 	private getStyleData() {
-		return styleData.replace(/\$\[(\w+)\]/g, (a, p) => {
+		return this.replaceStringVariable(styleData);
+	}
+
+	/**
+	 * 変数置換
+	 */
+	private replaceStringVariable(str: string) {
+		return str.replace(/\$\[(\w+)\]/g, (a, p) => {
 			switch (p) {
 				case "prefix":
 					return LIBRARY_NAME;
@@ -480,7 +494,7 @@ export default class WindowManager extends WinLetBaseClass {
 		const contentHTML = `${messageHTML}<div class="${LIBRARY_NAME}-popup-buttons">${buttonsHTML}</div>`;
 
 		const winOptions: WindowOptions = {
-			id: `popup-${Utils.generateId()}`,
+			id: Utils.generateId(`${LIBRARY_NAME}-popup`),
 			title: options.title || "",
 			icon: options.icon,
 			resizableX: false,
@@ -491,8 +505,10 @@ export default class WindowManager extends WinLetBaseClass {
 			maximizable: false,
 			maximizableOnDblClick: false,
 			enableShortcuts: false,
+			modal: options.modal ?? true,
+			alwaysOnTop: options.alwaysOnTop ?? false,
 			content: { html: contentHTML },
-			focus: options.focus,
+			focus: options.focus ?? true,
 			_isPopup: true,
 		};
 		if (options.onFocus) winOptions.onFocus = options.onFocus;
@@ -586,8 +602,8 @@ export default class WindowManager extends WinLetBaseClass {
 		this.activeWindow = win;
 		win.el.style.zIndex = `${win.options.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
 
-		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove("active"));
-		win.options._taskbarItem?.classList.add("active");
+		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove(`${LIBRARY_NAME}-active`));
+		win.options._taskbarItem?.classList.add(`${LIBRARY_NAME}-active`);
 		// focus()はWindowクラス側で呼ばれるので不要
 	}
 
@@ -630,7 +646,7 @@ export default class WindowManager extends WinLetBaseClass {
 		menuItems.forEach((itemData) => {
 			const itemEl = document.createElement("li");
 			if (itemData.separator) {
-				itemEl.className = "separator";
+				itemEl.className = `${LIBRARY_NAME}-separator`;
 			} else {
 				itemEl.textContent = itemData.name ?? "";
 				itemEl.addEventListener("click", (e) => {
@@ -660,18 +676,37 @@ export default class WindowManager extends WinLetBaseClass {
 		this.themes.set(theme.name, theme);
 	}
 
+	public getRegisteredThemes(): string[] {
+		return Array.from(this.themes.keys());
+	}
+
 	public setTheme(theme: string | Theme): void {
-		const themeObj = typeof theme === "string" ? this.themes.get(theme) : theme;
+		const themeObj = typeof theme === "string" ? this.themes.get(theme.toLowerCase()) : theme;
 		if (!themeObj) {
 			console.warn(`WinLet: Theme "${theme}" not found.`);
 			return;
 		}
-		this.activeTheme = themeObj;
-		if (this.container) {
-			for (const [key, value] of Object.entries(themeObj.variables)) {
-				this.container.style.setProperty(key, value);
+		if (!this.container) {
+			console.warn("WinLet: Container not found.");
+			return;
+		}
+
+		if (this.activeTheme) {
+			for (const [key, value] of Object.entries(this.activeTheme.variables)) {
+				if (!(key in themeObj.variables)) {
+					this.container.style.removeProperty(this.replaceStringVariable(key));
+				}
 			}
 		}
+
+		this.activeTheme = themeObj;
+		for (const [key, value] of Object.entries(themeObj.variables)) {
+			this.container.style.setProperty(this.replaceStringVariable(key), this.replaceStringVariable(value));
+		}
+	}
+
+	public getTheme(): Theme | null {
+		return this.activeTheme;
 	}
 
 	private createTaskbar(): void {
@@ -689,6 +724,8 @@ export default class WindowManager extends WinLetBaseClass {
 		item.title = win.getTitle();
 		item.dataset.windowId = win.id;
 
+		this.updateTaskbarItemContent(item, win);
+
 		item.addEventListener("click", () => {
 			if (win.state === "minimized") {
 				win.restore();
@@ -705,18 +742,47 @@ export default class WindowManager extends WinLetBaseClass {
 		this.taskbarEl.appendChild(item);
 	}
 
-	public updateTaskbarItem(win: WinLetWindow, state: "minimized" | "restored" | "titleChanged"): void {
+	private updateTaskbarItemContent(item: HTMLElement, win: WinLetWindow) {
+		const { icon, taskbarOptions } = win.options;
+		item.innerHTML = ""; // Clear existing content
+		item.title = win.getTitle(); // Always set tooltip
+
+		const showIconOnly = taskbarOptions?.showIconOnly && icon;
+
+		item.classList.toggle(`${LIBRARY_NAME}-icon-only`, !!showIconOnly);
+
+		if (showIconOnly) {
+			const iconEl = document.createElement("div");
+			iconEl.className = `${LIBRARY_NAME}-taskbar-item-icon`;
+			if (win.isFontAwesome(icon)) {
+				const i = document.createElement("i");
+				i.className = icon;
+				iconEl.appendChild(i);
+			} else {
+				const img = document.createElement("img");
+				img.src = icon;
+				img.alt = win.getTitle();
+				iconEl.appendChild(img);
+			}
+			item.appendChild(iconEl);
+		} else {
+			item.textContent = win.getTitle();
+		}
+	}
+
+	public updateTaskbarItem(win: WinLetWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged"): void {
 		const item = win.options._taskbarItem;
 		if (!item) return;
 
 		switch (state) {
 			case "minimized":
-				item.classList.add("minimized");
+				item.classList.add(`${LIBRARY_NAME}-minimized`);
 				break;
 			case "restored":
-				item.classList.remove("minimized");
+				item.classList.remove(`${LIBRARY_NAME}-minimized`);
 				break;
 			case "titleChanged":
+			case "iconChanged":
 				item.textContent = win.getTitle();
 				item.title = win.getTitle();
 				break;

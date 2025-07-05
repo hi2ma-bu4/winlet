@@ -6,15 +6,12 @@ try {
 jasc.on("DOMContentLoaded", () => {
 	WinLet.init({
 		windowSwitchShortcut: "Ctrl+@",
+		enableAnimations: true,
+		enableTaskbar: true,
 	});
 });
 
 // UI/UXの改善
-// TODO: テーマ機能の導入(ブートストラップのダークモードなどに対応): その他のカスタムテーマを簡単に切り替えられる公式な仕組み
-// TODO: タスクバー/ドックの実装: 画面の端（上下左右）に、起動中のウィンドウや最小化されたウィンドウを一覧表示・管理するタスクバーを設置する機能
-// TODO: ローディングインジケーター: iframeコンテンツや非同期で取得するHTMLコンテンツの読み込み中に、ウィンドウ内にスピナーやプログレスバーを表示するオプションを追加
-// TODO: ウィンドウシェイク機能: win.shake()のように、注意を引くためにウィンドウを揺らすAPIを追加します。入力エラー時などに活用
-// TODO: ウィンドウの透明度設定: win.setOpacity(0.8)のように、ウィンドウの不透明度を動的に変更できる機能
 // TODO: コントロールボタンの拡張: 現在の3つのボタン（最小化・最大化・閉じる）に加え、開発者がカスタムのコントロールボタンを追加できる仕組み
 // ウィンドウ管理・レイアウト
 // TODO: ウィンドウのスナップ機能: ドラッグ中に、画面の四隅や辺、または他のウィンドウの境界にウィンドウが吸着（スナップ）する機能
@@ -225,6 +222,18 @@ class Main {
 					action: (win) => win.setPosition("center", "center"),
 				},
 			],
+		});
+	}
+
+	static createAlwaysOnTopWindow() {
+		WinLet.createWindow({
+			title: "常に前面に表示",
+			minimizable: false,
+			modal: true,
+			alwaysOnTop: true,
+			content: {
+				html: '<div style="padding:1em;"><h2>常に前面に表示</h2><p>常に前面に表示されます。</p></div>',
+			},
 		});
 	}
 }

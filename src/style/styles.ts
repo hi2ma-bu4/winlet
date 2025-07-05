@@ -1,46 +1,95 @@
 const styleData: string = `
+/* ========================================================================
+    1. 基本設定・変数
+   ======================================================================== */
 :root {
+    /* 基本色・シャドウ */
+    --$[prefix]-text-color: #000;
     --$[prefix]-bg: #f0f0f0;
     --$[prefix]-border: #a0a0a0;
+    --$[prefix]-shadow-color-light: rgba(0,0,0,0.15);
+    --$[prefix]-shadow-color-strong: rgba(0,0,0,0.3);
+    --$[prefix]-shadow-color-active: rgba(0,0,0,0.45);
+
+    /* タイトルバー */
     --$[prefix]-title-bar-height: 32px;
     --$[prefix]-title-bar-bg: #e0e0e0;
     --$[prefix]-title-bar-active-bg: #0078d7;
     --$[prefix]-title-text-color: #000;
     --$[prefix]-title-text-active-color: #fff;
+
+    /* コントロールボタン */
     --$[prefix]-control-bg: #d0d0d0;
     --$[prefix]-control-hover-bg: #e5e5e5;
     --$[prefix]-control-close-hover-bg: #e81123;
     --$[prefix]-control-close-hover-color: #fff;
+
+    /* メニュー */
     --$[prefix]-menu-bg: #fff;
     --$[prefix]-menu-border: #ccc;
     --$[prefix]-menu-item-color: #000;
     --$[prefix]-menu-item-hover-bg: #0078d7;
     --$[prefix]-menu-item-hover-color: #fff;
+    --$[prefix]-shortcut-text-color: #666;
+
+    /* タブ */
     --$[prefix]-tab-bg: #dcdcdc;
     --$[prefix]-tab-active-bg: #f0f0f0;
     --$[prefix]-tab-border: #b0b0b0;
+    --$[prefix]-tab-bar-bg: #e1e1e1;
+    --$[prefix]-tab-close-btn-hover-bg: #ccc;
+    --$[prefix]-tab-active-close-btn-hover-bg: #ddd;
+
+    /* ポップアップボタン */
+    --$[prefix]-popup-button-hover-bg: #e9e9e9;
+    --$[prefix]-popup-button-hover-border-color: #bbb;
+
+    /* リサイズハンドル */
     --$[prefix]-resize-handle-size: 8px;
     --$[prefix]-resize-handle-offset: -4px;
+
+    /* タスクバー */
     --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);
     --$[prefix]-taskbar-border: #a0a0a0;
     --$[prefix]-taskbar-item-bg: #d0d0d0;
     --$[prefix]-taskbar-item-active-bg: #0078d7;
     --$[prefix]-taskbar-item-active-color: #fff;
+    --$[prefix]-taskbar-icon-size: 20px;
+
+    /* ローディングインジケーター */
+    --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);
+    --$[prefix]-loader-color: var(--$[prefix]-title-bar-active-bg);
+
+    /* その他 */
+    --$[prefix]-scrollbar-thumb-bg: rgba(100, 100, 100, 0.5);
 }
 
+/* ========================================================================
+    2. ユーティリティクラス
+   ========================================================================= */
+/**
+ * テキスト選択を無効化
+ */
 .$[prefix]-us-none {
     user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-
+/**
+ * テキスト選択を有効化
+ */
 .$[prefix]-us-auto {
     user-select: auto;
     -webkit-user-select: auto;
     -ms-user-select: auto;
 }
 
-
+/* ========================================================================
+    3. コンテナ
+   ========================================================================= */
+/**
+ * 全てのウィンドウを内包する最上位コンテナ
+ */
 .$[prefix]-container {
     position: fixed;
     top: 0;
@@ -51,15 +100,22 @@ const styleData: string = `
     overflow: hidden;
     z-index: 999;
 }
-
+/**
+ * 特定の要素内にネストされた場合のコンテナ
+ */
 .$[prefix]-container.$[prefix]-is-nested {
     position: absolute;
 }
-
+/**
+ * タブのドラッグ中にポインターイベントを有効化し、ドロップを受け付ける
+ */
 .$[prefix]-container.$[prefix]-is-tab-dragging {
     pointer-events: auto;
 }
-
+/* ========================================================================
+   4. ウィンドウ
+   ======================================================================== */
+/* --- ウィンドウ基本スタイル --- */
 .$[prefix]-window {
     position: absolute;
     display: flex;
@@ -68,39 +124,75 @@ const styleData: string = `
     min-height: 150px;
     border: 1px solid var(--$[prefix]-border);
     background-color: var(--$[prefix]-bg);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);
     border-radius: 5px;
     overflow: hidden;
     pointer-events: all;
-    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out; /* transitionを更新 */
+    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
     touch-action: none;
 }
 
+/* --- ウィンドウ状態別スタイル --- */
+/**
+ * ドラッグ中・リサイズ中のトランジションを短縮し、操作性を向上
+ */
 .$[prefix]-window.$[prefix]-is-dragging,
 .$[prefix]-window.$[prefix]-is-resizing {
     transition: opacity 0.1s, transform 0.1s;
 }
-
-.$[prefix]-window.minimized {
-    transform: scale(0.5);
+/**
+ * 最小化されたウィンドウのアニメーション
+ */
+.$[prefix]-window.$[prefix]-is-minimizing,
+.$[prefix]-window.$[prefix]-minimized {
+    transform: scale(0);
     opacity: 0;
     transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
 }
-
-.$[prefix]-window.maximized {
-    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
-}
-
-.$[prefix]-window.maximized > .$[prefix]-resize-handle {
+.$[prefix]-window.$[prefix]-minimized {
     display: none;
 }
-
-.$[prefix]-window.is-restoring {
+/**
+ * 最大化されたウィンドウのアニメーション
+ */
+.$[prefix]-window.$[prefix]-maximized {
     transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
 }
+/**
+ * 最大化状態ではリサイズハンドルを非表示
+ */
+.$[prefix]-window.$[prefix]-maximized > .$[prefix]-resize-handle {
+    display: none;
+}
+/**
+ * 復元中のアニメーション
+ */
+.$[prefix]-window.$[prefix]-is-restoring {
+    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
+}
+/**
+ * アクティブ（フォーカスされている）ウィンドウ
+ */
+.$[prefix]-window.$[prefix]-active {
+    box-shadow: 0 8px 25px var(--$[prefix]-shadow-color-active); /* アクティブ時のシャドウ */
+}
+/**
+ * アクティブ（フォーカスされている）ウィンドウのタイトルバー
+ */
+.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {
+    background-color: var(--$[prefix]-title-bar-active-bg);
+    color: var(--$[prefix]-title-text-active-color);
+}
+.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar .$[prefix]-title {
+    color: var(--$[prefix]-title-text-active-color);
+}
 
-/* 常に手前に表示 */
-.$[prefix]-window.always-on-top .$[prefix]-title-bar {
+/* --- ウィンドウ特殊スタイル --- */
+/**
+ * 「常に手前に表示」が有効なウィンドウ
+ */
+.$[prefix]-window.$[prefix]-always-on-top .$[prefix]-title-bar {
     background-image: repeating-linear-gradient(
         -45deg,
         transparent,
@@ -110,7 +202,25 @@ const styleData: string = `
     );
 }
 
-/* --- ゴーストウィンドウ --- */
+/**
+ * ウィンドウシェイクアニメーション
+ */
+@keyframes $[prefix]-shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+.$[prefix]-window.$[prefix]-is-shaking {
+    animation: $[prefix]-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* ========================================================================
+    5. ゴーストウィンドウ
+   ======================================================================== */
+/**
+ * ドラッグ・リサイズ時に表示される輪郭
+ */
 .$[prefix]-ghost-window {
     position: absolute;
     box-sizing: border-box;
@@ -120,15 +230,10 @@ const styleData: string = `
     pointer-events: none;
 }
 
-/* Focus State */
-.$[prefix]-window.active .$[prefix]-title-bar {
-    background-color: var(--$[prefix]-title-bar-active-bg);
-    color: var(--$[prefix]-title-text-active-color);
-}
-.$[prefix]-window.active .$[prefix]-title-bar .$[prefix]-title {
-    color: var(--$[prefix]-title-text-active-color);
-}
-
+/* ========================================================================
+    6. タイトルバー
+   ======================================================================== */
+/* --- タイトルバー基本スタイル --- */
 .$[prefix]-title-bar {
     display: flex;
     align-items: center;
@@ -139,11 +244,14 @@ const styleData: string = `
     flex-shrink: 0;
     touch-action: none;
 }
-
-.$[prefix]-title-bar.controls-left {
+/**
+ * コントロールが左側にある場合のタイトルバー
+ */
+.$[prefix]-title-bar.$[prefix]-controls-left {
     flex-direction: row-reverse;
 }
 
+/* --- アイコン・タイトル --- */
 .$[prefix]-icon {
     min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);
     height: calc(var(--$[prefix]-title-bar-height) * 0.75);
@@ -182,10 +290,11 @@ const styleData: string = `
     pointer-events: none;
 }
 
-.$[prefix]-title-bar.controls-left .$[prefix]-title {
+.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-title {
     text-align: right;
 }
 
+/* --- コントロールボタン --- */
 .$[prefix]-controls {
     display: flex;
     height: 100%;
@@ -193,7 +302,7 @@ const styleData: string = `
     flex-shrink: 0;
 }
 
-.$[prefix]-title-bar.controls-left .$[prefix]-controls {
+.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-controls {
     margin-left: 0;
     margin-right: auto;
     flex-direction: row-reverse;
@@ -223,14 +332,64 @@ const styleData: string = `
     color: var(--$[prefix]-control-close-hover-color);
 }
 
+/* ========================================================================
+    7. メインコンテンツエリア
+   ======================================================================== */
 .$[prefix]-main-content {
     all: initial;
+    position: relative;
     display:flex;
+    color: var(--$[prefix]-text-color);
     flex-direction:column;
     flex-grow:1;
     overflow:hidden;
 }
 
+.$[prefix]-content {
+    flex-grow: 1;
+    position: relative;
+    overflow: auto;
+    touch-action: auto;
+}
+
+.$[prefix]-content iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* --- ローディングインジケーター --- */
+.$[prefix]-loader-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--$[prefix]-loader-bg);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+@keyframes $[prefix]-spinner-rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.$[prefix]-loader-spinner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 5px solid #fff;
+    border-bottom-color: var(--$[prefix]-loader-color);
+    animation: $[prefix]-spinner-rotation 1s linear infinite;
+}
+
+/* ========================================================================
+    8. メニューバー
+   ======================================================================== */
 .$[prefix]-menu-bar {
     color: var(--$[prefix]-menu-item-color);
     display: flex;
@@ -243,7 +402,7 @@ const styleData: string = `
 
 .$[prefix]-menu-item {
     font-family: sans-serif;
-    font-size: 14px;
+    font-size: clamp(0px , calc(var(--winlet-title-bar-height) * 0.6), 14px);
     padding: 4px 8px;
     cursor: default;
     position: relative;
@@ -254,16 +413,16 @@ const styleData: string = `
     color: var(--$[prefix]-menu-item-hover-color);
 }
 
+/* --- ドロップダウンメニュー --- */
 .$[prefix]-menu-dropdown {
     color: var(--$[prefix]-menu-item-color);
-    line-height: 1.6em;
     display: none;
     position: absolute;
     top: 100%;
     left: 0;
     background-color: var(--$[prefix]-menu-bg);
     border: 1px solid var(--$[prefix]-menu-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);
     list-style: none;
     margin: 0;
     padding: 4px 0;
@@ -283,7 +442,7 @@ const styleData: string = `
     color: var(--$[prefix]-menu-item-hover-color);
 }
 
-.$[prefix]-menu-dropdown li.separator {
+.$[prefix]-menu-dropdown li.$[prefix]-separator {
     height: 1px;
     background-color: var(--$[prefix]-menu-border);
     margin: 4px 0;
@@ -292,18 +451,18 @@ const styleData: string = `
 
 .$[prefix]-menu-dropdown-item {
     display: flex;
+    line-height: 1.6em;
     flex-wrap: nowrap;
     justify-content: space-between;
     width: 100%;
     white-space: nowrap;
 }
 
-/* --- メニュー --- */
-/* サブメニューを持つ項目のスタイル */
-.$[prefix]-menu-dropdown li.has-submenu {
+/* --- サブメニュー --- */
+.$[prefix]-menu-dropdown li.$[prefix]-has-submenu {
     position: relative;
 }
-.$[prefix]-menu-dropdown li.has-submenu::after {
+.$[prefix]-menu-dropdown li.$[prefix]-has-submenu::after {
     content: '▶';
     position: absolute;
     top: 50%;
@@ -312,21 +471,23 @@ const styleData: string = `
     font-size: 0.8em;
     color: inherit;
 }
-
-/* ネストされたサブメニューの表示位置 */
-.$[prefix]-menu-dropdown li.has-submenu > .$[prefix]-menu-dropdown {
+/**
+ * ネストされたサブメニューの表示位置
+ */
+.$[prefix]-menu-dropdown li.$[prefix]-has-submenu > .$[prefix]-menu-dropdown {
     top: -5px; /* liのpaddingを考慮 */
     left: 100%;
 }
-
-/* サブメニューはホバーで開く */
-.$[prefix]-menu-dropdown li.has-submenu:hover > .$[prefix]-menu-dropdown {
+/**
+ * サブメニューはホバーで開く
+ */
+.$[prefix]-menu-dropdown li.$[prefix]-has-submenu:hover > .$[prefix]-menu-dropdown {
     display: block;
 }
 
-/* ショートカットキーテキストのスタイル */
+/* --- ショートカットテキスト --- */
 .$[prefix]-shortcut-text {
-    color: #666;
+    color: var(--$[prefix]-shortcut-text-color);
     margin-left: 1em;
 }
 .$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {
@@ -341,7 +502,7 @@ const styleData: string = `
     -ms-overflow-style: -ms-autohiding-scrollbar;
     scrollbar-width: thin;
     display: flex;
-    background-color: #e1e1e1;
+    background-color: var(--$[prefix]-tab-bar-bg);
     flex-shrink: 0;
     align-items: flex-end;
     touch-action: auto;
@@ -353,7 +514,7 @@ const styleData: string = `
 }
 
 .$[prefix]-tab-bar::-webkit-scrollbar-thumb {
-    background-color: rgba(100, 100, 100, 0.5);
+    background-color: var(--$[prefix]-scrollbar-thumb-bg);
     border-radius: 3px;
 }
 
@@ -361,6 +522,7 @@ const styleData: string = `
     background-color: transparent;
 }
 
+/* --- タブ --- */
 .$[prefix]-tab {
     white-space: nowrap;
     padding: 8px 16px;
@@ -371,20 +533,26 @@ const styleData: string = `
     background-color: var(--$[prefix]-tab-bg);
 }
 
-.$[prefix]-tab.active {
+.$[prefix]-tab.$[prefix]-active {
     background-color: var(--$[prefix]-tab-active-bg);
     border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);
 }
 
-.$[prefix]-tab.active .$[prefix]-tab-close-btn:hover {
-    background-color: #ddd;
+.$[prefix]-tab.$[prefix]-active .$[prefix]-tab-close-btn:hover {
+    background-color: var(--$[prefix]-tab-active-close-btn-hover-bg);
 }
 
-/* ドラッグ中のタブのスタイル */
-.$[prefix]-tab.dragging {
+/**
+ * ドラッグ中のタブのスタイル
+ */
+.$[prefix]-tab.$[prefix]-dragging {
     opacity: 0.5;
 }
-/* タブの閉じるボタン */
+
+/* --- タブ関連ボタン --- */
+/**
+ * タブの閉じるボタン
+ */
 .$[prefix]-tab-close-btn {
     margin-left: 8px;
     padding: 0 4px;
@@ -395,20 +563,12 @@ const styleData: string = `
     line-height: 1;
 }
 .$[prefix]-tab-close-btn:hover {
-    background-color: #ccc;
+    background-color: var(--$[prefix]-tab-close-btn-hover-bg);
 }
 
-.$[prefix]-tab-content {
-    display: none;
-}
-
-.$[prefix]-tab-content.active {
-    display: block;
-    width: 100%;
-    height: 100%;
-}
-
-/* タブ追加ボタン */
+/**
+ * タブ追加ボタン
+ */
 .$[prefix]-tab-add-btn {
     padding: 8px;
     font-size: 14px;
@@ -416,40 +576,42 @@ const styleData: string = `
     border-bottom: 1px solid var(--$[prefix]-tab-border);
 }
 .$[prefix]-tab-add-btn:hover {
-    background-color: #e0e0e0;
+    background-color: var(--$[prefix]-title-bar-bg);
 }
 
-.$[prefix]-content {
-    flex-grow: 1;
-    position: relative;
-    overflow: auto;
-    touch-action: auto;
+/* --- タブコンテンツ --- */
+.$[prefix]-tab-content {
+    display: none;
 }
 
-.$[prefix]-content iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
+.$[prefix]-tab-content.$[prefix]-active {
+    display: block;
     width: 100%;
     height: 100%;
-    border: none;
 }
 
+
+/* ========================================================================
+    10. リサイズハンドル
+   ======================================================================== */
 .$[prefix]-resize-handle {
     position: absolute;
     z-index: 5;
     touch-action: none;
 }
 
-.$[prefix]-resize-handle.n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }
-.$[prefix]-resize-handle.s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }
-.$[prefix]-resize-handle.w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }
-.$[prefix]-resize-handle.e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }
-.$[prefix]-resize-handle.nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }
-.$[prefix]-resize-handle.ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }
-.$[prefix]-resize-handle.sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }
-.$[prefix]-resize-handle.se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }
+.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }
+.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }
+.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }
+.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }
+.$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }
+.$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }
+.$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }
+.$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }
 
+/* ========================================================================
+    11. コンテキストメニュー
+   ======================================================================== */
 .$[prefix]-context-menu {
     color: var(--$[prefix]-menu-item-color);
     pointer-events: all;
@@ -457,7 +619,7 @@ const styleData: string = `
     z-index: 10000;
     background-color: var(--$[prefix]-menu-bg);
     border: 1px solid var(--$[prefix]-menu-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);
     list-style: none;
     margin: 0;
     padding: 4px 0;
@@ -473,14 +635,16 @@ const styleData: string = `
     background-color: var(--$[prefix]-menu-item-hover-bg);
     color: var(--$[prefix]-menu-item-hover-color);
 }
-.$[prefix]-context-menu li.separator {
+.$[prefix]-context-menu li.$[prefix]-separator {
     height: 1px;
     background-color: var(--$[prefix]-menu-border);
     margin: 4px 0;
     padding: 0;
 }
 
-/* --- Popup Styles --- */
+/* ========================================================================
+    12. ポップアップ
+   ======================================================================== */
 .$[prefix]-popup-window .$[prefix]-content {
     display: flex;
     flex-direction: column;
@@ -504,47 +668,44 @@ const styleData: string = `
     touch-action: auto;
 }
 .$[prefix]-popup-button {
+    color: var(--$[prefix]-menu-item-color);
     min-width: 80px;
     padding: 8px 12px;
     margin: 0;
-    border: 1px solid #ccc;
+    border: 1px solid var(--$[prefix]-menu-border);
     border-radius: 3px;
-    background-color: #f0f0f0;
+    background-color: var(--$[prefix]-bg);
     cursor: pointer;
     font-size: 14px;
-    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 1px 1px var(--$[prefix]-shadow-color-light);
 }
 .$[prefix]-popup-button:hover {
-    border-color: #bbb;
-    background-color: #e9e9e9;
+    border-color: var(--$[prefix]-popup-button-hover-border-color);
+    background-color: var(--$[prefix]-popup-button-hover-bg);
 }
 .$[prefix]-popup-button:active {
-    background-color: #dcdcdc;
+    background-color: var(--$[prefix]-tab-bg);
 }
 
-/* --- Merged Menu/Tab Styles --- */
+/* ========================================================================
+    13. 統合スタイル (Merged Styles)
+   ======================================================================== */
+/* --- メニュー/タブ統合時の基本タイトルバー --- */
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {
     height: auto;
     align-items: flex-end;
     padding: 0;
 }
-.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.active .$[prefix]-title-bar {
-    background-color: var(--$[prefix]-title-bar-bg);
-}
 
+/* --- メニュー統合スタイル --- */
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {
     margin-block: auto;
-}
-
-.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {
-    display: none;
 }
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {
     flex-grow: 1;
     margin-block: auto;
 }
-
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {
     border-bottom: none;
     background: transparent;
@@ -556,13 +717,21 @@ const styleData: string = `
     padding-top: 0;
     padding-bottom: 0;
 }
-
-.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {
+/* アクティブウィンドウの統合メニューの文字色 */
+.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {
     color: var(--winlet-menu-item-hover-color);
 }
-.$[prefix]-window.$[prefix]-menu-style-merged.active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {
+.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {
     background-color: var(--$[prefix]-title-bar-bg);
     color: var(--$[prefix]-menu-item-color);
+}
+
+/* --- タブ統合スタイル (Chrome風) --- */
+.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {
+    background-color: var(--$[prefix]-title-bar-bg);
+}
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {
+    display: none;
 }
 
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {
@@ -574,17 +743,13 @@ const styleData: string = `
     height: calc(var(--$[prefix]-title-bar-height) + 4px);
     margin: 0;
     order: 1; /* controlsより前に配置 */
-}
-.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{
-    width: 0px;
-    height: 0px;
+    display: none;
 }
-
-.$[prefix]-window.$[prefix]-title-bar.controls-left .$[prefix]-tab-bar {
+.$[prefix]-window.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-tab-bar {
     order: -1;
 }
 
@@ -598,7 +763,7 @@ const styleData: string = `
     position: relative;
     bottom: -1px;
 }
-.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.active {
+.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.$[prefix]-active {
     background-color: var(--$[prefix]-bg);
     border-color: var(--$[prefix]-border);
     border-bottom: 1px solid var(--$[prefix]-bg);
@@ -612,13 +777,17 @@ const styleData: string = `
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {
     border-top: none;
 }
+
+/* --- 統合時のコントロールボタン --- */
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {
     align-self: flex-start;
     order: 2;
 }
 
-/* --- タスクバー --- */
+/* ========================================================================
+    14. タスクバー
+   ======================================================================== */
 .$[prefix]-taskbar {
     position: absolute;
     bottom: 0;
@@ -634,12 +803,26 @@ const styleData: string = `
     z-index: 50000;
     gap: 5px;
     overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
     backdrop-filter: blur(5px);
+    pointer-events: all;
+}
+.$[prefix]-taskbar::-webkit-scrollbar{
+    width: 6px;
+    height: 6px;
+}
+.$[prefix]-taskbar::-webkit-scrollbar-thumb {
+    background-color: var(--$[prefix]-scrollbar-thumb-bg);
+    border-radius: 3px;
+}
+.$[prefix]-taskbar::-webkit-scrollbar-track {
+    background-color: transparent;
 }
 .$[prefix]-taskbar-item {
     display: flex;
     align-items: center;
-    height: 30px;
+    height: 70%;
     padding: 0 10px;
     border-radius: 3px;
     background-color: var(--$[prefix]-taskbar-item-bg);
@@ -653,16 +836,39 @@ const styleData: string = `
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.$[prefix]-taskbar-item.active {
+.$[prefix]-taskbar-item-icon {
+    width: var(--$[prefix]-taskbar-icon-size);
+    height: var(--$[prefix]-taskbar-icon-size);
+}
+.$[prefix]-taskbar-item-icon i,
+.$[prefix]-taskbar-item-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.$[prefix]-taskbar-item-icon i {
+    font-size: calc(var(--$[prefix]-taskbar-icon-size) * 0.9);
+    line-height: var(--$[prefix]-taskbar-icon-size);
+    text-align: center;
+}
+.$[prefix]-taskbar-item.$[prefix]-icon-only {
+    min-width: var(--$[prefix]-taskbar-icon-size);
+    max-width: calc(var(--$[prefix]-taskbar-icon-size) + 12px);
+    padding: 0 6px;
+}
+.$[prefix]-taskbar-item.$[prefix]-active {
     background-color: var(--$[prefix]-taskbar-item-active-bg);
     color: var(--$[prefix]-taskbar-item-active-color);
 }
-.$[prefix]-taskbar-item.minimized {
+.$[prefix]-taskbar-item.$[prefix]-minimized {
     opacity: 0.7;
 }
 
-/* --- Mobile / Touch Device Adjustments --- */
+/* ========================================================================
+    15. モバイル・タッチデバイス対応
+   ======================================================================== */
 @media (pointer: coarse), (max-width: 768px) {
+    /* リサイズハンドルとコントロールボタンを大きくして操作しやすくする */
     :root {
         --$[prefix]-resize-handle-size: 16px;
         --$[prefix]-resize-handle-offset: -8px;
@@ -670,6 +876,16 @@ const styleData: string = `
     .$[prefix]-control-btn {
         width: calc(var(--$[prefix]-title-bar-height) * 1.5);
     }
+}
+
+/* ========================================================================
+    16. アニメーション無効化
+   ======================================================================== */
+.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,
+.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,
+.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,
+.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {
+    transition: none;
 }
 `;
 

@@ -19,7 +19,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private titleBarEl: HTMLElement;
 	private iconEl: HTMLElement;
 	private titleEl: HTMLElement;
+	private mainContentEl: HTMLElement;
 	private contentEl: HTMLElement;
+	private loaderEl: HTMLElement;
 	private tabs: { tabEl: HTMLElement; contentEl: HTMLElement }[] = [];
 	private addTabBtn: HTMLElement | null = null;
 	private isMenuOpen = false;
@@ -37,7 +39,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	constructor(options: WindowOptions, manager: WindowManager) {
 		super();
-		this.id = options.id || Utils.generateId("window");
+		this.id = options.id || Utils.generateId(`${LIBRARY_NAME}-window`);
 		if (options.id) {
 			const existingEl = document.getElementById(options.id);
 			if (existingEl && existingEl.classList.contains(`${LIBRARY_NAME}-window`)) {
@@ -72,7 +74,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.titleBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title-bar`)!;
 		this.iconEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-icon`)!;
 		this.titleEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title`)!;
-		this.contentEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
+		this.mainContentEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-main-content`)!;
+		this.contentEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
+		this.loaderEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-loader-overlay`)!;
 
 		this.applyOptions();
 		this.setupEventListeners();
@@ -87,13 +91,13 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		const handles: string[] = [];
 		if (this.options.resizableY) {
-			handles.push(`<div class="${LIBRARY_NAME}-resize-handle n"></div>`, `<div class="${LIBRARY_NAME}-resize-handle s"></div>`);
+			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-n"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-s"></div>`);
 		}
 		if (this.options.resizableX) {
-			handles.push(`<div class="${LIBRARY_NAME}-resize-handle w"></div>`, `<div class="${LIBRARY_NAME}-resize-handle e"></div>`);
+			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-w"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-e"></div>`);
 		}
 		if (this.options.resizableX && this.options.resizableY) {
-			handles.push(`<div class="${LIBRARY_NAME}-resize-handle nw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ne"></div>`, `<div class="${LIBRARY_NAME}-resize-handle sw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle se"></div>`);
+			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-nw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-ne"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-sw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-se"></div>`);
 		}
 		const resizableHandlesHTML = handles.join("");
 
@@ -117,6 +121,12 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
             ${controlsHTML}
         `;
 
+		const loaderHTML = `
+            <div class="${LIBRARY_NAME}-loader-overlay" style="display: none;">
+                <div class="${LIBRARY_NAME}-loader-spinner"></div>
+            </div>
+        `;
+
 		windowEl.innerHTML = `
             <div class="${LIBRARY_NAME}-title-bar ${LIBRARY_NAME}-us-none">
                 ${titleBarContentHTML}
@@ -125,6 +135,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
                 ${!isMergedMenu && hasMenu ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
                 ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
                 <div class="${LIBRARY_NAME}-content"></div>
+				${loaderHTML}
             </div>
             ${resizableHandlesHTML}
         `;
@@ -139,7 +150,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.el.style.minHeight = `${this.options.minHeight}px`;
 
 		if (this.options.controlsPosition === "left") {
-			this.titleBarEl.classList.add("controls-left");
+			this.titleBarEl.classList.add(`${LIBRARY_NAME}-controls-left`);
 		}
 
 		if (this.options.tabs.length > 0) {
@@ -153,8 +164,20 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 	}
 
+	private showLoader(): void {
+		if (this.options.showLoadingIndicator) {
+			this.loaderEl.style.display = "flex";
+		}
+	}
+
+	private hideLoader(): void {
+		this.loaderEl.style.display = "none";
+	}
+
 	private renderContent(container: HTMLElement, content: WindowContentOptions): void {
 		container.innerHTML = "";
+		this.hideLoader();
+
 		if (content.template) {
 			const template = document.querySelector<HTMLTemplateElement>(content.template);
 			if (template?.tagName === "TEMPLATE") {
@@ -166,6 +189,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		} else if (content.html) {
 			container.innerHTML = content.html;
 		} else if (Utils.isNonEmptyObject(content.iframe) && (content.iframe.src || content.iframe.srcdoc)) {
+			this.showLoader();
 			const iframe = document.createElement("iframe");
 			const iframeConfig = content.iframe;
 			if (iframeConfig.src) {
@@ -202,6 +226,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					iframe.setAttribute("sandbox", iframeConfig.sandbox.join(" "));
 				}
 			}
+			iframe.addEventListener("load", () => this.hideLoader());
+			iframe.addEventListener("error", () => this.hideLoader());
 			container.appendChild(iframe);
 		} else {
 			container.innerHTML = "";
@@ -258,7 +284,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		items.forEach((itemData) => {
 			const itemEl = document.createElement("li");
 			if (itemData.separator) {
-				itemEl.className = "separator";
+				itemEl.className = `${LIBRARY_NAME}-separator`;
 			} else {
 				let text = itemData.name ?? "";
 				text = `<span>${text}</span>`;
@@ -272,7 +298,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					itemData.action?.(this);
 				});
 				if (itemData.items) {
-					itemEl.classList.add("has-submenu"); // スタイル付けのためのクラス
+					itemEl.classList.add(`${LIBRARY_NAME}-has-submenu`); // スタイル付けのためのクラス
 					const subMenuEl = this.createDropdownMenu(itemData.items);
 					itemEl.appendChild(subMenuEl);
 				}
@@ -333,7 +359,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			const sourceTabId = e.dataTransfer?.getData("text/plain");
 			if (!tabDataJSON || !sourceWindowId || !sourceTabId) return;
 
-			const draggingEl = this.manager.container?.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.dragging`);
+			const draggingEl = this.manager.container?.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.${LIBRARY_NAME}-dragging`);
 
 			// 自分自身のウィンドウ内での並び替え
 			if (sourceWindowId === this.id) {
@@ -416,7 +442,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		tabEl.draggable = true;
 		tabEl.addEventListener("dragstart", (e) => {
 			e.dataTransfer!.setData("text/plain", tabEl.dataset.tabId!);
-			tabEl.classList.add("dragging");
+			tabEl.classList.add(`${LIBRARY_NAME}-dragging`);
 
 			// 分離機能が有効な場合、追加情報をセット
 			if (this.options.tabOptions.detachable) {
@@ -431,7 +457,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			}
 		});
 		tabEl.addEventListener("dragend", () => {
-			tabEl.classList.remove("dragging");
+			tabEl.classList.remove(`${LIBRARY_NAME}-dragging`);
 			this.manager.onTabDragEnd();
 		});
 
@@ -443,7 +469,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				}
 
 				e.preventDefault();
-				const draggingEl = document.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.dragging`);
+				const draggingEl = document.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.${LIBRARY_NAME}-dragging`);
 				if (draggingEl && draggingEl !== tabEl) {
 					const rect = tabEl.getBoundingClientRect();
 					// カーソルの位置によって挿入位置を左右に決める
@@ -471,7 +497,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	// タブを閉じるロジック
 	public closeTab(index: number) {
 		// アクティブなタブが閉じられるかチェック
-		const wasActive = this.tabs[index]?.tabEl.classList.contains("active");
+		const wasActive = this.tabs[index]?.tabEl.classList.contains(`${LIBRARY_NAME}-active`);
 
 		// DOMから要素を削除
 		this.tabs[index].tabEl.remove();
@@ -497,8 +523,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	public activateTab(index: number): void {
 		this.tabs.forEach((tab, i) => {
-			tab.tabEl.classList.toggle("active", i === index);
-			tab.contentEl.classList.toggle("active", i === index);
+			tab.tabEl.classList.toggle(`${LIBRARY_NAME}-active`, i === index);
+			tab.contentEl.classList.toggle(`${LIBRARY_NAME}-active`, i === index);
 		});
 	}
 
@@ -691,7 +717,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 			const onPointerUp = () => {
 				document.removeEventListener("pointermove", onPointerMove);
-				document.removeEventListener("pointerup", onPointerMove);
+				document.removeEventListener("pointerup", onPointerUp);
 
 				if (ghostEl) {
 					this.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
@@ -762,13 +788,13 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 						const deltaX = moveE.clientX - startX;
 						const deltaY = moveE.clientY - startY;
 
-						if (direction.includes("e")) newWidth = Math.max(minWidth, startWidth + deltaX);
-						if (direction.includes("w")) {
+						if (direction.includes(`${LIBRARY_NAME}-e`)) newWidth = Math.max(minWidth, startWidth + deltaX);
+						if (direction.includes(`${LIBRARY_NAME}-w`)) {
 							newWidth = Math.max(minWidth, startWidth - deltaX);
 							newLeft = startLeft + deltaX;
 						}
-						if (direction.includes("s")) newHeight = Math.max(minHeight, startHeight + deltaY);
-						if (direction.includes("n")) {
+						if (direction.includes(`${LIBRARY_NAME}-s`)) newHeight = Math.max(minHeight, startHeight + deltaY);
+						if (direction.includes(`${LIBRARY_NAME}-n`)) {
 							newHeight = Math.max(minHeight, startHeight - deltaY);
 							newTop = startTop + deltaY;
 						}
@@ -806,7 +832,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		});
 	}
 
-	private isFontAwesome(classStr: string): boolean {
+	public isFontAwesome(classStr: string): boolean {
 		const classes = classStr.trim().split(/\s+/);
 		const hasPrefix = classes.some((c) => /^fa[bslr]?$/.test(c));
 		const hasIcon = classes.some((c) => /^fa-[a-z0-9-]+$/.test(c));
@@ -830,14 +856,14 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 			const doMinimize = () => {
 				this.state = "minimized";
-				this.el.classList.add("minimized");
-				this.el.classList.remove("is-minimizing");
+				this.el.classList.add(`${LIBRARY_NAME}-minimized`);
+				this.el.classList.remove(`${LIBRARY_NAME}-is-minimizing`);
 				this.manager.updateTaskbarItem(this, "minimized");
 				this.blur();
 			};
 
 			if (this.manager.getGlobalConfig().enableAnimations) {
-				this.el.classList.add("is-minimizing");
+				this.el.classList.add(`${LIBRARY_NAME}-is-minimizing`);
 				this.el.addEventListener("transitionend", doMinimize, { once: true });
 			} else {
 				doMinimize();
@@ -854,16 +880,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			if (this.state !== "normal") this.restore();
 			this.lastState = { x: this.el.offsetLeft, y: this.el.offsetTop, width: this.el.offsetWidth, height: this.el.offsetHeight };
 			this.state = "maximized";
-			this.el.classList.add("maximized");
+			this.el.classList.add(`${LIBRARY_NAME}-maximized`);
 
 			const doMaximize = () => {
-				this.el.classList.remove("is-maximizing");
+				this.el.classList.remove(`${LIBRARY_NAME}-is-maximizing`);
 				this.setPosition(0, 0);
 				this.setSize("100%", "100%");
 			};
 
 			if (this.manager.getGlobalConfig().enableAnimations) {
-				this.el.classList.add("is-maximizing");
+				this.el.classList.add(`${LIBRARY_NAME}-is-maximizing`);
 				// アニメーションのために先にサイズと位置を設定
 				this.el.style.top = "0px";
 				this.el.style.left = "0px";
@@ -886,13 +912,13 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const wasMinimized = this.state === "minimized";
 		if (this.state === "minimized") {
 			this.state = "normal";
-			this.el.classList.remove("minimized");
+			this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
 			this.manager.updateTaskbarItem(this, "restored");
 			this.focus();
 		} else if (this.state === "maximized") {
 			const doRestore = () => {
 				this.state = "normal";
-				this.el.classList.remove("maximized", "is-restoring");
+				this.el.classList.remove(`${LIBRARY_NAME}-maximized`, `${LIBRARY_NAME}-is-restoring`);
 				const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
 				if (maxBtn) {
 					maxBtn.title = "Maximize";
@@ -901,7 +927,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			};
 
 			if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
-				this.el.classList.add("is-restoring");
+				this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
 				this.setSize(this.lastState.width, this.lastState.height);
 				this.setPosition(this.lastState.x, this.lastState.y);
 				this.el.addEventListener("transitionend", doRestore, { once: true });
@@ -923,15 +949,30 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		this.manager.focusWindow(this);
 		this.focused = true;
-		this.el.classList.add("active");
+		this.el.classList.add(`${LIBRARY_NAME}-active`);
 		this.options.onFocus(this);
 	}
 
 	public blur(): void {
 		if (!this.focused) return;
 		this.focused = false;
-		this.el.classList.remove("active");
+		this.el.classList.remove(`${LIBRARY_NAME}-active`);
 		this.options.onBlur(this);
+	}
+
+	public shake(): void {
+		const className = `${LIBRARY_NAME}-is-shaking`;
+		if (this.el.classList.contains(className)) {
+			return; // Already shaking
+		}
+		this.el.classList.add(className);
+		this.el.addEventListener(
+			"animationend",
+			() => {
+				this.el.classList.remove(className);
+			},
+			{ once: true }
+		);
 	}
 
 	public reload(): void {
@@ -964,7 +1005,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		};
 
 		if (this.options.tabs.length > 0) {
-			const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains("active"));
+			const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains(`${LIBRARY_NAME}-active`));
 			if (activeTabIndex > -1) {
 				const activeTab = this.tabs[activeTabIndex];
 				const tabContentOptions = this.options.tabs[activeTabIndex].content;
@@ -977,7 +1018,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	public getContent(): HTMLElement | HTMLIFrameElement {
 		let contentContainer: HTMLElement;
-		const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains("active"));
+		const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains(`${LIBRARY_NAME}-active`));
 
 		if (activeTabIndex > -1) {
 			// If there's an active tab, use its content element
@@ -1058,7 +1099,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public setIcon(icon: string | null): void {
 		this.options.icon = icon;
 		this.iconEl.innerHTML = "";
-		if (!icon) return;
+		if (!icon) {
+			this.manager.updateTaskbarItem(this, "iconChanged");
+			return;
+		}
 
 		if (this.isFontAwesome(icon)) {
 			const i = document.createElement("i");
@@ -1070,6 +1114,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			img.alt = "window icon";
 			this.iconEl.appendChild(img);
 		}
+		this.manager.updateTaskbarItem(this, "iconChanged");
 	}
 
 	public getPosition(): { x: number; y: number } {
@@ -1141,6 +1186,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.el.style.height = typeof height === "number" ? `${height}px` : height;
 	}
 
+	public setOpacity(opacity: number): void {
+		const clampedOpacity = Math.max(0, Math.min(1, opacity));
+		this.options.opacity = clampedOpacity;
+		this.el.style.opacity = clampedOpacity.toString();
+	}
+
+	public getOpacity(): number {
+		return this.options.opacity;
+	}
+
 	public setOptions(options: Partial<WindowOptions>): void {
 		// タイトル
 		if (typeof options.title === "string") {
@@ -1149,6 +1204,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		// アイコン
 		if (typeof options.icon === "string" || options.icon === null) {
 			this.setIcon(options.icon);
+		}
+		// 不透明度
+		if (typeof options.opacity === "number") {
+			this.setOpacity(options.opacity);
 		}
 		// 常に手前に表示
 		if (typeof options.alwaysOnTop === "boolean") {
@@ -1161,6 +1220,6 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (typeof options.useGhostWindow === "boolean") {
 			this.options.useGhostWindow = options.useGhostWindow;
 		}
-		// リサイズ可否など、他のプロパティもここに追加可能...
+		// TODO: リサイズ可否など、他のプロパティもここに追加
 	}
 }

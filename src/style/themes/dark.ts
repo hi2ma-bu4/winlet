@@ -2,33 +2,49 @@
 import { Theme } from "../../const/types";
 
 export const darkTheme: Theme = {
-	name: "Dark",
+	name: "dark",
 	variables: {
-		"--winlet-bg": "#2d2d2d",
-		"--winlet-border": "#555",
-		"--winlet-title-bar-height": "32px",
-		"--winlet-title-bar-bg": "#3c3c3c",
-		"--winlet-title-bar-active-bg": "#0078d7",
-		"--winlet-title-text-color": "#e0e0e0",
-		"--winlet-title-text-active-color": "#fff",
-		"--winlet-control-bg": "#4a4a4a",
-		"--winlet-control-hover-bg": "#5a5a5a",
-		"--winlet-control-close-hover-bg": "#e81123",
-		"--winlet-control-close-hover-color": "#fff",
-		"--winlet-menu-bg": "#252525",
-		"--winlet-menu-border": "#444",
-		"--winlet-menu-item-color": "#e0e0e0",
-		"--winlet-menu-item-hover-bg": "#0078d7",
-		"--winlet-menu-item-hover-color": "#fff",
-		"--winlet-tab-bg": "#383838",
-		"--winlet-tab-active-bg": "#2d2d2d",
-		"--winlet-tab-border": "#505050",
-		"--winlet-resize-handle-size": "8px",
-		"--winlet-resize-handle-offset": "-4px",
-		"--winlet-taskbar-bg": "rgba(45, 45, 45, 0.9)",
-		"--winlet-taskbar-border": "#555",
-		"--winlet-taskbar-item-bg": "#5a5a5a",
-		"--winlet-taskbar-item-active-bg": "#0078d7",
-		"--winlet-taskbar-item-active-color": "#fff",
+		// 基本色・シャドウ
+		"--$[prefix]-text-color": "#e0e0e0",
+		"--$[prefix]-bg": "#2d2d2d",
+		"--$[prefix]-border": "#555",
+		"--$[prefix]-shadow-color-light": "rgba(0,0,0,0.3)",
+		"--$[prefix]-shadow-color-strong": "rgba(0,0,0,0.5)",
+		"--$[prefix]-shadow-color-active": "rgba(0,0,0,0.7)",
+
+		// タイトルバー
+		"--$[prefix]-title-bar-bg": "#3c3c3c",
+		"--$[prefix]-title-text-color": "#e0e0e0",
+		"--$[prefix]-title-text-active-color": "#fff",
+
+		// コントロールボタン
+		"--$[prefix]-control-bg": "#4a4a4a",
+		"--$[prefix]-control-hover-bg": "#5a5a5a",
+
+		// メニュー
+		"--$[prefix]-menu-bg": "#252525",
+		"--$[prefix]-menu-border": "#444",
+		"--$[prefix]-menu-item-color": "#e0e0e0",
+		"--$[prefix]-shortcut-text-color": "#b0b0b0",
+
+		// タブ
+		"--$[prefix]-tab-bg": "#383838",
+		"--$[prefix]-tab-active-bg": "#2d2d2d",
+		"--$[prefix]-tab-border": "#505050",
+		"--$[prefix]-tab-bar-bg": "#383838",
+		"--$[prefix]-tab-close-btn-hover-bg": "#5a5a5a",
+		"--$[prefix]-tab-active-close-btn-hover-bg": "#6a6a6a",
+
+		// ポップアップボタン
+		"--$[prefix]-popup-button-hover-bg": "#5a5a5a",
+		"--$[prefix]-popup-button-hover-border-color": "#777",
+
+		// タスクバー
+		"--$[prefix]-taskbar-bg": "rgba(45, 45, 45, 0.9)",
+		"--$[prefix]-taskbar-border": "#555",
+		"--$[prefix]-taskbar-item-bg": "#5a5a5a",
+
+		// その他
+		"--$[prefix]-scrollbar-thumb-bg": "rgba(180, 180, 180, 0.5)",
 	},
 };

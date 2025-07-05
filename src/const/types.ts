@@ -37,13 +37,38 @@ export interface IWindow {
 	state: WindowState;
 
 	// --- Public API ---
+	/**
+	 * ウィンドウを閉じます。
+	 */
 	close(): void;
+	/**
+	 * ウィンドウを最小化します。
+	 */
 	minimize(): void;
+	/**
+	 * ウィンドウを最大化/元に戻します。
+	 */
 	toggleMaximize(): void;
+	/**
+	 * ウィンドウを最大化します。
+	 */
 	maximize(): void;
+	/**
+	 * ウィンドウを元に戻します。
+	 */
 	restore(): void;
+	/**
+	 * ウィンドウをフォーカスします。
+	 */
 	focus(): void;
+	/**
+	 * ウィンドウからフォーカスを外します。
+	 */
 	blur(): void;
+	/**
+	 * 注意を引くためにウィンドウを揺らします。
+	 */
+	shake(): void;
 	getTitle(): string;
 	setTitle(title: string): void;
 	setIcon(icon: string | null): void;
@@ -51,6 +76,15 @@ export interface IWindow {
 	setPosition(x: number | "center" | "left" | "right" | "auto", y: number | "center" | "top" | "bottom" | "auto"): void;
 	getSize(): { width: number; height: number };
 	setSize(width: number | string, height: number | string): void;
+	/**
+	 * ウィンドウの不透明度を設定します。
+	 * @param opacity 0.0 (透明) から 1.0 (不透明) の間の値
+	 */
+	setOpacity(opacity: number): void;
+	/**
+	 * 現在のウィンドウの不透明度を取得します。
+	 * @returns 0.0 から 1.0 の間の値
+	 */
 	reload(): void;
 
 	/**
@@ -244,6 +278,16 @@ export interface WindowOptions {
 		onMergeAttempt?: (sourceWindow: IWindow, targetWindow: IWindow) => boolean;
 	};
 	/**
+	 * タスクバーアイテムの表示設定
+	 */
+	taskbarOptions?: {
+		/**
+		 * trueにすると、タスクバーにタイトルではなくアイコンを表示します。
+		 * アイコンが設定されている必要があります。
+		 */
+		showIconOnly?: boolean;
+	};
+	/**
 	 * 右クリックメニュー
 	 */
 	contextMenu?: ContextMenuItem[];
@@ -259,6 +303,14 @@ export interface WindowOptions {
 	 * ドラッグ・リサイズ時にゴーストウィンドウ（輪郭）を表示するか
 	 */
 	useGhostWindow?: boolean;
+	/**
+	 * iframeや非同期コンテンツの読み込み中にローディングインジケーターを表示するか
+	 */
+	showLoadingIndicator?: boolean;
+	/**
+	 * ウィンドウの不透明度 (0.0 - 1.0)
+	 */
+	opacity?: number;
 	/**
 	 * ウィンドウをモーダルとして扱うか
 	 * trueの場合、このウィンドウ以外は操作できなくなります。
@@ -328,6 +380,8 @@ export interface PopupOptions {
 	timeout?: number;
 	autoWidth?: boolean;
 	focus?: boolean;
+	alwaysOnTop?: boolean;
+	modal?: boolean;
 
 	/**
 	 * ウィンドウクローズ時
@@ -418,10 +472,25 @@ export interface WinLetApi {
 	 */
 	setGlobalConfig: (options: GlobalConfigOptions) => void;
 	/**
+	 * 表示テーマを登録します。
+	 * @param theme - 登録するテーマ
+	 */
+	registerTheme: (theme: Theme) => void;
+	/**
+	 * 登録済みのテーマ名の配列を取得します。
+	 * @returns 登録済みのテーマ名の配列
+	 */
+	getRegisteredThemes: () => string[];
+	/**
 	 * 表示テーマを変更します。
 	 * @param theme - 登録済みのテーマ名（'default', 'dark'など）またはThemeオブジェクト
 	 */
 	setTheme: (theme: string | Theme) => void;
+	/**
+	 * 現在の表示テーマを取得します。
+	 * @returns 現在の表示テーマ
+	 */
+	getTheme: () => Theme | null;
 	/**
 	 * WinLetのバージョンを取得します。
 	 */
