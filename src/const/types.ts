@@ -1,6 +1,7 @@
 export const LIBRARY_NAME = "winlet";
 
 export type WindowState = "normal" | "minimized" | "maximized";
+export type VirtualizationLevel = "none" | "frozen" | "unloaded";
 
 export interface WindowContentOptions {
 	/**
@@ -82,8 +83,7 @@ export interface IWindow {
 	 */
 	setOpacity(opacity: number): void;
 	/**
-	 * 現在のウィンドウの不透明度を取得します。
-	 * @returns 0.0 から 1.0 の間の値
+	 * ウィンドウをリロードします。
 	 */
 	reload(): void;
 
@@ -136,6 +136,25 @@ export interface ContextMenuItem {
 	separator?: boolean;
 }
 
+export interface CustomControlButton {
+	/**
+	 * ボタンを識別するための一意の名前
+	 */
+	name: string;
+	/**
+	 * ボタンのHTMLコンテンツ (例: '<i class="fa fa-question"></i>')
+	 */
+	html: string;
+	/**
+	 * ボタンのツールチップテキスト
+	 */
+	title?: string;
+	/**
+	 * ボタンクリック時のアクション
+	 */
+	action: (win: IWindow) => void;
+}
+
 export interface WindowOptions {
 	/**
 	 * ウィンドウのID
@@ -183,6 +202,12 @@ export interface WindowOptions {
 	 * ウィンドウの最小サイズY
 	 */
 	minHeight?: number;
+	/**
+	 * ウィンドウが仮想化の対象となるかどうか。
+	 * `enableVirtualization` がtrueの場合にのみ有効です。
+	 * @default true
+	 */
+	virtualizable?: boolean;
 	/**
 	 * ウィンドウのオプション
 	 */
@@ -313,6 +338,10 @@ export interface WindowOptions {
 	 */
 	contextMenu?: ContextMenuItem[];
 	/**
+	 * タイトルバーに追加するカスタムコントロールボタン
+	 */
+	customControls?: CustomControlButton[];
+	/**
 	 * ショートカットキーを有効化
 	 */
 	enableShortcuts?: boolean;
@@ -427,10 +456,12 @@ export interface GlobalConfigOptions {
 	libraryPath?: string;
 	/**
 	 * ウィンドウ操作時のアニメーションを有効にするか
+	 * @default true
 	 */
 	enableAnimations?: boolean;
 	/**
 	 * タスクバーを表示するか
+	 * @default false
 	 */
 	enableTaskbar?: boolean;
 	/**
@@ -439,13 +470,39 @@ export interface GlobalConfigOptions {
 	taskbar?: TaskbarOptions;
 	/**
 	 * モーダルウィンドウのフォーカストラップを有効にするか
+	 * @default true
 	 */
 	enableFocusTrapping?: boolean;
 	/**
+	 * ウィンドウ仮想化を有効にするか。
+	 * 大量のウィンドウを扱う際のパフォーマンスを向上させます。
+	 * @default true
+	 */
+	enableVirtualization?: boolean;
+	/**
+	 * 最小化されたウィンドウをフリーズするまでの遅延時間（ミリ秒）。
+	 * `enableVirtualization` がtrueの場合にのみ有効です。
+	 * @default 5000
+	 */
+	virtualizationFreezeDelay?: number;
+	/**
+	 * 最小化されたウィンドウをアンロードするまでの遅延時間（ミリ秒）。
+	 * `enableVirtualization` がtrueの場合にのみ有効です。
+	 * @default 1800000
+	 */
+	virtualizationUnloadDelay?: number;
+	/**
 	 * 初期テーマ
 	 * 'dark'などの登録済みテーマ名、またはThemeオブジェクトを指定
+	 * @default 'default'
 	 */
 	theme?: string | Theme;
+	/**
+	 * デバッグモードを有効にするか。
+	 * ウィンドウにID、座標、状態などのデバッグ情報をオーバーレイ表示します。
+	 * @default false
+	 */
+	enableDebugMode?: boolean;
 }
 
 /**

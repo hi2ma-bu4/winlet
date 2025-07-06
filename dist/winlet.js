@@ -277,6 +277,7 @@ var defaultConfig = exports.defaultConfig = {
   height: 400,
   minWidth: 200,
   minHeight: 150,
+  virtualizable: true,
   windowOptions: {
     resizableX: true,
     resizableY: true,
@@ -322,6 +323,7 @@ var defaultConfig = exports.defaultConfig = {
     showIconOnly: true
   },
   contextMenu: [],
+  customControls: [],
   enableShortcuts: true,
   controlsPosition: "right",
   showLoadingIndicator: true,
@@ -441,6 +443,9 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "contextMenuTimer", null);
     (0, _defineProperty2["default"])(_this, "popupCloseCallback", null);
     (0, _defineProperty2["default"])(_this, "childManager", null);
+    (0, _defineProperty2["default"])(_this, "debugOverlayEl", null);
+    (0, _defineProperty2["default"])(_this, "virtualizationLevel", "none");
+    (0, _defineProperty2["default"])(_this, "minimizeVirtualizeTimer", null);
     _this.id = options.id || _utils["default"].generateId("".concat(_types.LIBRARY_NAME, "-window"));
     if (options.id) {
       var existingEl = document.getElementById(options.id);
@@ -474,8 +479,10 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     _this.mainContentEl = _this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-main-content"));
     _this.contentEl = _this.mainContentEl.querySelector(".".concat(_types.LIBRARY_NAME, "-content"));
     _this.loaderEl = _this.mainContentEl.querySelector(".".concat(_types.LIBRARY_NAME, "-loader-overlay"));
+    _this.debugOverlayEl = _this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-debug-overlay"));
     _this.applyOptions();
     _this.setupEventListeners();
+    _this.updateDebugOverlay();
     _this.options.onOpen(_this);
     return _this;
   }
@@ -483,6 +490,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   return (0, _createClass2["default"])(WinLetWindow, [{
     key: "createDOM",
     value: function createDOM() {
+      var _this$options$customC;
       var windowEl = document.createElement("div");
       windowEl.className = "".concat(_types.LIBRARY_NAME, "-window");
       windowEl.id = this.id;
@@ -507,10 +515,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       var hasTabs = this.options.tabs.length > 0;
       var isMergedMenu = this.options.menuStyle === "merged" && hasMenu;
       var isMergedTabs = this.options.tabStyle === "merged" && hasTabs;
-      var controlsHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-controls\">\n                ").concat(this.options.windowOptions.minimizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-minimize-btn\" type=\"button\" value=\"\uFF3F\" title=\"Minimize\" />") : "", "\n                ").concat(this.options.windowOptions.maximizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-maximize-btn\" type=\"button\" value=\"\u25A1\" title=\"Maximize\" />") : "", "\n                ").concat(this.options.windowOptions.closable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-close-btn\" type=\"button\" value=\"\u2573\" title=\"Close\">") : "", "\n            </div>");
+      var customControlsHTML = ((_this$options$customC = this.options.customControls) !== null && _this$options$customC !== void 0 ? _this$options$customC : []).map(function (c) {
+        return "<button class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-custom-control-btn\" data-name=\"").concat(c.name, "\" title=\"").concat(c.title || "", "\" aria-label=\"").concat(c.title || c.name, "\">").concat(c.html, "</button>");
+      }).join("");
+      var controlsHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-controls\">\n\t\t\t\t").concat(customControlsHTML, "\n                ").concat(this.options.windowOptions.minimizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-minimize-btn\" type=\"button\" value=\"\uFF3F\" title=\"Minimize\" aria-label=\"Minimize\"/>") : "", "\n                ").concat(this.options.windowOptions.maximizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-maximize-btn\" type=\"button\" value=\"\u25A1\" title=\"Maximize\" aria-label=\"Maximize\"/>") : "", "\n                ").concat(this.options.windowOptions.closable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-close-btn\" type=\"button\" value=\"\u2573\" title=\"Close\" aria-label=\"Close\"/>") : "", "\n            </div>");
       var titleBarContentHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-icon\"></div>\n            ").concat(isMergedMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\"></div>") : "", "\n            <div id=\"").concat(this.id, "-title\" class=\"").concat(_types.LIBRARY_NAME, "-title\"></div>\n            ").concat(isMergedTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\"></div>") : "", "\n            ").concat(controlsHTML, "\n        ");
       var loaderHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-loader-overlay\" style=\"display: none;\">\n                <div class=\"").concat(_types.LIBRARY_NAME, "-loader-spinner\"></div>\n            </div>\n        ");
-      windowEl.innerHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-title-bar ").concat(_types.LIBRARY_NAME, "-us-none\">\n                ").concat(titleBarContentHTML, "\n            </div>\n            <div class=\"").concat(_types.LIBRARY_NAME, "-main-content\">\n                ").concat(!isMergedMenu && hasMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\" role=\"menubar\"></div>") : "", "\n                ").concat(!isMergedTabs && hasTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\" role=\"tablist\"></div>") : "", "\n                <div class=\"").concat(_types.LIBRARY_NAME, "-content\"></div>\n\t\t\t\t").concat(loaderHTML, "\n            </div>\n            ").concat(resizableHandlesHTML, "\n        ");
+      var debugHTML = "<div class=\"".concat(_types.LIBRARY_NAME, "-debug-overlay\"></div>");
+      windowEl.innerHTML = "\n\t\t\t".concat(debugHTML, "\n            <div class=\"").concat(_types.LIBRARY_NAME, "-title-bar ").concat(_types.LIBRARY_NAME, "-us-none\">\n                ").concat(titleBarContentHTML, "\n            </div>\n            <div class=\"").concat(_types.LIBRARY_NAME, "-main-content\">\n                ").concat(!isMergedMenu && hasMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\" role=\"menubar\"></div>") : "", "\n                ").concat(!isMergedTabs && hasTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\" role=\"tablist\"></div>") : "", "\n                <div class=\"").concat(_types.LIBRARY_NAME, "-content\"></div>\n\t\t\t\t").concat(loaderHTML, "\n            </div>\n            ").concat(resizableHandlesHTML, "\n        ");
       return windowEl;
     }
   }, {
@@ -551,6 +563,9 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       var _this2 = this;
       container.innerHTML = "";
       this.hideLoader();
+      if (this.virtualizationLevel === "unloaded") {
+        return;
+      }
       if (content.template) {
         var template = document.querySelector(content.template);
         if ((template === null || template === void 0 ? void 0 : template.tagName) === "TEMPLATE") {
@@ -943,28 +958,33 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         }
       };
       document.addEventListener("click", this.boundGlobalClickHandler);
-      var closeBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-close-btn"));
-      closeBtn === null || closeBtn === void 0 || closeBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        if (_this9.options._isPopup) {
-          var _this9$popupCloseCall;
-          (_this9$popupCloseCall = _this9.popupCloseCallback) === null || _this9$popupCloseCall === void 0 || _this9$popupCloseCall.call(_this9, _types.CLOSE_BUTTON_RESULT);
+      var controlsEl = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-controls"));
+      controlsEl === null || controlsEl === void 0 || controlsEl.addEventListener("click", function (e) {
+        var target = e.target;
+        var button = target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn"));
+        if (!button) return;
+        if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-close-btn"))) {
+          e.stopPropagation();
+          if (_this9.options._isPopup) {
+            var _this9$popupCloseCall;
+            (_this9$popupCloseCall = _this9.popupCloseCallback) === null || _this9$popupCloseCall === void 0 || _this9$popupCloseCall.call(_this9, _types.CLOSE_BUTTON_RESULT);
+          }
+          _this9.close();
+        } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-maximize-btn"))) {
+          e.stopPropagation();
+          _this9.toggleMaximize();
+        } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-minimize-btn"))) {
+          e.stopPropagation();
+          _this9.minimize();
+        } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-custom-control-btn"))) {
+          e.stopPropagation();
+          var name = button.dataset.name;
+          var control = _this9.options.customControls.find(function (c) {
+            return c.name === name;
+          });
+          control === null || control === void 0 || control.action(_this9);
         }
-        _this9.close();
       });
-      closeBtn === null || closeBtn === void 0 || closeBtn.setAttribute("aria-label", "Close");
-      var maxBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
-      maxBtn === null || maxBtn === void 0 || maxBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        _this9.toggleMaximize();
-      });
-      maxBtn === null || maxBtn === void 0 || maxBtn.setAttribute("aria-label", "Maximize");
-      var minBtn = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-minimize-btn"));
-      minBtn === null || minBtn === void 0 || minBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        _this9.minimize();
-      });
-      minBtn === null || minBtn === void 0 || minBtn.setAttribute("aria-label", "Minimize");
       if (this.options.windowOptions.movable) this.makeMovable();
       if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
       if (this.options.contextMenu.length > 0) {
@@ -1067,6 +1087,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             _this0.el.releasePointerCapture(e.pointerId);
             _this0.contentEl.style.pointerEvents = "auto";
             _this0.options.onMove(_this0);
+            _this0.manager.updateVirtualization();
           }
           _this0.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-dragging"));
         };
@@ -1157,6 +1178,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             document.removeEventListener("pointermove", onPointerMove);
             document.removeEventListener("pointerup", _onPointerUp2);
             _this1.options.onResize(_this1);
+            _this1.updateDebugOverlay();
+            _this1.manager.updateVirtualization();
             _this1.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"));
           };
           document.addEventListener("pointermove", onPointerMove);
@@ -1179,6 +1202,59 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       return hasPrefix && hasIcon;
     }
   }, {
+    key: "updateDebugOverlay",
+    value: function updateDebugOverlay() {
+      if (this.debugOverlayEl) {
+        var pos = this.getPosition();
+        var size = this.getSize();
+        this.debugOverlayEl.textContent = "ID:    ".concat(this.id, "\nState: ").concat(this.state, "\nPos:   x:").concat(Math.round(pos.x), ", y:").concat(Math.round(pos.y), "\nSize:  w:").concat(Math.round(size.width), ", h:").concat(Math.round(size.height), "\nFocus: ").concat(this.focused, "\nz-idx: ").concat(this.el.style.zIndex, "\nVirt:  ").concat(this.virtualizationLevel).trim();
+      }
+    }
+  }, {
+    key: "hasUnsafeContent",
+    value: function hasUnsafeContent() {
+      return !!this.mainContentEl.querySelector("iframe, frame, object, input, textarea, select, canvas, video, audio");
+    }
+  }, {
+    key: "virtualize",
+    value: function virtualize(level) {
+      if (this.virtualizationLevel === level) return;
+      if (level === "auto") {
+        level = this.hasUnsafeContent() ? "frozen" : "unloaded";
+      }
+      if (level === "frozen") {
+        this.virtualizationLevel = "frozen";
+        this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-frozen"));
+        this.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-virtualized"));
+      } else if (level === "unloaded") {
+        this.virtualizationLevel = "unloaded";
+        this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-virtualized"));
+        this.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-frozen"));
+        this.contentEl.innerHTML = "";
+      }
+      this.updateDebugOverlay();
+    }
+  }, {
+    key: "unvirtualize",
+    value: function unvirtualize() {
+      var _this10 = this;
+      if (this.virtualizationLevel === "none") return;
+      var previousLevel = this.virtualizationLevel;
+      this.virtualizationLevel = "none";
+      this.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-virtualized"), "".concat(_types.LIBRARY_NAME, "-is-frozen"));
+      if (previousLevel === "unloaded") {
+        if (this.options.tabs.length > 0) {
+          this.tabs.forEach(function (tab) {
+            var tabIndex = parseInt(tab.tabEl.dataset.tabId, 10);
+            _this10.renderContent(tab.contentEl, _this10.options.tabs[tabIndex].content);
+          });
+        } else {
+          this.renderContent(this.contentEl, this.options.content);
+        }
+      }
+      this.updateDebugOverlay();
+    }
+  }, {
     key: "close",
     value: function close() {
       if (this.boundGlobalClickHandler) {
@@ -1190,16 +1266,33 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "minimize",
     value: function minimize() {
-      var _this10 = this;
+      var _this11 = this;
       if (this.state !== "minimized") {
         if (this.state !== "normal") this.restore();
         var doMinimize = function doMinimize() {
-          _this10.state = "minimized";
-          _this10.el.setAttribute("aria-hidden", "true");
-          _this10.el.classList.add("".concat(_types.LIBRARY_NAME, "-minimized"));
-          _this10.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-minimizing"));
-          _this10.manager.updateTaskbarItem(_this10, "minimized");
-          _this10.blur();
+          _this11.state = "minimized";
+          _this11.el.setAttribute("aria-hidden", "true");
+          _this11.el.classList.add("".concat(_types.LIBRARY_NAME, "-minimized"));
+          _this11.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-minimizing"));
+          _this11.manager.updateTaskbarItem(_this11, "minimized");
+          _this11.blur();
+          var globalConfig = _this11.manager.getGlobalConfig();
+          if (globalConfig.enableVirtualization && _this11.options.virtualizable) {
+            var _globalConfig$virtual2;
+            if (_this11.minimizeVirtualizeTimer) {
+              clearTimeout(_this11.minimizeVirtualizeTimer);
+            }
+            _this11.minimizeVirtualizeTimer = window.setTimeout(function () {
+              _this11.virtualize("auto");
+              if (_this11.virtualizationLevel !== "unloaded") {
+                var _globalConfig$virtual;
+                _this11.minimizeVirtualizeTimer = window.setTimeout(function () {
+                  _this11.virtualize("unloaded");
+                }, (_globalConfig$virtual = globalConfig.virtualizationUnloadDelay) !== null && _globalConfig$virtual !== void 0 ? _globalConfig$virtual : 5000);
+              }
+            }, (_globalConfig$virtual2 = globalConfig.virtualizationFreezeDelay) !== null && _globalConfig$virtual2 !== void 0 ? _globalConfig$virtual2 : 5000);
+          }
+          _this11.updateDebugOverlay();
         };
         this.el.setAttribute("inert", "");
         if (this.manager.getGlobalConfig().enableAnimations) {
@@ -1221,7 +1314,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "maximize",
     value: function maximize() {
-      var _this11 = this;
+      var _this12 = this;
       if (this.state !== "maximized") {
         if (this.state !== "normal") this.restore();
         this.lastState = {
@@ -1233,9 +1326,10 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         this.state = "maximized";
         this.el.classList.add("".concat(_types.LIBRARY_NAME, "-maximized"));
         var doMaximize = function doMaximize() {
-          _this11.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
-          _this11.setPosition(0, 0);
-          _this11.setSize("100%", "100%");
+          _this12.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
+          _this12.setPosition(0, 0);
+          _this12.setSize("100%", "100%");
+          _this12.updateDebugOverlay();
         };
         if (this.manager.getGlobalConfig().enableAnimations) {
           this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
@@ -1260,7 +1354,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "restore",
     value: function restore() {
-      var _this12 = this;
+      var _this13 = this;
+      if (this.minimizeVirtualizeTimer) {
+        clearTimeout(this.minimizeVirtualizeTimer);
+        this.minimizeVirtualizeTimer = null;
+      }
+      if (this.virtualizationLevel !== "none") {
+        this.unvirtualize();
+      }
       var wasMinimized = this.state === "minimized";
       if (this.state === "minimized") {
         this.state = "normal";
@@ -1271,14 +1372,15 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         this.focus();
       } else if (this.state === "maximized") {
         var doRestore = function doRestore() {
-          _this12.state = "normal";
-          _this12.el.classList.remove("".concat(_types.LIBRARY_NAME, "-maximized"), "".concat(_types.LIBRARY_NAME, "-is-restoring"));
-          var maxBtn = _this12.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
+          _this13.state = "normal";
+          _this13.el.classList.remove("".concat(_types.LIBRARY_NAME, "-maximized"), "".concat(_types.LIBRARY_NAME, "-is-restoring"));
+          var maxBtn = _this13.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
           if (maxBtn) {
             maxBtn.title = "Maximize";
             maxBtn.value = "\u25A1";
             maxBtn.setAttribute("aria-label", "Maximize");
           }
+          _this13.updateDebugOverlay();
         };
         if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
           this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-restoring"));
@@ -1293,6 +1395,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           doRestore();
         }
       }
+      this.updateDebugOverlay();
     }
   }, {
     key: "focus",
@@ -1304,6 +1407,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.manager.focusWindow(this);
       this.focused = true;
       this.el.classList.add("".concat(_types.LIBRARY_NAME, "-active"));
+      this.updateDebugOverlay();
       this.options.onFocus(this);
     }
   }, {
@@ -1312,19 +1416,20 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       if (!this.focused) return;
       this.focused = false;
       this.el.classList.remove("".concat(_types.LIBRARY_NAME, "-active"));
+      this.updateDebugOverlay();
       this.options.onBlur(this);
     }
   }, {
     key: "shake",
     value: function shake() {
-      var _this13 = this;
+      var _this14 = this;
       var className = "".concat(_types.LIBRARY_NAME, "-is-shaking");
       if (this.el.classList.contains(className)) {
         return;
       }
       this.el.classList.add(className);
       this.el.addEventListener("animationend", function () {
-        _this13.el.classList.remove(className);
+        _this14.el.classList.remove(className);
       }, {
         once: true
       });
@@ -1332,7 +1437,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "reload",
     value: function reload() {
-      var _this14 = this;
+      var _this15 = this;
       if (this.options.onReload(this) === false) {
         return;
       }
@@ -1345,13 +1450,13 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               (_iframe$contentWindow = iframe.contentWindow) === null || _iframe$contentWindow === void 0 || _iframe$contentWindow.location.reload();
             } catch (e) {
               console.warn("WinLet: Cross-origin iframe could not be reloaded directly. Recreating iframe element.", e);
-              _this14.renderContent(container, content);
+              _this15.renderContent(container, content);
             }
           } else {
-            _this14.renderContent(container, content);
+            _this15.renderContent(container, content);
           }
         } else {
-          _this14.renderContent(container, content);
+          _this15.renderContent(container, content);
         }
       };
       if (this.options.tabs.length > 0) {
@@ -1512,6 +1617,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       }
       this.el.style.left = "".concat(Math.min(Math.max(150 - winWidth, finalX), parentRect.width - 150), "px");
       this.el.style.top = "".concat(Math.min(Math.max(0, finalY), parentRect.height - 50), "px");
+      this.updateDebugOverlay();
     }
   }, {
     key: "getSize",
@@ -1532,6 +1638,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     value: function setSize(width, height) {
       this.el.style.width = typeof width === "number" ? "".concat(width, "px") : width;
       this.el.style.height = typeof height === "number" ? "".concat(height, "px") : height;
+      this.updateDebugOverlay();
     }
   }, {
     key: "setOpacity",
@@ -1658,6 +1765,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "themes", new Map());
     (0, _defineProperty2["default"])(_this, "activeTheme", null);
     (0, _defineProperty2["default"])(_this, "boundTabPressHandler", null);
+    (0, _defineProperty2["default"])(_this, "virtualizationIntervalId", null);
     _this.globalConfig = initialConfig;
     _this.registerTheme(_default.defaultTheme);
     _this.registerTheme(_dark.darkTheme);
@@ -1675,6 +1783,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       Object.assign(this.globalConfig, options);
       if (this.container) {
         this.container.classList.toggle("".concat(_types.LIBRARY_NAME, "-animations-disabled"), !this.globalConfig.enableAnimations);
+        this.container.classList.toggle("".concat(_types.LIBRARY_NAME, "-debug-mode-enabled"), !!this.globalConfig.enableDebugMode);
         if (this.globalConfig.enableTaskbar) {
           if (!this.taskbarEl) {
             this.createTaskbar();
@@ -1748,6 +1857,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       } else {
         this.setTheme("default");
       }
+      this.updateVirtualization();
       window.addEventListener("blur", function () {
         return (requestAnimationFrame(function () {
             var activeEl = document.activeElement;
@@ -2026,6 +2136,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       } else {
         win.el.style.zIndex = "".concat(win.options.windowOptions.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter);
       }
+      this.updateVirtualization();
       return win;
     }
   }, {
@@ -2113,6 +2224,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         id: _utils["default"].generateId("".concat(_types.LIBRARY_NAME, "-popup")),
         title: options.title || "",
         icon: options.icon,
+        virtualizable: false,
         windowOptions: {
           resizableX: false,
           resizableY: false,
@@ -2196,6 +2308,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
           var nextWin = Array.from(this.windows.values()).pop();
           if (nextWin) this.focusWindow(nextWin);
         }
+        this.updateVirtualization();
       }
     }
   }, {
@@ -2217,6 +2330,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         return (_w$options$_taskbarIt = w.options._taskbarItem) === null || _w$options$_taskbarIt === void 0 ? void 0 : _w$options$_taskbarIt.classList.remove("".concat(_types.LIBRARY_NAME, "-active"));
       });
       (_win$options$_taskbar = win.options._taskbarItem) === null || _win$options$_taskbar === void 0 || _win$options$_taskbar.classList.add("".concat(_types.LIBRARY_NAME, "-active"));
+      this.updateVirtualization();
     }
   }, {
     key: "getWindow",
@@ -2529,6 +2643,73 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         key: key
       };
     }
+  }, {
+    key: "updateVirtualization",
+    value: function updateVirtualization() {
+      if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
+      var windows = Array.from(this.windows.values()).sort(function (a, b) {
+        return parseInt(a.el.style.zIndex || "0", 10) - parseInt(b.el.style.zIndex || "0", 10);
+      });
+      var viewportRect = this.workspaceEl.getBoundingClientRect();
+      for (var i = 0; i < windows.length; i++) {
+        var targetWin = windows[i];
+        if (!targetWin.options.virtualizable || targetWin.state !== "normal" || targetWin === this.activeWindow) {
+          targetWin.unvirtualize();
+          continue;
+        }
+        var targetRect = targetWin.el.getBoundingClientRect();
+        if (targetRect.width <= 1 || targetRect.height <= 1) {
+          targetWin.virtualize(targetWin.hasUnsafeContent() ? "frozen" : "unloaded");
+          continue;
+        }
+        var samplePoints = [{
+          x: targetRect.left + 1,
+          y: targetRect.top + 1
+        }, {
+          x: targetRect.right - 1,
+          y: targetRect.top + 1
+        }, {
+          x: targetRect.right - 1,
+          y: targetRect.bottom - 1
+        }, {
+          x: targetRect.left + 1,
+          y: targetRect.bottom - 1
+        }, {
+          x: targetRect.left + targetRect.width * 0.5,
+          y: targetRect.top + targetRect.height * 0.5
+        }];
+        var isVisible = false;
+        for (var _i3 = 0, _samplePoints = samplePoints; _i3 < _samplePoints.length; _i3++) {
+          var point = _samplePoints[_i3];
+          var inViewport = point.x >= viewportRect.left && point.x < viewportRect.right && point.y >= viewportRect.top && point.y < viewportRect.bottom;
+          if (!inViewport) {
+            continue;
+          }
+          var pointIsOccluded = false;
+          for (var j = i + 1; j < windows.length; j++) {
+            var _occluderWin$getOpaci;
+            var occluderWin = windows[j];
+            if (occluderWin.state !== "normal" || ((_occluderWin$getOpaci = occluderWin.getOpacity()) !== null && _occluderWin$getOpaci !== void 0 ? _occluderWin$getOpaci : 1) < 0.9) {
+              continue;
+            }
+            var occluderRect = occluderWin.el.getBoundingClientRect();
+            if (point.x >= occluderRect.left && point.x < occluderRect.right && point.y >= occluderRect.top && point.y < occluderRect.bottom) {
+              pointIsOccluded = true;
+              break;
+            }
+          }
+          if (!pointIsOccluded) {
+            isVisible = true;
+            break;
+          }
+        }
+        if (isVisible) {
+          targetWin.unvirtualize();
+        } else {
+          targetWin.virtualize("auto");
+        }
+      }
+    }
   }]);
 }(_baseclass["default"]);
 (0, _defineProperty2["default"])(WindowManager, "allWindows", new Map());
@@ -2553,9 +2734,13 @@ var globalConfig = {
   libraryPath: selfUrl,
   enableAnimations: true,
   enableFocusTrapping: true,
+  enableVirtualization: true,
+  virtualizationFreezeDelay: 1000 * 5,
+  virtualizationUnloadDelay: 1000 * 60 * 30,
   taskbar: {
     position: "bottom"
-  }
+  },
+  enableDebugMode: false
 };
 var manager = new _window_manager["default"](globalConfig);
 var api = {
@@ -2755,7 +2940,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
-var styleData = "\n/* ========================================================================\n    1. \u57FA\u672C\u8A2D\u5B9A\u30FB\u5909\u6570\n   ======================================================================== */\n:root {\n    /* \u57FA\u672C\u8272\u30FB\u30B7\u30E3\u30C9\u30A6 */\n    --$[prefix]-text-color: #000;\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-shadow-color-light: rgba(0,0,0,0.15);\n    --$[prefix]-shadow-color-strong: rgba(0,0,0,0.3);\n    --$[prefix]-shadow-color-active: rgba(0,0,0,0.45);\n\n    /* \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC */\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n\n    /* \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 */\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n\n    /* \u30E1\u30CB\u30E5\u30FC */\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-shortcut-text-color: #666;\n\n    /* \u30BF\u30D6 */\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-tab-bar-bg: #e1e1e1;\n    --$[prefix]-tab-close-btn-hover-bg: #ccc;\n    --$[prefix]-tab-active-close-btn-hover-bg: #ddd;\n\n    /* \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30DC\u30BF\u30F3 */\n    --$[prefix]-popup-button-hover-bg: #e9e9e9;\n    --$[prefix]-popup-button-hover-border-color: #bbb;\n\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB */\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n\n    /* \u30BF\u30B9\u30AF\u30D0\u30FC */\n    --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);\n    --$[prefix]-taskbar-border: #a0a0a0;\n    --$[prefix]-taskbar-item-bg: #d0d0d0;\n    --$[prefix]-taskbar-item-active-bg: #0078d7;\n    --$[prefix]-taskbar-item-active-color: #fff;\n    --$[prefix]-taskbar-height: 40px;\n    --$[prefix]-taskbar-width: 40px;\n\n    /* \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC */\n    --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);\n    --$[prefix]-loader-color: var(--$[prefix]-title-bar-active-bg);\n\n    /* \u305D\u306E\u4ED6 */\n    --$[prefix]-scrollbar-thumb-bg: rgba(100, 100, 100, 0.5);\n}\n\n/* ========================================================================\n    2. \u30E6\u30FC\u30C6\u30A3\u30EA\u30C6\u30A3\u30AF\u30E9\u30B9\n   ========================================================================= */\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u7121\u52B9\u5316\n */\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u6709\u52B9\u5316\n */\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n/* ========================================================================\n    3. \u30B3\u30F3\u30C6\u30CA\n   ========================================================================= */\n/**\n * \u5168\u3066\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5185\u5305\u3059\u308B\u6700\u4E0A\u4F4D\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    box-sizing: border-box;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n    display: flex;\n    pointer-events: none;\n}\n.$[prefix]-container > * {\n    pointer-events: all; /* \u5B50\u8981\u7D20(workspace, taskbar)\u306E\u30A4\u30D9\u30F3\u30C8\u306F\u6709\u52B9\u5316 */\n}\n/**\n * \u7279\u5B9A\u306E\u8981\u7D20\u5185\u306B\u30CD\u30B9\u30C8\u3055\u308C\u305F\u5834\u5408\u306E\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container.$[prefix]-is-nested {\n    position: absolute;\n}\n\n.$[prefix]-workspace {\n    position: relative;\n    flex-grow: 1; /* \u6B8B\u308A\u306E\u30B9\u30DA\u30FC\u30B9\u3092\u3059\u3079\u3066\u5360\u6709 */\n    overflow: hidden; /* \u30A6\u30A3\u30F3\u30C9\u30A6\u304C\u306F\u307F\u51FA\u3055\u306A\u3044\u3088\u3046\u306B */\n    min-width: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    min-height: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    pointer-events: none;\n}\n/**\n * \u30BF\u30D6\u306E\u30C9\u30E9\u30C3\u30B0\u4E2D\u306B\u30DD\u30A4\u30F3\u30BF\u30FC\u30A4\u30D9\u30F3\u30C8\u3092\u6709\u52B9\u5316\u3057\u3001\u30C9\u30ED\u30C3\u30D7\u3092\u53D7\u3051\u4ED8\u3051\u308B\n */\n.$[prefix]-workspace.$[prefix]-is-tab-dragging {\n    pointer-events: auto;\n}\n/* ========================================================================\n    4. \u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);\n    box-sizing: border-box;\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n    touch-action: none;\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u72B6\u614B\u5225\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u6700\u5C0F\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-minimizing,\n.$[prefix]-window.$[prefix]-minimized {\n    transform: scale(0);\n    opacity: 0;\n    transition: opacity 0.25s, transform 0.25s;\n    pointer-events: none;\n}\n.$[prefix]-window.$[prefix]-minimized {\n    display: none;\n}\n/**\n * \u6700\u5927\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-maximized {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n/**\n * \u6700\u5927\u5316\u72B6\u614B\u3067\u306F\u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3092\u975E\u8868\u793A\n */\n.$[prefix]-window.$[prefix]-maximized > .$[prefix]-resize-handle {\n    display: none;\n}\n/**\n * \u5FA9\u5143\u4E2D\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-restoring {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u30FB\u30EA\u30B5\u30A4\u30BA\u4E2D\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u77ED\u7E2E\u3057\u3001\u64CD\u4F5C\u6027\u3092\u5411\u4E0A\n */\n.$[prefix]-window.$[prefix]-is-dragging,\n.$[prefix]-window.$[prefix]-is-resizing {\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-active {\n    box-shadow: 0 8px 25px var(--$[prefix]-shadow-color-active); /* \u30A2\u30AF\u30C6\u30A3\u30D6\u6642\u306E\u30B7\u30E3\u30C9\u30A6 */\n}\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u7279\u6B8A\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u300C\u5E38\u306B\u624B\u524D\u306B\u8868\u793A\u300D\u304C\u6709\u52B9\u306A\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-always-on-top .$[prefix]-title-bar {\n    background-image: repeating-linear-gradient(\n        -45deg,\n        transparent,\n        transparent 4px,\n        rgba(255, 255, 255, 0.05) 4px,\n        rgba(255, 255, 255, 0.05) 8px\n    );\n}\n\n/**\n * \u30A6\u30A3\u30F3\u30C9\u30A6\u30B7\u30A7\u30A4\u30AF\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n@keyframes $[prefix]-shake {\n    10%, 90% { transform: translate3d(-1px, 0, 0); }\n    20%, 80% { transform: translate3d(2px, 0, 0); }\n    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }\n    40%, 60% { transform: translate3d(4px, 0, 0); }\n}\n.$[prefix]-window.$[prefix]-is-shaking {\n    animation: $[prefix]-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;\n}\n\n/* ========================================================================\n    5. \u30B4\u30FC\u30B9\u30C8\u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/**\n * \u30C9\u30E9\u30C3\u30B0\u30FB\u30EA\u30B5\u30A4\u30BA\u6642\u306B\u8868\u793A\u3055\u308C\u308B\u8F2A\u90ED\n */\n.$[prefix]-ghost-window {\n    position: absolute;\n    box-sizing: border-box;\n    border: 2px dashed var(--$[prefix]-title-bar-active-bg);\n    background-color: rgba(0, 120, 215, 0.1);\n    z-index: 99999;\n    pointer-events: none;\n}\n\n/* ========================================================================\n    6. \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n   ======================================================================== */\n/* --- \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n/**\n * \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u304C\u5DE6\u5074\u306B\u3042\u308B\u5834\u5408\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-title-bar.$[prefix]-controls-left {\n    flex-direction: row-reverse;\n}\n\n/* --- \u30A2\u30A4\u30B3\u30F3\u30FB\u30BF\u30A4\u30C8\u30EB --- */\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon:empty {\n    display: none;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n/* --- \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n/* ========================================================================\n    7. \u30E1\u30A4\u30F3\u30B3\u30F3\u30C6\u30F3\u30C4\u30A8\u30EA\u30A2\n   ======================================================================== */\n.$[prefix]-main-content {\n    all: initial;\n    position: relative;\n    display:flex;\n    color: var(--$[prefix]-text-color);\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n/* --- \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC --- */\n.$[prefix]-loader-overlay {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background-color: var(--$[prefix]-loader-bg);\n    display: none;\n    justify-content: center;\n    align-items: center;\n    z-index: 20;\n}\n@keyframes $[prefix]-spinner-rotation {\n    0% { transform: rotate(0deg); }\n    100% { transform: rotate(360deg); }\n}\n.$[prefix]-loader-spinner {\n    width: 48px;\n    height: 48px;\n    border-radius: 50%;\n    border: 5px solid #fff;\n    border-bottom-color: var(--$[prefix]-loader-color);\n    animation: $[prefix]-spinner-rotation 1s linear infinite;\n}\n\n/* ========================================================================\n    8. \u30E1\u30CB\u30E5\u30FC\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: clamp(0px , calc(var(--winlet-title-bar-height) * 0.6), 14px);\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n/* --- \u30C9\u30ED\u30C3\u30D7\u30C0\u30A6\u30F3\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    line-height: 1.6em;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: calc(var(--winlet-title-bar-height) * -0.5);\n    font-size: 0.8em;\n    color: inherit;\n}\n/**\n * \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n/**\n * \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* --- \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30C6\u30AD\u30B9\u30C8 --- */\n.$[prefix]-shortcut-text {\n    color: var(--$[prefix]-shortcut-text-color);\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: var(--$[prefix]-tab-bar-bg);\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: var(--$[prefix]-scrollbar-thumb-bg);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active .$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-active-close-btn-hover-bg);\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB\n */\n.$[prefix]-tab.$[prefix]-dragging {\n    opacity: 0.5;\n}\n\n/* --- \u30BF\u30D6\u95A2\u9023\u30DC\u30BF\u30F3 --- */\n/**\n * \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-close-btn-hover-bg);\n}\n\n/**\n * \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n/* --- \u30BF\u30D6\u30B3\u30F3\u30C6\u30F3\u30C4 --- */\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.$[prefix]-active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n\n/* ========================================================================\n    10. \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\n   ======================================================================== */\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n/* ========================================================================\n    11. \u30B3\u30F3\u30C6\u30AD\u30B9\u30C8\u30E1\u30CB\u30E5\u30FC\n   ======================================================================== */\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* ========================================================================\n    12. \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\n   ======================================================================== */\n.$[prefix]-popup-window .$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    padding: 20px;\n    box-sizing: border-box;\n}\n.$[prefix]-popup-message {\n    font-family: sans-serif;\n    font-size: 14px;\n    line-height: 1.5;\n    flex-grow: 1;\n    word-wrap: break-word;\n}\n.$[prefix]-popup-buttons {\n    display: flex;\n    justify-content: flex-end;\n    gap: 10px;\n    margin-top: 20px;\n    flex-shrink: 0;\n    touch-action: auto;\n}\n.$[prefix]-popup-button {\n    color: var(--$[prefix]-menu-item-color);\n    min-width: 80px;\n    padding: 8px 12px;\n    margin: 0;\n    border: 1px solid var(--$[prefix]-menu-border);\n    border-radius: 3px;\n    background-color: var(--$[prefix]-bg);\n    cursor: pointer;\n    font-size: 14px;\n    box-shadow: 0 1px 1px var(--$[prefix]-shadow-color-light);\n}\n.$[prefix]-popup-button:hover {\n    border-color: var(--$[prefix]-popup-button-hover-border-color);\n    background-color: var(--$[prefix]-popup-button-hover-bg);\n}\n.$[prefix]-popup-button:active {\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n/* ========================================================================\n    13. \u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Merged Styles)\n   ======================================================================== */\n/* --- \u30E1\u30CB\u30E5\u30FC/\u30BF\u30D6\u7D71\u5408\u6642\u306E\u57FA\u672C\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC\u7D71\u5408\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n/* \u30A2\u30AF\u30C6\u30A3\u30D6\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u7D71\u5408\u30E1\u30CB\u30E5\u30FC\u306E\u6587\u5B57\u8272 */\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n/* --- \u30BF\u30D6\u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Chrome\u98A8) --- */\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    display: none;\n}\n.$[prefix]-window.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n\n/* --- \u7D71\u5408\u6642\u306E\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* ========================================================================\n    14. \u30BF\u30B9\u30AF\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-taskbar {\n    position: absolute;\n    background-color: var(--$[prefix]-taskbar-bg);\n    box-sizing: border-box;\n    display: flex;\n    align-items: center;\n    padding: 0 5px;\n    z-index: 50000;\n    flex-shrink: 0;\n    display: flex;\n    gap: 5px;\n    overflow: auto;\n    scrollbar-width: none;\n    -ms-overflow-style: none;\n    backdrop-filter: blur(5px);\n    pointer-events: all;\n}\n.$[prefix]-taskbar::-webkit-scrollbar{\n    display: none;\n}\n\n/* --- \u4F4D\u7F6E --- */\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom {\n    bottom: 0;\n    left: 0;\n    width: 100%;\n    height: var(--$[prefix]-taskbar-height);\n    flex-direction: row;\n    border-top: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: var(--$[prefix]-taskbar-height);\n    flex-direction: row;\n    border-bottom: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left {\n    top: 0;\n    left: 0;\n    width: var(--$[prefix]-taskbar-width);\n    height: 100%;\n    flex-direction: column;\n    border-right: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    top: 0;\n    right: 0;\n    width: var(--$[prefix]-taskbar-width);\n    height: 100%;\n    flex-direction: column;\n    border-left: 1px solid var(--$[prefix]-taskbar-border);\n}\n\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom,\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left,\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);\n}\n\n\n.$[prefix]-taskbar-item {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    width: auto;\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 0 10px;\n    border-radius: 3px;\n    background-color: var(--$[prefix]-taskbar-item-bg);\n    cursor: pointer;\n    flex-shrink: 0;\n    max-width: 150px;\n    transition: background-color 0.2s;\n    font-family: sans-serif;\n    font-size: 14px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    box-sizing: border-box;\n}\n/* \u7E26\u5411\u304D\u30BF\u30B9\u30AF\u30D0\u30FC\u306E\u30A2\u30A4\u30C6\u30E0 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: auto;\n    min-height: 40px;\n    max-width: none;\n    padding: 10px 0;\n    writing-mode: vertical-rl;\n}\n\n.$[prefix]-taskbar-item-icon {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n.$[prefix]-taskbar-item-icon img {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item-icon i {\n    font-size: calc((var(--winlet-taskbar-icon-size) - 12px) * 0.8);\n    line-height: calc(var(--winlet-taskbar-icon-size) - 18px);\n    text-align: center;\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 6px;\n}\n/* \u7E26\u5411\u304D\u30A2\u30A4\u30B3\u30F3\u30E2\u30FC\u30C9 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item.$[prefix]-icon-only,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n}\n\n.$[prefix]-taskbar-item.$[prefix]-active {\n    background-color: var(--$[prefix]-taskbar-item-active-bg);\n    color: var(--$[prefix]-taskbar-item-active-color);\n}\n.$[prefix]-taskbar-item.$[prefix]-minimized {\n    opacity: 0.7;\n}\n\n/* ========================================================================\n    15. \u30E2\u30D0\u30A4\u30EB\u30FB\u30BF\u30C3\u30C1\u30C7\u30D0\u30A4\u30B9\u5BFE\u5FDC\n   ======================================================================== */\n@media (pointer: coarse), (max-width: 768px) {\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3068\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3\u3092\u5927\u304D\u304F\u3057\u3066\u64CD\u4F5C\u3057\u3084\u3059\u304F\u3059\u308B */\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n\n/* ========================================================================\n    16. \u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\u7121\u52B9\u5316\n   ======================================================================== */\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {\n    transition: none;\n}\n";
+var styleData = "\n/* ========================================================================\n    1. \u57FA\u672C\u8A2D\u5B9A\u30FB\u5909\u6570\n   ======================================================================== */\n:root {\n    /* \u57FA\u672C\u8272\u30FB\u30B7\u30E3\u30C9\u30A6 */\n    --$[prefix]-text-color: #000;\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-shadow-color-light: rgba(0,0,0,0.15);\n    --$[prefix]-shadow-color-strong: rgba(0,0,0,0.3);\n    --$[prefix]-shadow-color-active: rgba(0,0,0,0.45);\n\n    /* \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC */\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n\n    /* \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 */\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n\n    /* \u30E1\u30CB\u30E5\u30FC */\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-shortcut-text-color: #666;\n\n    /* \u30BF\u30D6 */\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-tab-bar-bg: #e1e1e1;\n    --$[prefix]-tab-close-btn-hover-bg: #ccc;\n    --$[prefix]-tab-active-close-btn-hover-bg: #ddd;\n\n    /* \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30DC\u30BF\u30F3 */\n    --$[prefix]-popup-button-hover-bg: #e9e9e9;\n    --$[prefix]-popup-button-hover-border-color: #bbb;\n\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB */\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n\n    /* \u30BF\u30B9\u30AF\u30D0\u30FC */\n    --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);\n    --$[prefix]-taskbar-border: #a0a0a0;\n    --$[prefix]-taskbar-item-bg: #d0d0d0;\n    --$[prefix]-taskbar-item-active-bg: #0078d7;\n    --$[prefix]-taskbar-item-active-color: #fff;\n    --$[prefix]-taskbar-height: 40px;\n    --$[prefix]-taskbar-width: 40px;\n\n    /* \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC */\n    --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);\n    --$[prefix]-loader-color: var(--$[prefix]-title-bar-active-bg);\n\n    /* \u305D\u306E\u4ED6 */\n    --$[prefix]-scrollbar-thumb-bg: rgba(100, 100, 100, 0.5);\n}\n\n/* ========================================================================\n    2. \u30E6\u30FC\u30C6\u30A3\u30EA\u30C6\u30A3\u30AF\u30E9\u30B9\n   ========================================================================= */\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u7121\u52B9\u5316\n */\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u6709\u52B9\u5316\n */\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n/* ========================================================================\n    3. \u30B3\u30F3\u30C6\u30CA\n   ========================================================================= */\n/**\n * \u5168\u3066\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5185\u5305\u3059\u308B\u6700\u4E0A\u4F4D\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    box-sizing: border-box;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n    display: flex;\n    pointer-events: none;\n}\n.$[prefix]-container > * {\n    pointer-events: all; /* \u5B50\u8981\u7D20(workspace, taskbar)\u306E\u30A4\u30D9\u30F3\u30C8\u306F\u6709\u52B9\u5316 */\n}\n/**\n * \u7279\u5B9A\u306E\u8981\u7D20\u5185\u306B\u30CD\u30B9\u30C8\u3055\u308C\u305F\u5834\u5408\u306E\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container.$[prefix]-is-nested {\n    position: absolute;\n}\n\n.$[prefix]-workspace {\n    position: relative;\n    flex-grow: 1; /* \u6B8B\u308A\u306E\u30B9\u30DA\u30FC\u30B9\u3092\u3059\u3079\u3066\u5360\u6709 */\n    overflow: hidden; /* \u30A6\u30A3\u30F3\u30C9\u30A6\u304C\u306F\u307F\u51FA\u3055\u306A\u3044\u3088\u3046\u306B */\n    min-width: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    min-height: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    pointer-events: none;\n}\n/**\n * \u30BF\u30D6\u306E\u30C9\u30E9\u30C3\u30B0\u4E2D\u306B\u30DD\u30A4\u30F3\u30BF\u30FC\u30A4\u30D9\u30F3\u30C8\u3092\u6709\u52B9\u5316\u3057\u3001\u30C9\u30ED\u30C3\u30D7\u3092\u53D7\u3051\u4ED8\u3051\u308B\n */\n.$[prefix]-workspace.$[prefix]-is-tab-dragging {\n    pointer-events: auto;\n}\n\n/**\n * \u4EEE\u60F3\u5316(\u30A2\u30F3\u30ED\u30FC\u30C9)\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-virtualized .$[prefix]-main-content {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-is-virtualized::after {\n    content: \"Unloaded\"; /* \u4EE5\u524D\u306F \"Virtualizing\" */\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n}\n\n/**\n * \u30D5\u30EA\u30FC\u30BA\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content {\n    pointer-events: none; /* \u30B3\u30F3\u30C6\u30F3\u30C4\u306E\u64CD\u4F5C\u3092\u7121\u52B9\u5316 */\n}\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content iframe {\n    visibility: hidden;\n}\n.$[prefix]-window.$[prefix]-is-frozen::after {\n    content: \"Frozen\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    background: rgba(128, 128, 128, 0.1);\n    width: 100%;\n    height: 100%;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n    z-index: 15; /* \u30ED\u30FC\u30C0\u30FC\u3088\u308A\u624B\u524D */\n}\n/* ========================================================================\n    4. \u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);\n    box-sizing: border-box;\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n    touch-action: none;\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u72B6\u614B\u5225\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u6700\u5C0F\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-minimizing,\n.$[prefix]-window.$[prefix]-minimized {\n    transform: scale(0);\n    opacity: 0;\n    transition: opacity 0.25s, transform 0.25s;\n    pointer-events: none;\n}\n.$[prefix]-window.$[prefix]-minimized {\n    display: none;\n}\n/**\n * \u6700\u5927\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-maximized {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n/**\n * \u6700\u5927\u5316\u72B6\u614B\u3067\u306F\u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3092\u975E\u8868\u793A\n */\n.$[prefix]-window.$[prefix]-maximized > .$[prefix]-resize-handle {\n    display: none;\n}\n/**\n * \u5FA9\u5143\u4E2D\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-restoring {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u30FB\u30EA\u30B5\u30A4\u30BA\u4E2D\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u77ED\u7E2E\u3057\u3001\u64CD\u4F5C\u6027\u3092\u5411\u4E0A\n */\n.$[prefix]-window.$[prefix]-is-dragging,\n.$[prefix]-window.$[prefix]-is-resizing {\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-active {\n    box-shadow: 0 8px 25px var(--$[prefix]-shadow-color-active); /* \u30A2\u30AF\u30C6\u30A3\u30D6\u6642\u306E\u30B7\u30E3\u30C9\u30A6 */\n}\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u7279\u6B8A\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u300C\u5E38\u306B\u624B\u524D\u306B\u8868\u793A\u300D\u304C\u6709\u52B9\u306A\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-always-on-top .$[prefix]-title-bar {\n    background-image: repeating-linear-gradient(\n        -45deg,\n        transparent,\n        transparent 4px,\n        rgba(255, 255, 255, 0.05) 4px,\n        rgba(255, 255, 255, 0.05) 8px\n    );\n}\n\n/**\n * \u30A6\u30A3\u30F3\u30C9\u30A6\u30B7\u30A7\u30A4\u30AF\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n@keyframes $[prefix]-shake {\n    10%, 90% { transform: translate3d(-1px, 0, 0); }\n    20%, 80% { transform: translate3d(2px, 0, 0); }\n    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }\n    40%, 60% { transform: translate3d(4px, 0, 0); }\n}\n.$[prefix]-window.$[prefix]-is-shaking {\n    animation: $[prefix]-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;\n}\n\n/* ========================================================================\n    5. \u30B4\u30FC\u30B9\u30C8\u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/**\n * \u30C9\u30E9\u30C3\u30B0\u30FB\u30EA\u30B5\u30A4\u30BA\u6642\u306B\u8868\u793A\u3055\u308C\u308B\u8F2A\u90ED\n */\n.$[prefix]-ghost-window {\n    position: absolute;\n    box-sizing: border-box;\n    border: 2px dashed var(--$[prefix]-title-bar-active-bg);\n    background-color: rgba(0, 120, 215, 0.1);\n    z-index: 99999;\n    pointer-events: none;\n}\n\n/* ========================================================================\n    6. \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n   ======================================================================== */\n/* --- \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n/**\n * \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u304C\u5DE6\u5074\u306B\u3042\u308B\u5834\u5408\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-title-bar.$[prefix]-controls-left {\n    flex-direction: row-reverse;\n}\n\n/* --- \u30A2\u30A4\u30B3\u30F3\u30FB\u30BF\u30A4\u30C8\u30EB --- */\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon:empty {\n    display: none;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n/* --- \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    display: inline-flex;\n    justify-content: center;\n    align-items: center;\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    border-radius: 0;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n    padding: 0;\n    margin: 0;\n    color: inherit;\n}\n\n.$[prefix]-custom-control-btn > * {\n    pointer-events: none;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n/* ========================================================================\n    7. \u30E1\u30A4\u30F3\u30B3\u30F3\u30C6\u30F3\u30C4\u30A8\u30EA\u30A2\n   ======================================================================== */\n.$[prefix]-main-content {\n    all: initial;\n    position: relative;\n    display:flex;\n    color: var(--$[prefix]-text-color);\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n/* --- \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC --- */\n.$[prefix]-loader-overlay {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background-color: var(--$[prefix]-loader-bg);\n    display: none;\n    justify-content: center;\n    align-items: center;\n    z-index: 20;\n}\n@keyframes $[prefix]-spinner-rotation {\n    0% { transform: rotate(0deg); }\n    100% { transform: rotate(360deg); }\n}\n.$[prefix]-loader-spinner {\n    width: 48px;\n    height: 48px;\n    border-radius: 50%;\n    border: 5px solid #fff;\n    border-bottom-color: var(--$[prefix]-loader-color);\n    animation: $[prefix]-spinner-rotation 1s linear infinite;\n}\n\n/* ========================================================================\n    8. \u30E1\u30CB\u30E5\u30FC\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: clamp(0px , calc(var(--winlet-title-bar-height) * 0.6), 14px);\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n/* --- \u30C9\u30ED\u30C3\u30D7\u30C0\u30A6\u30F3\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    line-height: 1.6em;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: calc(var(--winlet-title-bar-height) * -0.5);\n    font-size: 0.8em;\n    color: inherit;\n}\n/**\n * \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n/**\n * \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* --- \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30C6\u30AD\u30B9\u30C8 --- */\n.$[prefix]-shortcut-text {\n    color: var(--$[prefix]-shortcut-text-color);\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: var(--$[prefix]-tab-bar-bg);\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: var(--$[prefix]-scrollbar-thumb-bg);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active .$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-active-close-btn-hover-bg);\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB\n */\n.$[prefix]-tab.$[prefix]-dragging {\n    opacity: 0.5;\n}\n\n/* --- \u30BF\u30D6\u95A2\u9023\u30DC\u30BF\u30F3 --- */\n/**\n * \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-close-btn-hover-bg);\n}\n\n/**\n * \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n/* --- \u30BF\u30D6\u30B3\u30F3\u30C6\u30F3\u30C4 --- */\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.$[prefix]-active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n\n/* ========================================================================\n    10. \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\n   ======================================================================== */\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n/* ========================================================================\n    11. \u30B3\u30F3\u30C6\u30AD\u30B9\u30C8\u30E1\u30CB\u30E5\u30FC\n   ======================================================================== */\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* ========================================================================\n    12. \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\n   ======================================================================== */\n.$[prefix]-popup-window .$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    padding: 20px;\n    box-sizing: border-box;\n}\n.$[prefix]-popup-message {\n    font-family: sans-serif;\n    font-size: 14px;\n    line-height: 1.5;\n    flex-grow: 1;\n    word-wrap: break-word;\n}\n.$[prefix]-popup-buttons {\n    display: flex;\n    justify-content: flex-end;\n    gap: 10px;\n    margin-top: 20px;\n    flex-shrink: 0;\n    touch-action: auto;\n}\n.$[prefix]-popup-button {\n    color: var(--$[prefix]-menu-item-color);\n    min-width: 80px;\n    padding: 8px 12px;\n    margin: 0;\n    border: 1px solid var(--$[prefix]-menu-border);\n    border-radius: 3px;\n    background-color: var(--$[prefix]-bg);\n    cursor: pointer;\n    font-size: 14px;\n    box-shadow: 0 1px 1px var(--$[prefix]-shadow-color-light);\n}\n.$[prefix]-popup-button:hover {\n    border-color: var(--$[prefix]-popup-button-hover-border-color);\n    background-color: var(--$[prefix]-popup-button-hover-bg);\n}\n.$[prefix]-popup-button:active {\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n/* ========================================================================\n    13. \u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Merged Styles)\n   ======================================================================== */\n/* --- \u30E1\u30CB\u30E5\u30FC/\u30BF\u30D6\u7D71\u5408\u6642\u306E\u57FA\u672C\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC\u7D71\u5408\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n/* \u30A2\u30AF\u30C6\u30A3\u30D6\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u7D71\u5408\u30E1\u30CB\u30E5\u30FC\u306E\u6587\u5B57\u8272 */\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n/* --- \u30BF\u30D6\u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Chrome\u98A8) --- */\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    display: none;\n}\n.$[prefix]-window.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n\n/* --- \u7D71\u5408\u6642\u306E\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* ========================================================================\n    14. \u30BF\u30B9\u30AF\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-taskbar {\n    position: absolute;\n    background-color: var(--$[prefix]-taskbar-bg);\n    box-sizing: border-box;\n    display: flex;\n    align-items: center;\n    padding: 0 5px;\n    z-index: 50000;\n    flex-shrink: 0;\n    display: flex;\n    gap: 5px;\n    overflow: auto;\n    scrollbar-width: none;\n    -ms-overflow-style: none;\n    backdrop-filter: blur(5px);\n    pointer-events: all;\n}\n.$[prefix]-taskbar::-webkit-scrollbar{\n    display: none;\n}\n\n/* --- \u4F4D\u7F6E --- */\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom {\n    bottom: 0;\n    left: 0;\n    border-top: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    top: 0;\n    left: 0;\n    border-bottom: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left {\n    top: 0;\n    left: 0;\n    border-right: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    top: 0;\n    right: 0;\n    border-left: 1px solid var(--$[prefix]-taskbar-border);\n}\n\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom,\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);\n    width: 100%;\n    height: var(--$[prefix]-taskbar-height);\n    flex-direction: row;\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left,\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);\n    width: var(--$[prefix]-taskbar-width);\n    height: 100%;\n    flex-direction: column;\n}\n\n\n.$[prefix]-taskbar-item {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    width: auto;\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 0 10px;\n    border-radius: 3px;\n    background-color: var(--$[prefix]-taskbar-item-bg);\n    cursor: pointer;\n    flex-shrink: 0;\n    max-width: 150px;\n    transition: background-color 0.2s;\n    font-family: sans-serif;\n    font-size: 14px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    box-sizing: border-box;\n}\n/* \u7E26\u5411\u304D\u30BF\u30B9\u30AF\u30D0\u30FC\u306E\u30A2\u30A4\u30C6\u30E0 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: auto;\n    min-height: 40px;\n    max-width: none;\n    padding: 10px 0;\n    writing-mode: vertical-rl;\n}\n\n.$[prefix]-taskbar-item-icon {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n.$[prefix]-taskbar-item-icon img {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item-icon i {\n    font-size: calc((var(--winlet-taskbar-icon-size) - 12px) * 0.8);\n    line-height: calc(var(--winlet-taskbar-icon-size) - 18px);\n    text-align: center;\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 6px;\n}\n/* \u7E26\u5411\u304D\u30A2\u30A4\u30B3\u30F3\u30E2\u30FC\u30C9 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item.$[prefix]-icon-only,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n}\n\n.$[prefix]-taskbar-item.$[prefix]-active {\n    background-color: var(--$[prefix]-taskbar-item-active-bg);\n    color: var(--$[prefix]-taskbar-item-active-color);\n}\n.$[prefix]-taskbar-item.$[prefix]-minimized {\n    opacity: 0.7;\n}\n\n/* ========================================================================\n    15. \u30E2\u30D0\u30A4\u30EB\u30FB\u30BF\u30C3\u30C1\u30C7\u30D0\u30A4\u30B9\u5BFE\u5FDC\n   ======================================================================== */\n@media (pointer: coarse), (max-width: 768px) {\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3068\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3\u3092\u5927\u304D\u304F\u3057\u3066\u64CD\u4F5C\u3057\u3084\u3059\u304F\u3059\u308B */\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n\n/* ========================================================================\n    16. \u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\u7121\u52B9\u5316\n   ======================================================================== */\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {\n    transition: none;\n}\n\n/* ========================================================================\n    17. \u30C7\u30D0\u30C3\u30B0\u30E2\u30FC\u30C9\n   ======================================================================== */\n.$[prefix]-debug-overlay {\n    display: none;\n    position: absolute;\n    top: calc(var(--$[prefix]-title-bar-height) + 5px);\n    left: 5px;\n    background: rgba(0,0,0,0.5);\n    color: #fff;\n    padding: 5px;\n    border-radius: 3px;\n    font-family: monospace;\n    font-size: 12px;\n    line-height: 1.4;\n    pointer-events: none;\n    z-index: 100;\n    white-space: pre;\n}\n\n.$[prefix]-container.$[prefix]-debug-mode-enabled .$[prefix]-debug-overlay {\n    display: block;\n}\n";
 var _default = exports["default"] = styleData;
 
 },{}],36:[function(require,module,exports){
@@ -2854,7 +3039,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.1.4";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.1.5";
 
 },{}]},{},[32])
 //# sourceMappingURL=winlet.js.map

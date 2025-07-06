@@ -34,6 +34,7 @@ export default class WindowManager extends WinLetBaseClass {
 	private themes = new Map<string, Theme>();
 	private activeTheme: Theme | null = null;
 	private boundTabPressHandler: ((e: KeyboardEvent) => void) | null = null;
+	private virtualizationIntervalId: number | null = null;
 
 	constructor(initialConfig: GlobalConfigOptions) {
 		super();
@@ -54,6 +55,7 @@ export default class WindowManager extends WinLetBaseClass {
 		// アニメーション設定をコンテナクラスに反映
 		if (this.container) {
 			this.container.classList.toggle(`${LIBRARY_NAME}-animations-disabled`, !this.globalConfig.enableAnimations);
+			this.container.classList.toggle(`${LIBRARY_NAME}-debug-mode-enabled`, !!this.globalConfig.enableDebugMode);
 
 			// タスクバーの有効・無効切り替えとレイアウト更新
 			if (this.globalConfig.enableTaskbar) {
@@ -123,7 +125,7 @@ export default class WindowManager extends WinLetBaseClass {
 		if (parentEl !== document.body) {
 			this.container.classList.add(`${LIBRARY_NAME}-is-nested`);
 
-			// Ensure the parent can act as a positioning context
+			// 親がポジショニングコンテキストとして機能できることを確認
 			const computedStyle = window.getComputedStyle(parentEl);
 			if (computedStyle.position === "static") {
 				parentEl.style.position = "relative";
@@ -142,6 +144,8 @@ export default class WindowManager extends WinLetBaseClass {
 		} else {
 			this.setTheme("default");
 		}
+
+		this.updateVirtualization();
 
 		window.addEventListener("blur", () =>
 			// 次のイベントサイクルでアクティブな要素を取得
@@ -466,6 +470,8 @@ export default class WindowManager extends WinLetBaseClass {
 			// フォーカスしない場合でも、z-indexの管理は必要
 			win.el.style.zIndex = `${win.options.windowOptions.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
 		}
+		// ウィンドウ作成後に仮想化状態を更新
+		this.updateVirtualization();
 		return win;
 	}
 
@@ -520,6 +526,7 @@ export default class WindowManager extends WinLetBaseClass {
 			id: Utils.generateId(`${LIBRARY_NAME}-popup`),
 			title: options.title || "",
 			icon: options.icon,
+			virtualizable: false,
 			windowOptions: {
 				resizableX: false,
 				resizableY: false,
@@ -606,6 +613,8 @@ export default class WindowManager extends WinLetBaseClass {
 				const nextWin = Array.from(this.windows.values()).pop();
 				if (nextWin) this.focusWindow(nextWin);
 			}
+			// ウィンドウ破棄後に仮想化状態を更新
+			this.updateVirtualization();
 		}
 	}
 
@@ -629,6 +638,9 @@ export default class WindowManager extends WinLetBaseClass {
 
 		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove(`${LIBRARY_NAME}-active`));
 		win.options._taskbarItem?.classList.add(`${LIBRARY_NAME}-active`);
+		// ウィンドウのフォーカス、移動、リサイズ時に仮想化状態を即時更新
+		this.updateVirtualization();
+
 		// focus()はWindowクラス側で呼ばれるので不要
 	}
 
@@ -928,5 +940,83 @@ export default class WindowManager extends WinLetBaseClass {
 		const alt = keys.includes("Alt");
 		const shift = keys.includes("Shift");
 		return { ctrl, alt, shift, key };
+	}
+
+	/**
+	 * 全てのウィンドウの可視性をチェックし、必要に応じて仮想化/復元を行う
+	 */
+	public updateVirtualization(): void {
+		if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
+
+		// z-indexでソートし、奥のウィンドウから手前のウィンドウの順で並べる
+		const windows = Array.from(this.windows.values()).sort((a, b) => parseInt(a.el.style.zIndex || "0", 10) - parseInt(b.el.style.zIndex || "0", 10));
+
+		const viewportRect = this.workspaceEl.getBoundingClientRect();
+
+		for (let i = 0; i < windows.length; i++) {
+			const targetWin = windows[i];
+
+			// 1. 仮想化対象外のウィンドウ、またはアクティブなウィンドウは常に非仮想化
+			if (!targetWin.options.virtualizable || targetWin.state !== "normal" || targetWin === this.activeWindow) {
+				targetWin.unvirtualize();
+				continue;
+			}
+
+			const targetRect = targetWin.el.getBoundingClientRect();
+			// 面積が非常に小さいウィンドウは非表示として扱う
+			if (targetRect.width <= 1 || targetRect.height <= 1) {
+				targetWin.virtualize(targetWin.hasUnsafeContent() ? "frozen" : "unloaded");
+				continue;
+			}
+
+			// 2. 5つのサンプルポイント（四隅と中央）を定義
+			const samplePoints = [
+				{ x: targetRect.left + 1, y: targetRect.top + 1 }, // Top-left
+				{ x: targetRect.right - 1, y: targetRect.top + 1 }, // Top-right
+				{ x: targetRect.right - 1, y: targetRect.bottom - 1 }, // Bottom-right
+				{ x: targetRect.left + 1, y: targetRect.bottom - 1 }, // Bottom-left
+				{ x: targetRect.left + targetRect.width * 0.5, y: targetRect.top + targetRect.height * 0.5 }, // Center
+			];
+
+			let isVisible = false;
+			for (const point of samplePoints) {
+				// ポイントがビューポート（ワークスペース）の外側なら、このポイントは不可視
+				const inViewport = point.x >= viewportRect.left && point.x < viewportRect.right && point.y >= viewportRect.top && point.y < viewportRect.bottom;
+				if (!inViewport) {
+					continue; // 次のサンプルポイントをチェック
+				}
+
+				// ポイントが他のウィンドウに隠されているかチェック
+				let pointIsOccluded = false;
+				// targetWinより手前にあるウィンドウ(occluderWin)をすべてチェック
+				for (let j = i + 1; j < windows.length; j++) {
+					const occluderWin = windows[j];
+					// 隠す能力のないウィンドウ（最小化、透明など）はスキップ
+					if (occluderWin.state !== "normal" || (occluderWin.getOpacity() ?? 1) < 0.9) {
+						continue;
+					}
+
+					const occluderRect = occluderWin.el.getBoundingClientRect();
+					// ポイントがoccluderWinの矩形内にあるかチェック
+					if (point.x >= occluderRect.left && point.x < occluderRect.right && point.y >= occluderRect.top && point.y < occluderRect.bottom) {
+						pointIsOccluded = true;
+						break; // １つのウィンドウでも隠していれば、このポイントのチェックは終了
+					}
+				}
+
+				// このポイントがビューポート内にあり、かつどのウィンドウにも隠されていなければ、可視と判断
+				if (!pointIsOccluded) {
+					isVisible = true;
+					break; // １つでも可視ポイントがあれば、ウィンドウ全体のチェックは終了
+				}
+			}
+
+			// 3. 最終的な可視性に基づいて仮想化状態を更新
+			if (isVisible) {
+				targetWin.unvirtualize();
+			} else {
+				targetWin.virtualize("auto");
+			}
+		}
 	}
 }

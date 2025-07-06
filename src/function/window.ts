@@ -1,6 +1,6 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, TabItem, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
+import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, TabItem, VirtualizationLevel, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";
@@ -36,6 +36,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	private childManager: WindowManager | null = null;
 	private parentWindow: IWindow | null;
+
+	private debugOverlayEl: HTMLElement | null = null;
+	public virtualizationLevel: VirtualizationLevel = "none";
+	private minimizeVirtualizeTimer: number | null = null;
 
 	constructor(options: WindowOptions, manager: WindowManager) {
 		super();
@@ -78,9 +82,11 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.mainContentEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-main-content`)!;
 		this.contentEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
 		this.loaderEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-loader-overlay`)!;
+		this.debugOverlayEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-debug-overlay`);
 
 		this.applyOptions();
 		this.setupEventListeners();
+		this.updateDebugOverlay();
 
 		this.options.onOpen(this);
 	}
@@ -115,11 +121,14 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const isMergedMenu = this.options.menuStyle === "merged" && hasMenu;
 		const isMergedTabs = this.options.tabStyle === "merged" && hasTabs;
 
+		const customControlsHTML = (this.options.customControls ?? []).map((c) => `<button class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-custom-control-btn" data-name="${c.name}" title="${c.title || ""}" aria-label="${c.title || c.name}">${c.html}</button>`).join("");
+
 		const controlsHTML = `
             <div class="${LIBRARY_NAME}-controls">
-                ${this.options.windowOptions.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" />` : ""}
-                ${this.options.windowOptions.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" />` : ""}
-                ${this.options.windowOptions.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close">` : ""}
+				${customControlsHTML}
+                ${this.options.windowOptions.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" aria-label="Minimize"/>` : ""}
+                ${this.options.windowOptions.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" aria-label="Maximize"/>` : ""}
+                ${this.options.windowOptions.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close" aria-label="Close"/>` : ""}
             </div>`;
 
 		const titleBarContentHTML = `
@@ -136,7 +145,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
             </div>
         `;
 
+		const debugHTML = `<div class="${LIBRARY_NAME}-debug-overlay"></div>`;
+
 		windowEl.innerHTML = `
+			${debugHTML}
             <div class="${LIBRARY_NAME}-title-bar ${LIBRARY_NAME}-us-none">
                 ${titleBarContentHTML}
             </div>
@@ -186,6 +198,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private renderContent(container: HTMLElement, content: WindowContentOptions): void {
 		container.innerHTML = "";
 		this.hideLoader();
+
+		if (this.virtualizationLevel === "unloaded") {
+			return; // 仮想化された場合、コンテンツをレンダリングしない
+		}
 
 		if (content.template) {
 			const template = document.querySelector<HTMLTemplateElement>(content.template);
@@ -594,29 +610,34 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		};
 		document.addEventListener("click", this.boundGlobalClickHandler);
 
-		const closeBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-close-btn`);
-		closeBtn?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			if (this.options._isPopup) {
-				this.popupCloseCallback?.(CLOSE_BUTTON_RESULT);
+		const controlsEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-controls`);
+		controlsEl?.addEventListener("click", (e) => {
+			const target = e.target as HTMLElement;
+			const button = target.closest<HTMLElement>(`.${LIBRARY_NAME}-control-btn`);
+			if (!button) return;
+
+			// 標準ボタン
+			if (button.classList.contains(`${LIBRARY_NAME}-close-btn`)) {
+				e.stopPropagation();
+				if (this.options._isPopup) {
+					this.popupCloseCallback?.(CLOSE_BUTTON_RESULT);
+				}
+				this.close();
+			} else if (button.classList.contains(`${LIBRARY_NAME}-maximize-btn`)) {
+				e.stopPropagation();
+				this.toggleMaximize();
+			} else if (button.classList.contains(`${LIBRARY_NAME}-minimize-btn`)) {
+				e.stopPropagation();
+				this.minimize();
 			}
-			this.close();
+			// カスタムボタン
+			else if (button.classList.contains(`${LIBRARY_NAME}-custom-control-btn`)) {
+				e.stopPropagation();
+				const name = button.dataset.name;
+				const control = this.options.customControls.find((c) => c.name === name);
+				control?.action(this);
+			}
 		});
-		closeBtn?.setAttribute("aria-label", "Close");
-
-		const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
-		maxBtn?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			this.toggleMaximize();
-		});
-		maxBtn?.setAttribute("aria-label", "Maximize");
-
-		const minBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-minimize-btn`);
-		minBtn?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			this.minimize();
-		});
-		minBtn?.setAttribute("aria-label", "Minimize");
 
 		if (this.options.windowOptions.movable) this.makeMovable();
 		if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
@@ -743,6 +764,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
 					this.options.onMove(this);
+					this.manager.updateVirtualization();
 				}
 
 				this.el.classList.remove(`${LIBRARY_NAME}-is-dragging`);
@@ -836,6 +858,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 						document.removeEventListener("pointermove", onPointerMove);
 						document.removeEventListener("pointerup", onPointerUp);
 						this.options.onResize(this);
+						this.updateDebugOverlay();
+						this.manager.updateVirtualization();
 
 						this.el.classList.remove(`${LIBRARY_NAME}-is-resizing`);
 					};
@@ -852,6 +876,78 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const hasPrefix = classes.some((c) => /^fa[bslr]?$/.test(c));
 		const hasIcon = classes.some((c) => /^fa-[a-z0-9-]+$/.test(c));
 		return hasPrefix && hasIcon;
+	}
+
+	private updateDebugOverlay(): void {
+		if (this.debugOverlayEl) {
+			const pos = this.getPosition();
+			const size = this.getSize();
+			this.debugOverlayEl.textContent = `ID:    ${this.id}
+State: ${this.state}
+Pos:   x:${Math.round(pos.x)}, y:${Math.round(pos.y)}
+Size:  w:${Math.round(size.width)}, h:${Math.round(size.height)}
+Focus: ${this.focused}
+z-idx: ${this.el.style.zIndex}
+Virt:  ${this.virtualizationLevel}`.trim();
+		}
+	}
+
+	/**
+	 * ウィンドウ内に不安全なコンテンツがあるか判定する
+	 */
+	public hasUnsafeContent(): boolean {
+		return !!this.mainContentEl.querySelector("iframe, frame, object, input, textarea, select, canvas, video, audio");
+	}
+
+	/**
+	 * ウィンドウを指定されたレベルまで仮想化する
+	 * @param level - 仮想化の目標レベル
+	 */
+	public virtualize(level?: "frozen" | "unloaded" | "auto"): void {
+		if (this.virtualizationLevel === level) return;
+
+		if (level === "auto") {
+			level = this.hasUnsafeContent() ? "frozen" : "unloaded";
+		}
+
+		// Stage 1: Freeze
+		if (level === "frozen") {
+			this.virtualizationLevel = "frozen";
+			this.el.classList.add(`${LIBRARY_NAME}-is-frozen`);
+			this.el.classList.remove(`${LIBRARY_NAME}-is-virtualized`); // Unload状態は解除
+		}
+		// Stage 2: Unload
+		else if (level === "unloaded") {
+			this.virtualizationLevel = "unloaded";
+			this.el.classList.add(`${LIBRARY_NAME}-is-virtualized`);
+			this.el.classList.remove(`${LIBRARY_NAME}-is-frozen`); // Freeze状態は解除
+			// コンテンツをクリアしてリソースを解放
+			this.contentEl.innerHTML = "";
+		}
+		this.updateDebugOverlay();
+	}
+	/**
+	 * ウィンドウの仮想化を解除する
+	 */
+	public unvirtualize(): void {
+		if (this.virtualizationLevel === "none") return;
+
+		const previousLevel = this.virtualizationLevel;
+		this.virtualizationLevel = "none";
+		this.el.classList.remove(`${LIBRARY_NAME}-is-virtualized`, `${LIBRARY_NAME}-is-frozen`);
+
+		// Unload状態から復元する場合はコンテンツを再描画
+		if (previousLevel === "unloaded") {
+			if (this.options.tabs.length > 0) {
+				this.tabs.forEach((tab) => {
+					const tabIndex = parseInt(tab.tabEl.dataset.tabId!, 10);
+					this.renderContent(tab.contentEl, this.options.tabs[tabIndex].content);
+				});
+			} else {
+				this.renderContent(this.contentEl, this.options.content);
+			}
+		}
+		this.updateDebugOverlay();
 	}
 
 	// --- Public API ---
@@ -876,6 +972,23 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				this.el.classList.remove(`${LIBRARY_NAME}-is-minimizing`);
 				this.manager.updateTaskbarItem(this, "minimized");
 				this.blur();
+
+				// 最小化時の仮想化タイマーを開始
+				const globalConfig = this.manager.getGlobalConfig();
+				if (globalConfig.enableVirtualization && this.options.virtualizable) {
+					if (this.minimizeVirtualizeTimer) {
+						clearTimeout(this.minimizeVirtualizeTimer);
+					}
+					this.minimizeVirtualizeTimer = window.setTimeout(() => {
+						this.virtualize("auto");
+						if (this.virtualizationLevel !== "unloaded") {
+							this.minimizeVirtualizeTimer = window.setTimeout(() => {
+								this.virtualize("unloaded");
+							}, globalConfig.virtualizationUnloadDelay ?? 5000);
+						}
+					}, globalConfig.virtualizationFreezeDelay ?? 5000);
+				}
+				this.updateDebugOverlay();
 			};
 
 			this.el.setAttribute("inert", "");
@@ -904,6 +1017,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				this.el.classList.remove(`${LIBRARY_NAME}-is-maximizing`);
 				this.setPosition(0, 0);
 				this.setSize("100%", "100%");
+				this.updateDebugOverlay();
 			};
 
 			if (this.manager.getGlobalConfig().enableAnimations) {
@@ -928,6 +1042,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	}
 
 	public restore(): void {
+		// 仮想化解除タイマーをクリア
+		if (this.minimizeVirtualizeTimer) {
+			clearTimeout(this.minimizeVirtualizeTimer);
+			this.minimizeVirtualizeTimer = null;
+		}
+		// もし仮想化されていたら、解除する
+		if (this.virtualizationLevel !== "none") {
+			this.unvirtualize();
+		}
+
 		const wasMinimized = this.state === "minimized";
 		if (this.state === "minimized") {
 			this.state = "normal";
@@ -946,6 +1070,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					maxBtn.value = "\u25a1";
 					maxBtn.setAttribute("aria-label", "Maximize");
 				}
+				this.updateDebugOverlay();
 			};
 
 			if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
@@ -959,6 +1084,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				doRestore();
 			}
 		}
+		this.updateDebugOverlay();
 	}
 
 	public focus(): void {
@@ -972,6 +1098,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.manager.focusWindow(this);
 		this.focused = true;
 		this.el.classList.add(`${LIBRARY_NAME}-active`);
+		this.updateDebugOverlay();
 		this.options.onFocus(this);
 	}
 
@@ -979,6 +1106,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (!this.focused) return;
 		this.focused = false;
 		this.el.classList.remove(`${LIBRARY_NAME}-active`);
+		this.updateDebugOverlay();
 		this.options.onBlur(this);
 	}
 
@@ -1195,6 +1323,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		// 画面外にはみ出さないようにする既存のロジックを適用
 		this.el.style.left = `${Math.min(Math.max(150 - winWidth, finalX), parentRect.width - 150)}px`;
 		this.el.style.top = `${Math.min(Math.max(0, finalY), parentRect.height - 50)}px`;
+		this.updateDebugOverlay();
 	}
 
 	public getSize(): { width: number; height: number } {
@@ -1207,6 +1336,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public setSize(width: number | string, height: number | string): void {
 		this.el.style.width = typeof width === "number" ? `${width}px` : width;
 		this.el.style.height = typeof height === "number" ? `${height}px` : height;
+		this.updateDebugOverlay();
 	}
 
 	public setOpacity(opacity: number): void {

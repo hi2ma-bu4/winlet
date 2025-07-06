@@ -16,8 +16,12 @@
 			"labelledby",
 			"maximizable",
 			"minimizable",
+			"occluder",
 			"reorderable",
 			"spinbutton",
+			"unvirtualize",
+			"Virt",
+			"virtualizable",
 			"windowmanager",
 			"winlet",
 			"yesnocancel"

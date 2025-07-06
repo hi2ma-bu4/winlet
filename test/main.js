@@ -8,14 +8,15 @@ jasc.on("DOMContentLoaded", () => {
 		windowSwitchShortcut: "Ctrl+@",
 		enableAnimations: true,
 		enableTaskbar: true,
+		virtualizationFreezeDelay: 5000,
+		virtualizationUnloadDelay: 10000, // デバッグ用に10秒
 		taskbar: {
 			position: "bottom",
 		},
+		enableDebugMode: true,
 	});
 });
 
-// UI/UXの改善
-// TODO: コントロールボタンの拡張: 現在の3つのボタン（最小化・最大化・閉じる）に加え、開発者がカスタムのコントロールボタンを追加できる仕組み
 // ウィンドウ管理・レイアウト
 // TODO: ウィンドウのスナップ機能: ドラッグ中に、画面の四隅や辺、または他のウィンドウの境界にウィンドウが吸着（スナップ）する機能
 // TODO: ワークスペース機能: ウィンドウのセットを「ワークスペース」としてグループ化し、仮想デスクトップのように切り替えられる機能
@@ -36,11 +37,9 @@ jasc.on("DOMContentLoaded", () => {
 // 開発者体験・パフォーマンス
 // TODO: プラグインアーキテクチャ: テーマやスナップ機能などを、コアライブラリを直接変更せずに機能追加できるプラグインシステムを導入
 // TODO: 設定の動的変更: win.setOptions({ resizableX: false, title: 'New Title' })のように、インスタンス生成後にもオプションを動的に変更できるAPIを整備
-// TODO: デバッグモード: 各ウィンドウにIDや座標、状態などのデバッグ情報をオーバーレイ表示するモード
-// TODO: ウィンドウの仮想化: 大量のウィンドウ（例: 100以上）を扱う際に、画面外にあり非アクティブなウィンドウのレンダリングを一時停止してパフォーマンスを向上させる仕組み
 // TODO: コンテンツのキャッシュ機構: templateやhtmlコンテンツをキャッシュし、同じコンテンツを再度開く際の表示を高速化するオプション
+// TODO: 仮想化機能はウィンドウ数がN以上で動作するようにする
 // アクセシビリティ
-// TODO: ARIA属性の自動付与: ウィンドウ（role="dialog"）、タイトルバー、コントロールボタンなどに対し、適切なARIAロールと属性を自動的に付与してスクリーンリーダーの読み上げを改善
 // TODO: ハイコントラストモード対応: OSのハイコントラスト設定を検知し、それに追従する専用の表示スタイルを適用
 // TODO: メニューとタブのキーボード操作: メニューバーやタブバー内を矢印キーで移動し、Enterキーで選択や切り替えができるように
 
@@ -75,6 +74,16 @@ class Main {
 					src: "https://www.wikipedia.org/",
 				},
 			},
+			customControls: [
+				{
+					name: "reload",
+					title: "更新",
+					html: '<i class="fas fa-sync-alt"></i>',
+					action: (win) => {
+						win.reload();
+					},
+				},
+			],
 			onClose: (w) => {
 				console.log("Iframe window was closed.", w);
 			},

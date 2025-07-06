@@ -13,9 +13,13 @@ const globalConfig: GlobalConfigOptions = {
 	libraryPath: selfUrl,
 	enableAnimations: true,
 	enableFocusTrapping: true,
+	enableVirtualization: true,
+	virtualizationFreezeDelay: 1000 * 5,
+	virtualizationUnloadDelay: 1000 * 60 * 30,
 	taskbar: {
 		position: "bottom",
 	},
+	enableDebugMode: false,
 };
 
 // シングルトンインスタンス

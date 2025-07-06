@@ -130,6 +130,52 @@ const styleData: string = `
 .$[prefix]-workspace.$[prefix]-is-tab-dragging {
     pointer-events: auto;
 }
+
+/**
+ * 仮想化(アンロード)されたウィンドウ
+ */
+.$[prefix]-window.$[prefix]-is-virtualized .$[prefix]-main-content {
+    display: none;
+}
+.$[prefix]-window.$[prefix]-is-virtualized::after {
+    content: "Unloaded"; /* 以前は "Virtualizing" */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--$[prefix]-border);
+    font-size: 1.5em;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/**
+ * フリーズされたウィンドウ
+ */
+.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content {
+    pointer-events: none; /* コンテンツの操作を無効化 */
+}
+.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content iframe {
+    visibility: hidden;
+}
+.$[prefix]-window.$[prefix]-is-frozen::after {
+    content: "Frozen";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--$[prefix]-border);
+    background: rgba(128, 128, 128, 0.1);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5em;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 15; /* ローダーより手前 */
+}
 /* ========================================================================
     4. ウィンドウ
    ======================================================================== */
@@ -330,9 +376,13 @@ const styleData: string = `
 }
 
 .$[prefix]-control-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
     width: calc(var(--$[prefix]-title-bar-height) * 1.3);
     height: 100%;
     border: none;
+    border-radius: 0;
     box-sizing: border-box;
     background-color: transparent;
     font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);
@@ -342,6 +392,13 @@ const styleData: string = `
     font-family: sans-serif;
     transition: background-color 0.2s;
     touch-action: auto;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+}
+
+.$[prefix]-custom-control-btn > * {
+    pointer-events: none;
 }
 
 .$[prefix]-control-btn:hover {
@@ -833,43 +890,37 @@ const styleData: string = `
 .$[prefix]-taskbar.$[prefix]-taskbar-bottom {
     bottom: 0;
     left: 0;
-    width: 100%;
-    height: var(--$[prefix]-taskbar-height);
-    flex-direction: row;
     border-top: 1px solid var(--$[prefix]-taskbar-border);
 }
 .$[prefix]-taskbar.$[prefix]-taskbar-top {
     top: 0;
     left: 0;
-    width: 100%;
-    height: var(--$[prefix]-taskbar-height);
-    flex-direction: row;
     border-bottom: 1px solid var(--$[prefix]-taskbar-border);
 }
 .$[prefix]-taskbar.$[prefix]-taskbar-left {
     top: 0;
     left: 0;
-    width: var(--$[prefix]-taskbar-width);
-    height: 100%;
-    flex-direction: column;
     border-right: 1px solid var(--$[prefix]-taskbar-border);
 }
 .$[prefix]-taskbar.$[prefix]-taskbar-right {
     top: 0;
     right: 0;
-    width: var(--$[prefix]-taskbar-width);
-    height: 100%;
-    flex-direction: column;
     border-left: 1px solid var(--$[prefix]-taskbar-border);
 }
 
 .$[prefix]-taskbar.$[prefix]-taskbar-bottom,
 .$[prefix]-taskbar.$[prefix]-taskbar-top {
     --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);
+    width: 100%;
+    height: var(--$[prefix]-taskbar-height);
+    flex-direction: row;
 }
 .$[prefix]-taskbar.$[prefix]-taskbar-left,
 .$[prefix]-taskbar.$[prefix]-taskbar-right {
     --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);
+    width: var(--$[prefix]-taskbar-width);
+    height: 100%;
+    flex-direction: column;
 }
 
 
@@ -964,6 +1015,30 @@ const styleData: string = `
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {
     transition: none;
+}
+
+/* ========================================================================
+    17. デバッグモード
+   ======================================================================== */
+.$[prefix]-debug-overlay {
+    display: none;
+    position: absolute;
+    top: calc(var(--$[prefix]-title-bar-height) + 5px);
+    left: 5px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 100;
+    white-space: pre;
+}
+
+.$[prefix]-container.$[prefix]-debug-mode-enabled .$[prefix]-debug-overlay {
+    display: block;
 }
 `;
 

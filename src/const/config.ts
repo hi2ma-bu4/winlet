@@ -12,6 +12,7 @@ export const defaultConfig: Required<WindowOptions> = {
 	height: 400,
 	minWidth: 200,
 	minHeight: 150,
+	virtualizable: true,
 	windowOptions: {
 		resizableX: true,
 		resizableY: true,
@@ -57,6 +58,7 @@ export const defaultConfig: Required<WindowOptions> = {
 		showIconOnly: true,
 	},
 	contextMenu: [],
+	customControls: [],
 	enableShortcuts: true,
 	controlsPosition: "right",
 	showLoadingIndicator: true,
