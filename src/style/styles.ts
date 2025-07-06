@@ -54,7 +54,8 @@ const styleData: string = `
     --$[prefix]-taskbar-item-bg: #d0d0d0;
     --$[prefix]-taskbar-item-active-bg: #0078d7;
     --$[prefix]-taskbar-item-active-color: #fff;
-    --$[prefix]-taskbar-icon-size: 20px;
+    --$[prefix]-taskbar-height: 40px;
+    --$[prefix]-taskbar-width: 40px;
 
     /* ローディングインジケーター */
     --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);
@@ -93,12 +94,20 @@ const styleData: string = `
 .$[prefix]-container {
     position: fixed;
     top: 0;
+    right: 0;
+    bottom: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    box-sizing: border-box;
     pointer-events: none;
     overflow: hidden;
     z-index: 999;
+    display: flex;
+    pointer-events: none;
+}
+.$[prefix]-container > * {
+    pointer-events: all; /* 子要素(workspace, taskbar)のイベントは有効化 */
 }
 /**
  * 特定の要素内にネストされた場合のコンテナ
@@ -106,14 +115,23 @@ const styleData: string = `
 .$[prefix]-container.$[prefix]-is-nested {
     position: absolute;
 }
+
+.$[prefix]-workspace {
+    position: relative;
+    flex-grow: 1; /* 残りのスペースをすべて占有 */
+    overflow: hidden; /* ウィンドウがはみ出さないように */
+    min-width: 0; /* flexアイテムの縮小問題を回避 */
+    min-height: 0; /* flexアイテムの縮小問題を回避 */
+    pointer-events: none;
+}
 /**
  * タブのドラッグ中にポインターイベントを有効化し、ドロップを受け付ける
  */
-.$[prefix]-container.$[prefix]-is-tab-dragging {
+.$[prefix]-workspace.$[prefix]-is-tab-dragging {
     pointer-events: auto;
 }
 /* ========================================================================
-   4. ウィンドウ
+    4. ウィンドウ
    ======================================================================== */
 /* --- ウィンドウ基本スタイル --- */
 .$[prefix]-window {
@@ -125,6 +143,7 @@ const styleData: string = `
     border: 1px solid var(--$[prefix]-border);
     background-color: var(--$[prefix]-bg);
     box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);
+    box-sizing: border-box;
     border-radius: 5px;
     overflow: hidden;
     pointer-events: all;
@@ -133,13 +152,6 @@ const styleData: string = `
 }
 
 /* --- ウィンドウ状態別スタイル --- */
-/**
- * ドラッグ中・リサイズ中のトランジションを短縮し、操作性を向上
- */
-.$[prefix]-window.$[prefix]-is-dragging,
-.$[prefix]-window.$[prefix]-is-resizing {
-    transition: opacity 0.1s, transform 0.1s;
-}
 /**
  * 最小化されたウィンドウのアニメーション
  */
@@ -171,6 +183,15 @@ const styleData: string = `
 .$[prefix]-window.$[prefix]-is-restoring {
     transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
 }
+
+/**
+ * ドラッグ中・リサイズ中のトランジションを短縮し、操作性を向上
+ */
+.$[prefix]-window.$[prefix]-is-dragging,
+.$[prefix]-window.$[prefix]-is-resizing {
+    transition: opacity 0.1s, transform 0.1s;
+}
+
 /**
  * アクティブ（フォーカスされている）ウィンドウ
  */
@@ -467,7 +488,7 @@ const styleData: string = `
     position: absolute;
     top: 50%;
     right: 10px;
-    margin-top: -0.65em;
+    margin-top: calc(var(--winlet-title-bar-height) * -0.5);
     font-size: 0.8em;
     color: inherit;
 }
@@ -753,7 +774,6 @@ const styleData: string = `
     order: -1;
 }
 
-
 .$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {
     border: 1px solid var(--$[prefix]-border);
     border-bottom: none;
@@ -790,39 +810,75 @@ const styleData: string = `
    ======================================================================== */
 .$[prefix]-taskbar {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 40px;
     background-color: var(--$[prefix]-taskbar-bg);
-    border-top: 1px solid var(--$[prefix]-taskbar-border);
     box-sizing: border-box;
     display: flex;
     align-items: center;
     padding: 0 5px;
     z-index: 50000;
+    flex-shrink: 0;
+    display: flex;
     gap: 5px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     backdrop-filter: blur(5px);
     pointer-events: all;
 }
 .$[prefix]-taskbar::-webkit-scrollbar{
-    width: 6px;
-    height: 6px;
+    display: none;
 }
-.$[prefix]-taskbar::-webkit-scrollbar-thumb {
-    background-color: var(--$[prefix]-scrollbar-thumb-bg);
-    border-radius: 3px;
+
+/* --- 位置 --- */
+.$[prefix]-taskbar.$[prefix]-taskbar-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--$[prefix]-taskbar-height);
+    flex-direction: row;
+    border-top: 1px solid var(--$[prefix]-taskbar-border);
 }
-.$[prefix]-taskbar::-webkit-scrollbar-track {
-    background-color: transparent;
+.$[prefix]-taskbar.$[prefix]-taskbar-top {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--$[prefix]-taskbar-height);
+    flex-direction: row;
+    border-bottom: 1px solid var(--$[prefix]-taskbar-border);
 }
+.$[prefix]-taskbar.$[prefix]-taskbar-left {
+    top: 0;
+    left: 0;
+    width: var(--$[prefix]-taskbar-width);
+    height: 100%;
+    flex-direction: column;
+    border-right: 1px solid var(--$[prefix]-taskbar-border);
+}
+.$[prefix]-taskbar.$[prefix]-taskbar-right {
+    top: 0;
+    right: 0;
+    width: var(--$[prefix]-taskbar-width);
+    height: 100%;
+    flex-direction: column;
+    border-left: 1px solid var(--$[prefix]-taskbar-border);
+}
+
+.$[prefix]-taskbar.$[prefix]-taskbar-bottom,
+.$[prefix]-taskbar.$[prefix]-taskbar-top {
+    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);
+}
+.$[prefix]-taskbar.$[prefix]-taskbar-left,
+.$[prefix]-taskbar.$[prefix]-taskbar-right {
+    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);
+}
+
+
 .$[prefix]-taskbar-item {
     display: flex;
     align-items: center;
-    height: 70%;
+    justify-content: center;
+    width: auto;
+    height: calc(var(--winlet-taskbar-icon-size) - 6px);
     padding: 0 10px;
     border-radius: 3px;
     background-color: var(--$[prefix]-taskbar-item-bg);
@@ -835,27 +891,49 @@ const styleData: string = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    box-sizing: border-box;
 }
+/* 縦向きタスクバーのアイテム */
+.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item,
+.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item {
+    width: calc(var(--winlet-taskbar-icon-size) - 6px);
+    height: auto;
+    min-height: 40px;
+    max-width: none;
+    padding: 10px 0;
+    writing-mode: vertical-rl;
+}
+
 .$[prefix]-taskbar-item-icon {
-    width: var(--$[prefix]-taskbar-icon-size);
-    height: var(--$[prefix]-taskbar-icon-size);
-}
-.$[prefix]-taskbar-item-icon i,
-.$[prefix]-taskbar-item-icon img {
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.$[prefix]-taskbar-item-icon img {
+    width: calc(var(--winlet-taskbar-icon-size) - 6px);
+    height: calc(var(--winlet-taskbar-icon-size) - 6px);
     object-fit: contain;
 }
 .$[prefix]-taskbar-item-icon i {
-    font-size: calc(var(--$[prefix]-taskbar-icon-size) * 0.9);
-    line-height: var(--$[prefix]-taskbar-icon-size);
+    font-size: calc((var(--winlet-taskbar-icon-size) - 12px) * 0.8);
+    line-height: calc(var(--winlet-taskbar-icon-size) - 18px);
     text-align: center;
+    object-fit: contain;
 }
 .$[prefix]-taskbar-item.$[prefix]-icon-only {
-    min-width: var(--$[prefix]-taskbar-icon-size);
-    max-width: calc(var(--$[prefix]-taskbar-icon-size) + 12px);
-    padding: 0 6px;
+    width: calc(var(--winlet-taskbar-icon-size) - 6px);
+    height: calc(var(--winlet-taskbar-icon-size) - 6px);
+    padding: 6px;
 }
+/* 縦向きアイコンモード */
+.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item.$[prefix]-icon-only,
+.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item.$[prefix]-icon-only {
+    width: calc(var(--winlet-taskbar-icon-size) - 6px);
+    height: calc(var(--winlet-taskbar-icon-size) - 6px);
+}
+
 .$[prefix]-taskbar-item.$[prefix]-active {
     background-color: var(--$[prefix]-taskbar-item-active-bg);
     color: var(--$[prefix]-taskbar-item-active-color);

@@ -13,9 +13,11 @@
 		"cSpell.words": [
 			"baseclass",
 			"bslr",
+			"labelledby",
 			"maximizable",
 			"minimizable",
 			"reorderable",
+			"spinbutton",
 			"windowmanager",
 			"winlet",
 			"yesnocancel"

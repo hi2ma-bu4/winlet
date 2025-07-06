@@ -13,7 +13,6 @@ export const defaultTheme: Theme = {
 		"--$[prefix]-shadow-color-active": "rgba(0,0,0,0.45)",
 
 		// タイトルバー
-		"--$[prefix]-title-bar-height": "32px",
 		"--$[prefix]-title-bar-bg": "#e0e0e0",
 		"--$[prefix]-title-bar-active-bg": "#0078d7",
 		"--$[prefix]-title-text-color": "#000",
@@ -45,17 +44,12 @@ export const defaultTheme: Theme = {
 		"--$[prefix]-popup-button-hover-bg": "#e9e9e9",
 		"--$[prefix]-popup-button-hover-border-color": "#bbb",
 
-		// リサイズハンドル
-		"--$[prefix]-resize-handle-size": "8px",
-		"--$[prefix]-resize-handle-offset": "-4px",
-
 		// タスクバー
 		"--$[prefix]-taskbar-bg": "rgba(240, 240, 240, 0.9)",
 		"--$[prefix]-taskbar-border": "#a0a0a0",
 		"--$[prefix]-taskbar-item-bg": "#d0d0d0",
 		"--$[prefix]-taskbar-item-active-bg": "#0078d7",
 		"--$[prefix]-taskbar-item-active-color": "#fff",
-		"--$[prefix]-taskbar-icon-size": "20px;",
 
 		/* ローディングインジケーター */
 		"--$[prefix]-loader-bg": "rgba(255, 255, 255, 0.7)",

@@ -8,6 +8,9 @@ jasc.on("DOMContentLoaded", () => {
 		windowSwitchShortcut: "Ctrl+@",
 		enableAnimations: true,
 		enableTaskbar: true,
+		taskbar: {
+			position: "bottom",
+		},
 	});
 });
 
@@ -227,10 +230,13 @@ class Main {
 
 	static createAlwaysOnTopWindow() {
 		WinLet.createWindow({
+			id: "alwaysOnTopWindow",
 			title: "常に前面に表示",
-			minimizable: false,
-			modal: true,
-			alwaysOnTop: true,
+			windowOptions: {
+				minimizable: false,
+				modal: true,
+				alwaysOnTop: true,
+			},
 			content: {
 				html: '<div style="padding:1em;"><h2>常に前面に表示</h2><p>常に前面に表示されます。</p></div>',
 			},

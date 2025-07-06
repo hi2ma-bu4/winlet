@@ -13,6 +13,9 @@ const globalConfig: GlobalConfigOptions = {
 	libraryPath: selfUrl,
 	enableAnimations: true,
 	enableFocusTrapping: true,
+	taskbar: {
+		position: "bottom",
+	},
 };
 
 // シングルトンインスタンス

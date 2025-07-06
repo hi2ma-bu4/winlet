@@ -109,6 +109,9 @@ export interface IWindow {
 
 	/**
 	 * ウィンドウのオプションを動的に変更します。
+	 *
+	 * (初期化時に使用されるオプションは変更されず、警告なども出力されません。)
+	 *
 	 * @param options - 変更したいオプション
 	 */
 	setOptions(options: Partial<WindowOptions>): void;
@@ -181,41 +184,59 @@ export interface WindowOptions {
 	 */
 	minHeight?: number;
 	/**
-	 * 水平方向のリサイズ
+	 * ウィンドウのオプション
 	 */
-	resizableX?: boolean;
-	/**
-	 * 垂直方向のリサイズ
-	 */
-	resizableY?: boolean;
-	/**
-	 * ウィンドウの移動
-	 */
-	movable?: boolean;
-	/**
-	 * ウィンドウを閉じるボタンの表示
-	 */
-	closable?: boolean;
-	/**
-	 * ウィンドウを最小化するボタンの表示
-	 */
-	minimizable?: boolean;
-	/**
-	 * ウィンドウを最大化するボタンの表示
-	 */
-	maximizable?: boolean;
-	/**
-	 * タイトルバーのダブルクリックで最大化
-	 */
-	maximizableOnDblClick?: boolean;
-	/**
-	 * ショートカットキーを有効化
-	 */
-	enableShortcuts?: boolean;
-	/**
-	 * コントロールの位置
-	 */
-	controlsPosition?: "left" | "right";
+	windowOptions?: {
+		/**
+		 * 水平方向のリサイズ
+		 */
+		resizableX?: boolean;
+		/**
+		 * 垂直方向のリサイズ
+		 */
+		resizableY?: boolean;
+		/**
+		 * ウィンドウの移動
+		 */
+		movable?: boolean;
+		/**
+		 * ウィンドウを閉じるボタンの表示
+		 */
+		closable?: boolean;
+		/**
+		 * ウィンドウを最小化するボタンの表示
+		 */
+		minimizable?: boolean;
+		/**
+		 * ウィンドウを最大化するボタンの表示
+		 */
+		maximizable?: boolean;
+		/**
+		 * タイトルバーのダブルクリックで最大化
+		 */
+		maximizableOnDblClick?: boolean;
+		/**
+		 * ウィンドウを常に最前面に表示するかどうか
+		 */
+		alwaysOnTop?: boolean;
+		/**
+		 * ドラッグ・リサイズ時にゴーストウィンドウ（輪郭）を表示するか
+		 */
+		useGhostWindow?: boolean;
+		/**
+		 * 作成時にウィンドウにフォーカスを当てるか
+		 */
+		focus?: boolean;
+		/**
+		 * ウィンドウの不透明度 (0.0 - 1.0)
+		 */
+		opacity?: number;
+		/**
+		 * ウィンドウをモーダルとして扱うか
+		 * trueの場合、このウィンドウ以外は操作できなくなります。
+		 */
+		modal?: boolean;
+	};
 	/**
 	 * ウィンドウのコンテンツ
 	 */
@@ -292,30 +313,17 @@ export interface WindowOptions {
 	 */
 	contextMenu?: ContextMenuItem[];
 	/**
-	 * 作成時にウィンドウにフォーカスを当てるか
+	 * ショートカットキーを有効化
 	 */
-	focus?: boolean;
+	enableShortcuts?: boolean;
 	/**
-	 * ウィンドウを常に最前面に表示するかどうか
+	 * コントロールの位置
 	 */
-	alwaysOnTop?: boolean;
-	/**
-	 * ドラッグ・リサイズ時にゴーストウィンドウ（輪郭）を表示するか
-	 */
-	useGhostWindow?: boolean;
+	controlsPosition?: "left" | "right";
 	/**
 	 * iframeや非同期コンテンツの読み込み中にローディングインジケーターを表示するか
 	 */
 	showLoadingIndicator?: boolean;
-	/**
-	 * ウィンドウの不透明度 (0.0 - 1.0)
-	 */
-	opacity?: number;
-	/**
-	 * ウィンドウをモーダルとして扱うか
-	 * trueの場合、このウィンドウ以外は操作できなくなります。
-	 */
-	modal?: boolean;
 	/**
 	 * ウィンドウオープン時
 	 */
@@ -397,6 +405,14 @@ export interface PopupOptions {
 	onBlur?: (win: IWindow) => void;
 }
 
+export interface TaskbarOptions {
+	/**
+	 * タスクバーの表示位置
+	 * @default 'bottom'
+	 */
+	position?: "top" | "bottom" | "left" | "right";
+}
+
 export interface GlobalConfigOptions {
 	windowSwitchShortcut?: string | null; // 例: "Ctrl+`"
 	/**
@@ -417,6 +433,10 @@ export interface GlobalConfigOptions {
 	 * タスクバーを表示するか
 	 */
 	enableTaskbar?: boolean;
+	/**
+	 * タスクバーの設定
+	 */
+	taskbar?: TaskbarOptions;
 	/**
 	 * モーダルウィンドウのフォーカストラップを有効にするか
 	 */

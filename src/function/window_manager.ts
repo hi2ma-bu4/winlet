@@ -12,6 +12,7 @@ import WinLetWindow from "./window";
 
 export default class WindowManager extends WinLetBaseClass {
 	public container: HTMLElement | null = null;
+	private workspaceEl: HTMLElement | null = null;
 	private static allWindows = new Map<string, WinLetWindow>();
 	private windows = new Map<string, WinLetWindow>();
 	// z-indexを通常と最前面で分離
@@ -53,6 +54,21 @@ export default class WindowManager extends WinLetBaseClass {
 		// アニメーション設定をコンテナクラスに反映
 		if (this.container) {
 			this.container.classList.toggle(`${LIBRARY_NAME}-animations-disabled`, !this.globalConfig.enableAnimations);
+
+			// タスクバーの有効・無効切り替えとレイアウト更新
+			if (this.globalConfig.enableTaskbar) {
+				if (!this.taskbarEl) {
+					// タスクバーがなければ作成
+					this.createTaskbar();
+				}
+				this.updateTaskbarLayout();
+			} else if (this.taskbarEl) {
+				// 無効化された場合
+				this.taskbarEl.remove();
+				this.taskbarEl = null;
+				// flex-directionをリセット
+				this.container.style.flexDirection = "";
+			}
 		}
 	}
 
@@ -97,6 +113,10 @@ export default class WindowManager extends WinLetBaseClass {
 		}
 		this.container = containerEl;
 
+		this.workspaceEl = document.createElement("div");
+		this.workspaceEl.className = `${LIBRARY_NAME}-workspace`;
+		this.container.appendChild(this.workspaceEl);
+
 		// 初期設定を適用
 		this.applyGlobalConfig(this.globalConfig);
 
@@ -111,7 +131,10 @@ export default class WindowManager extends WinLetBaseClass {
 		}
 
 		if (this.globalConfig.enableTaskbar) {
-			this.createTaskbar();
+			if (!this.taskbarEl) {
+				// タスクバーがなければ作成
+				this.createTaskbar();
+			}
 		}
 
 		if (this.globalConfig.theme) {
@@ -159,7 +182,7 @@ export default class WindowManager extends WinLetBaseClass {
 		// ウィンドウ外クリックでblurさせる処理を追加
 		document.addEventListener("pointerdown", (e: PointerEvent) => {
 			// e.targetがHTMLElementでない場合や、アクティブなウィンドウがない場合は何もしない
-			if (!(e.target instanceof HTMLElement) || !this.activeWindow || this.activeWindow.options.modal) {
+			if (!(e.target instanceof HTMLElement) || !this.activeWindow || this.activeWindow.options.windowOptions.modal) {
 				return;
 			}
 
@@ -215,13 +238,13 @@ export default class WindowManager extends WinLetBaseClass {
 		this.setupShortcutListeners();
 
 		// タブ分離機能のためのグローバルなD&Dリスナー
-		this.container!.addEventListener("dragover", (e) => {
+		this.workspaceEl!.addEventListener("dragover", (e) => {
 			if (e.dataTransfer?.types.includes("application/winlet-tab")) {
 				e.preventDefault();
 			}
 		});
 
-		this.container!.addEventListener("drop", (e) => {
+		this.workspaceEl!.addEventListener("drop", (e) => {
 			// ドロップ先がウィンドウやタブバーの中なら何もしない
 			const targetEl = e.target as HTMLElement;
 			if (targetEl.closest(`.${LIBRARY_NAME}-window`)) {
@@ -396,7 +419,7 @@ export default class WindowManager extends WinLetBaseClass {
 		if (creationOptions.x === "auto" || creationOptions.y === "auto") {
 			const winWidth = creationOptions.width;
 			const winHeight = creationOptions.height;
-			const containerRect = this.container!.getBoundingClientRect();
+			const containerRect = this.workspaceEl!.getBoundingClientRect();
 
 			let nextX: number;
 			let nextY: number;
@@ -429,19 +452,19 @@ export default class WindowManager extends WinLetBaseClass {
 		const win = new WinLetWindow(creationOptions, this);
 		this.windows.set(win.id, win);
 		WindowManager.allWindows.set(win.id, win);
-		this.container!.appendChild(win.el);
+		this.workspaceEl!.appendChild(win.el);
 
 		if (this.taskbarEl) {
 			this.createTaskbarItem(win);
 		}
 
 		win.setPosition(creationOptions.x, creationOptions.y);
-		if (creationOptions.focus) {
+		if (creationOptions.windowOptions.focus) {
 			this.focusWindow(win);
 			win.focus();
 		} else {
 			// フォーカスしない場合でも、z-indexの管理は必要
-			win.el.style.zIndex = `${win.options.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
+			win.el.style.zIndex = `${win.options.windowOptions.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
 		}
 		return win;
 	}
@@ -490,25 +513,27 @@ export default class WindowManager extends WinLetBaseClass {
 		};
 
 		const messageHTML = `<div class="${LIBRARY_NAME}-popup-message">${Utils.sanitizeHTML(options.message)}</div>`;
-		const buttonsHTML = buttons.map((btn, index) => `<input class="${LIBRARY_NAME}-popup-button" data-index="${index}" type="button" value="${Utils.sanitizeHTML(btn.text)}"/>`).join("");
-		const contentHTML = `${messageHTML}<div class="${LIBRARY_NAME}-popup-buttons">${buttonsHTML}</div>`;
+		const buttonsHTML = buttons.map((btn, index) => `<input class="${LIBRARY_NAME}-popup-button" data-index="${index}" type="button" value="${Utils.sanitizeHTML(btn.text)}" role="button"/>`).join("");
+		const contentHTML = `${messageHTML}<div class="${LIBRARY_NAME}-popup-buttons" role="spinbutton">${buttonsHTML}</div>`;
 
 		const winOptions: WindowOptions = {
 			id: Utils.generateId(`${LIBRARY_NAME}-popup`),
 			title: options.title || "",
 			icon: options.icon,
-			resizableX: false,
-			resizableY: false,
-			movable: true,
-			closable: true,
-			minimizable: false,
-			maximizable: false,
-			maximizableOnDblClick: false,
+			windowOptions: {
+				resizableX: false,
+				resizableY: false,
+				movable: true,
+				closable: true,
+				minimizable: false,
+				maximizable: false,
+				maximizableOnDblClick: false,
+				modal: options.modal ?? true,
+				alwaysOnTop: options.alwaysOnTop ?? false,
+				focus: options.focus ?? true,
+			},
 			enableShortcuts: false,
-			modal: options.modal ?? true,
-			alwaysOnTop: options.alwaysOnTop ?? false,
 			content: { html: contentHTML },
-			focus: options.focus ?? true,
 			_isPopup: true,
 		};
 		if (options.onFocus) winOptions.onFocus = options.onFocus;
@@ -521,9 +546,9 @@ export default class WindowManager extends WinLetBaseClass {
 			temp.style.whiteSpace = "pre";
 			temp.className = `${LIBRARY_NAME}-popup-message`;
 			temp.innerHTML = Utils.sanitizeHTML(options.message);
-			this.container?.appendChild(temp);
+			this.workspaceEl?.appendChild(temp);
 			winOptions.width = temp.offsetWidth + 80; // メッセージ幅 + パディング
-			this.container?.removeChild(temp);
+			this.workspaceEl?.removeChild(temp);
 		} else {
 			winOptions.width = 300;
 		}
@@ -569,7 +594,7 @@ export default class WindowManager extends WinLetBaseClass {
 			if (win.options._taskbarItem) {
 				win.options._taskbarItem.remove();
 			}
-			if (win.options.modal) {
+			if (win.options.windowOptions.modal) {
 				this.deactivateFocusTrap();
 			}
 
@@ -586,13 +611,13 @@ export default class WindowManager extends WinLetBaseClass {
 
 	public focusWindow(win: WinLetWindow): void {
 		this.ensureInitialized();
-		if (this.activeWindow === win && !win.options.modal) return;
+		if (this.activeWindow === win && !win.options.windowOptions.modal) return;
 
 		// 自身が管理する他のウィンドウをぼかす
 		this.activeWindow?.blur();
 
 		// モーダルかつフォーカストラップ有効ならトラップ開始
-		if (win.options.modal && this.globalConfig.enableFocusTrapping) {
+		if (win.options.windowOptions.modal && this.globalConfig.enableFocusTrapping) {
 			this.activateFocusTrap(win);
 		} else {
 			// そうでなければ既存のトラップは解除
@@ -600,7 +625,7 @@ export default class WindowManager extends WinLetBaseClass {
 		}
 
 		this.activeWindow = win;
-		win.el.style.zIndex = `${win.options.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
+		win.el.style.zIndex = `${win.options.windowOptions.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
 
 		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove(`${LIBRARY_NAME}-active`));
 		win.options._taskbarItem?.classList.add(`${LIBRARY_NAME}-active`);
@@ -627,12 +652,12 @@ export default class WindowManager extends WinLetBaseClass {
 	}
 
 	public onTabDragStart(sourceWindowId: string): void {
-		this.container?.classList.add(`${LIBRARY_NAME}-is-tab-dragging`);
+		this.workspaceEl?.classList.add(`${LIBRARY_NAME}-is-tab-dragging`);
 		this.draggingTabInfo = { sourceWindowId };
 	}
 
 	public onTabDragEnd(): void {
-		this.container?.classList.remove(`${LIBRARY_NAME}-is-tab-dragging`);
+		this.workspaceEl?.classList.remove(`${LIBRARY_NAME}-is-tab-dragging`);
 		this.draggingTabInfo = null;
 	}
 
@@ -658,7 +683,7 @@ export default class WindowManager extends WinLetBaseClass {
 			this.contextMenuEl!.appendChild(itemEl);
 		});
 
-		this.container!.appendChild(this.contextMenuEl);
+		this.workspaceEl!.appendChild(this.contextMenuEl);
 
 		const { offsetWidth: menuWidth, offsetHeight: menuHeight } = this.contextMenuEl;
 		const { innerWidth: screenWidth, innerHeight: screenHeight } = window;
@@ -712,8 +737,79 @@ export default class WindowManager extends WinLetBaseClass {
 	private createTaskbar(): void {
 		if (!this.container) return;
 		this.taskbarEl = document.createElement("div");
-		this.taskbarEl.className = `${LIBRARY_NAME}-taskbar`;
+		this.taskbarEl.className = `${LIBRARY_NAME}-taskbar ${LIBRARY_NAME}-us-none`;
+		this.updateTaskbarLayout();
 		this.container.appendChild(this.taskbarEl);
+	}
+
+	private updateTaskbarLayout(): void {
+		if (!this.taskbarEl || !this.container) return;
+
+		const taskbarOpts = this.globalConfig.taskbar || {};
+		const position = taskbarOpts.position || "bottom";
+
+		switch (position) {
+			case "top":
+			case "bottom":
+			case "left":
+			case "right":
+				break;
+			default:
+				throw new WinLetError(`Invalid taskbar position: ${position}`);
+		}
+
+		// クラスを一度リセット
+		this.taskbarEl.className = `${LIBRARY_NAME}-taskbar ${LIBRARY_NAME}-us-none`;
+
+		// 位置クラスを追加
+		this.taskbarEl.classList.add(`${LIBRARY_NAME}-taskbar-${position}`);
+
+		if (!this.taskbarEl.isConnected) {
+			this.container.appendChild(this.taskbarEl);
+		}
+
+		this.container.style.flexDirection = "";
+		this.taskbarEl.style.order = "";
+		if (this.workspaceEl) {
+			this.workspaceEl.style.order = "";
+		}
+
+		this.container.style.paddingTop = "0";
+		this.container.style.paddingBottom = "0";
+		this.container.style.paddingLeft = "0";
+		this.container.style.paddingRight = "0";
+
+		// getComputedStyleで実際のタスクバーサイズを取得
+		const computedStyle = window.getComputedStyle(this.taskbarEl);
+		const taskbarHeight = computedStyle.height;
+		const taskbarWidth = computedStyle.width;
+
+		switch (position) {
+			case "top":
+				this.container.style.paddingTop = taskbarHeight;
+				this.container.style.flexDirection = "column-reverse";
+				this.taskbarEl.style.order = "1";
+				if (this.workspaceEl) this.workspaceEl.style.order = "2";
+				break;
+			case "bottom":
+				this.container.style.paddingBottom = taskbarHeight;
+				this.container.style.flexDirection = "column";
+				this.taskbarEl.style.order = "2";
+				if (this.workspaceEl) this.workspaceEl.style.order = "1";
+				break;
+			case "left":
+				this.container.style.paddingLeft = taskbarWidth;
+				this.container.style.flexDirection = "row-reverse";
+				this.taskbarEl.style.order = "1";
+				if (this.workspaceEl) this.workspaceEl.style.order = "2";
+				break;
+			case "right":
+				this.container.style.paddingRight = taskbarWidth;
+				this.container.style.flexDirection = "row";
+				this.taskbarEl.style.order = "2";
+				if (this.workspaceEl) this.workspaceEl.style.order = "1";
+				break;
+		}
 	}
 
 	private createTaskbarItem(win: WinLetWindow): void {

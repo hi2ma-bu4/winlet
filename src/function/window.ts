@@ -64,11 +64,12 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			this.el.classList.add(`${LIBRARY_NAME}-menu-style-merged`);
 		}
 		// 最前面/モーダル指定によりクラスを追加
-		if (this.options.alwaysOnTop) {
+		if (this.options.windowOptions.alwaysOnTop) {
 			this.el.classList.add(`${LIBRARY_NAME}-always-on-top`);
 		}
-		if (this.options.modal) {
+		if (this.options.windowOptions.modal) {
 			this.el.classList.add(`${LIBRARY_NAME}-modal`);
+			this.el.setAttribute("aria-modal", "true");
 		}
 
 		this.titleBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-title-bar`)!;
@@ -89,14 +90,22 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		windowEl.className = `${LIBRARY_NAME}-window`;
 		windowEl.id = this.id;
 
+		// ARIA属性
+		windowEl.setAttribute("role", "application");
+		windowEl.setAttribute("aria-labelledby", `${this.id}-title`);
+		if (this.state === "minimized") {
+			windowEl.setAttribute("inert", "");
+			windowEl.setAttribute("aria-hidden", "true");
+		}
+
 		const handles: string[] = [];
-		if (this.options.resizableY) {
+		if (this.options.windowOptions.resizableY) {
 			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-n"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-s"></div>`);
 		}
-		if (this.options.resizableX) {
+		if (this.options.windowOptions.resizableX) {
 			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-w"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-e"></div>`);
 		}
-		if (this.options.resizableX && this.options.resizableY) {
+		if (this.options.windowOptions.resizableX && this.options.windowOptions.resizableY) {
 			handles.push(`<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-nw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-ne"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-sw"></div>`, `<div class="${LIBRARY_NAME}-resize-handle ${LIBRARY_NAME}-se"></div>`);
 		}
 		const resizableHandlesHTML = handles.join("");
@@ -108,15 +117,15 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		const controlsHTML = `
             <div class="${LIBRARY_NAME}-controls">
-                ${this.options.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" />` : ""}
-                ${this.options.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" />` : ""}
-                ${this.options.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close">` : ""}
+                ${this.options.windowOptions.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" />` : ""}
+                ${this.options.windowOptions.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" />` : ""}
+                ${this.options.windowOptions.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close">` : ""}
             </div>`;
 
 		const titleBarContentHTML = `
             <div class="${LIBRARY_NAME}-icon"></div>
             ${isMergedMenu ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
-            <div class="${LIBRARY_NAME}-title"></div>
+            <div id="${this.id}-title" class="${LIBRARY_NAME}-title"></div>
             ${isMergedTabs ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
             ${controlsHTML}
         `;
@@ -132,8 +141,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
                 ${titleBarContentHTML}
             </div>
             <div class="${LIBRARY_NAME}-main-content">
-                ${!isMergedMenu && hasMenu ? `<div class="${LIBRARY_NAME}-menu-bar"></div>` : ""}
-                ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar"></div>` : ""}
+                ${!isMergedMenu && hasMenu ? `<div class="${LIBRARY_NAME}-menu-bar" role="menubar"></div>` : ""}
+                ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar" role="tablist"></div>` : ""}
                 <div class="${LIBRARY_NAME}-content"></div>
 				${loaderHTML}
             </div>
@@ -249,6 +258,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			const menuItemEl = document.createElement("div");
 			menuItemEl.className = `${LIBRARY_NAME}-menu-item ${LIBRARY_NAME}-us-none`;
 			menuItemEl.textContent = menuItemData.name ?? "";
+			menuItemEl.setAttribute("role", "menu");
 
 			if (menuItemData.items) {
 				const dropdownEl = this.createDropdownMenu(menuItemData.items);
@@ -291,7 +301,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				if (this.options.enableShortcuts && itemData.shortcut) {
 					text += `<span class="${LIBRARY_NAME}-shortcut-text">(${itemData.shortcut})</span>`;
 				}
-				itemEl.innerHTML = `<div class="${LIBRARY_NAME}-menu-dropdown-item">${text}</div>`;
+				itemEl.innerHTML = `<div class="${LIBRARY_NAME}-menu-dropdown-item" role="menuitem">${text}</div>`;
 				itemEl.addEventListener("click", (e) => {
 					e.stopPropagation();
 					this.closeAllMenus();
@@ -344,15 +354,15 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			if (e.dataTransfer?.types.includes("application/winlet-tab")) {
 				e.preventDefault();
 				if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-				tabBar.classList.add("drag-over");
+				tabBar.classList.add(`${LIBRARY_NAME}-drag-over`);
 			}
 		});
 		tabBar.addEventListener("dragleave", () => {
-			tabBar.classList.remove("drag-over");
+			tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
 		});
 		tabBar.addEventListener("drop", (e) => {
 			e.preventDefault();
-			tabBar.classList.remove("drag-over");
+			tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
 
 			const tabDataJSON = e.dataTransfer?.getData("application/winlet-tab");
 			const sourceWindowId = e.dataTransfer?.getData("application/winlet-source-window-id");
@@ -398,6 +408,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		const tabEl = document.createElement("div");
 		tabEl.className = `${LIBRARY_NAME}-tab`;
+		tabEl.setAttribute("role", "tab");
 		tabEl.dataset.tabId = index.toString(); // IDを紐付け
 
 		const titleEl = document.createElement("span");
@@ -425,6 +436,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		// タブコンテント生成ロジック
 		const tabContentEl = document.createElement("div");
 		tabContentEl.className = `${LIBRARY_NAME}-tab-content`;
+		tabContentEl.setAttribute("role", "tabpanel");
 		this.contentEl.appendChild(tabContentEl);
 		this.renderContent(tabContentEl, tabData.content);
 
@@ -574,7 +586,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		// iframeなどにフォーカスが移った際にウィンドウ自体をアクティブにする
 		this.el.addEventListener("focusin", () => this.focus());
 
-		// Add a global click listener to close menus when clicking outside
+		// グローバルクリックリスナーを追加して、外側をクリックするときにメニューを閉じる
 		this.boundGlobalClickHandler = () => {
 			if (this.isMenuOpen) {
 				this.closeAllMenus();
@@ -590,21 +602,24 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			}
 			this.close();
 		});
+		closeBtn?.setAttribute("aria-label", "Close");
 
 		const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
 		maxBtn?.addEventListener("click", (e) => {
 			e.stopPropagation();
 			this.toggleMaximize();
 		});
+		maxBtn?.setAttribute("aria-label", "Maximize");
 
 		const minBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-minimize-btn`);
 		minBtn?.addEventListener("click", (e) => {
 			e.stopPropagation();
 			this.minimize();
 		});
+		minBtn?.setAttribute("aria-label", "Minimize");
 
-		if (this.options.movable) this.makeMovable();
-		if (this.options.resizableX || this.options.resizableY) this.makeResizable();
+		if (this.options.windowOptions.movable) this.makeMovable();
+		if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
 		if (this.options.contextMenu.length > 0) {
 			// PC用: 右クリック
 			this.el.addEventListener(
@@ -658,7 +673,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 			// --- ゴーストウィンドウ処理 ---
 			let ghostEl: HTMLElement | null = null;
-			if (this.options.useGhostWindow) {
+			if (this.options.windowOptions.useGhostWindow) {
 				ghostEl = document.createElement("div");
 				ghostEl.className = `${LIBRARY_NAME}-ghost-window`;
 				this.manager.container?.appendChild(ghostEl);
@@ -739,9 +754,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		this.titleBarEl.addEventListener("pointerdown", onPointerDown, { passive: false });
 
-		if (this.options.maximizable) {
+		if (this.options.windowOptions.maximizable) {
 			this.titleBarEl.addEventListener("dblclick", (e: MouseEvent) => {
-				if (this.options.maximizableOnDblClick) {
+				if (this.options.windowOptions.maximizableOnDblClick) {
 					const target = e.target as HTMLElement;
 					// 操作UI（コントロールボタン、メニュー、タブ）の上では発火しないようにする
 					if (target.closest(`.${LIBRARY_NAME}-control-btn, .${LIBRARY_NAME}-menu-item, .${LIBRARY_NAME}-tab`)) {
@@ -769,7 +784,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 					// --- ゴーストウィンドウ処理 ---
 					let ghostEl: HTMLElement | null = null;
-					if (this.options.useGhostWindow) {
+					if (this.options.windowOptions.useGhostWindow) {
 						ghostEl = document.createElement("div");
 						ghostEl.className = `${LIBRARY_NAME}-ghost-window`;
 						this.manager.container?.appendChild(ghostEl);
@@ -856,14 +871,17 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 			const doMinimize = () => {
 				this.state = "minimized";
+				this.el.setAttribute("aria-hidden", "true");
 				this.el.classList.add(`${LIBRARY_NAME}-minimized`);
 				this.el.classList.remove(`${LIBRARY_NAME}-is-minimizing`);
 				this.manager.updateTaskbarItem(this, "minimized");
 				this.blur();
 			};
 
+			this.el.setAttribute("inert", "");
 			if (this.manager.getGlobalConfig().enableAnimations) {
 				this.el.classList.add(`${LIBRARY_NAME}-is-minimizing`);
+				this.el.setAttribute("inert", "");
 				this.el.addEventListener("transitionend", doMinimize, { once: true });
 			} else {
 				doMinimize();
@@ -904,6 +922,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			if (maxBtn) {
 				maxBtn.title = "Restore";
 				maxBtn.value = "\u274f";
+				maxBtn.setAttribute("aria-label", "Restore");
 			}
 		}
 	}
@@ -912,6 +931,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const wasMinimized = this.state === "minimized";
 		if (this.state === "minimized") {
 			this.state = "normal";
+			this.el.removeAttribute("aria-hidden");
+			this.el.removeAttribute("inert");
 			this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
 			this.manager.updateTaskbarItem(this, "restored");
 			this.focus();
@@ -923,6 +944,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				if (maxBtn) {
 					maxBtn.title = "Maximize";
 					maxBtn.value = "\u25a1";
+					maxBtn.setAttribute("aria-label", "Maximize");
 				}
 			};
 
@@ -1093,6 +1115,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	public setTitle(title: string): void {
 		this.options.title = title;
 		this.titleEl.textContent = Utils.sanitizeHTML(title);
+		this.titleEl.setAttribute("aria-label", Utils.sanitizeHTML(title));
 		this.manager.updateTaskbarItem(this, "titleChanged");
 	}
 
@@ -1188,15 +1211,19 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	public setOpacity(opacity: number): void {
 		const clampedOpacity = Math.max(0, Math.min(1, opacity));
-		this.options.opacity = clampedOpacity;
+		this.options.windowOptions.opacity = clampedOpacity;
 		this.el.style.opacity = clampedOpacity.toString();
 	}
 
 	public getOpacity(): number {
-		return this.options.opacity;
+		return this.options.windowOptions.opacity!;
 	}
 
 	public setOptions(options: Partial<WindowOptions>): void {
+		// ifExists
+		if (typeof options.ifExists === "boolean") {
+			this.options.ifExists = options.ifExists;
+		}
 		// タイトル
 		if (typeof options.title === "string") {
 			this.setTitle(options.title);
@@ -1205,21 +1232,59 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (typeof options.icon === "string" || options.icon === null) {
 			this.setIcon(options.icon);
 		}
+		// 位置
+		let x: number | "center" | "left" | "right" | null = null;
+		if (typeof options.x === "number" || options.x === "center" || options.x === "left" || options.x === "right") {
+			x = options.x;
+		}
+		let y: number | "center" | "top" | "bottom" | null = null;
+		if (typeof options.y === "number" || options.y === "center" || options.y === "top" || options.y === "bottom") {
+			y = options.y;
+		}
+		if (x !== null || y !== null) {
+			if (x === null) {
+				x = this.getPosition().x;
+			}
+			if (y === null) {
+				y = this.getPosition().y;
+			}
+			this.setPosition(x, y);
+		}
+		// サイズ
+		let width: number | string | null = null;
+		if (typeof options.width === "number" || typeof options.width === "string") {
+			width = options.width;
+		}
+		let height: number | string | null = null;
+		if (typeof options.height === "number" || typeof options.height === "string") {
+			height = options.height;
+		}
+		if (width !== null || height !== null) {
+			if (width === null) {
+				width = this.getSize().width;
+			}
+			if (height === null) {
+				height = this.getSize().height;
+			}
+			this.setSize(width, height);
+		}
+
+		const windowOptions = options.windowOptions || {};
+
 		// 不透明度
-		if (typeof options.opacity === "number") {
-			this.setOpacity(options.opacity);
+		if (typeof windowOptions.opacity === "number") {
+			this.setOpacity(windowOptions.opacity);
 		}
 		// 常に手前に表示
-		if (typeof options.alwaysOnTop === "boolean") {
-			this.options.alwaysOnTop = options.alwaysOnTop;
-			this.el.classList.toggle(`${LIBRARY_NAME}-always-on-top`, this.options.alwaysOnTop);
+		if (typeof windowOptions.alwaysOnTop === "boolean") {
+			this.options.windowOptions.alwaysOnTop = windowOptions.alwaysOnTop;
+			this.el.classList.toggle(`${LIBRARY_NAME}-always-on-top`, windowOptions.alwaysOnTop);
 			// z-indexを再評価するためにフォーカスする
 			this.focus();
 		}
 		// ゴーストウィンドウ
-		if (typeof options.useGhostWindow === "boolean") {
-			this.options.useGhostWindow = options.useGhostWindow;
+		if (typeof windowOptions.useGhostWindow === "boolean") {
+			this.options.windowOptions.useGhostWindow = windowOptions.useGhostWindow;
 		}
-		// TODO: リサイズ可否など、他のプロパティもここに追加
 	}
 }
