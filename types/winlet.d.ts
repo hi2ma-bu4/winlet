@@ -458,17 +458,17 @@ interface GlobalConfigOptions {
      */
     enableVirtualization?: boolean;
     /**
-     * 最小化されたウィンドウをフリーズするまでの遅延時間（ミリ秒）。
-     * `enableVirtualization` がtrueの場合にのみ有効です。
-     * @default 5000
+     * 仮想化がアクティブになる最小ウィンドウ数。
+     * この数を超えると、非表示のウィンドウの仮想化が開始されます。
+     * @default 5
      */
-    virtualizationFreezeDelay?: number;
+    virtualizationThreshold?: number;
     /**
-     * 最小化されたウィンドウをアンロードするまでの遅延時間（ミリ秒）。
+     * 最小化されたウィンドウを仮想化するまでの遅延時間（ミリ秒）。
      * `enableVirtualization` がtrueの場合にのみ有効です。
-     * @default 1800000
+     * @default 10000
      */
-    virtualizationUnloadDelay?: number;
+    virtualizationDelay?: number;
     /**
      * 初期テーマ
      * 'dark'などの登録済みテーマ名、またはThemeオブジェクトを指定

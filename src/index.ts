@@ -14,8 +14,8 @@ const globalConfig: GlobalConfigOptions = {
 	enableAnimations: true,
 	enableFocusTrapping: true,
 	enableVirtualization: true,
-	virtualizationFreezeDelay: 1000 * 5,
-	virtualizationUnloadDelay: 1000 * 60 * 30,
+	virtualizationThreshold: 5,
+	virtualizationDelay: 1000 * 10,
 	taskbar: {
 		position: "bottom",
 	},

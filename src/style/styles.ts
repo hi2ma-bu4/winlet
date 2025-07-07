@@ -131,14 +131,17 @@ const styleData: string = `
     pointer-events: auto;
 }
 
+/* ========================================================================
+    4. 仮想化技術
+   ======================================================================== */
 /**
  * 仮想化(アンロード)されたウィンドウ
  */
-.$[prefix]-window.$[prefix]-is-virtualized .$[prefix]-main-content {
+.$[prefix]-window.$[prefix]-is-virtualized > .$[prefix]-main-content {
     display: none;
 }
 .$[prefix]-window.$[prefix]-is-virtualized::after {
-    content: "Unloaded"; /* 以前は "Virtualizing" */
+    content: "Unloaded";
     position: absolute;
     top: 50%;
     left: 50%;
@@ -147,6 +150,25 @@ const styleData: string = `
     font-size: 1.5em;
     font-weight: bold;
     pointer-events: none;
+}
+
+/**
+ * 中断されたウィンドウ
+ */
+.$[prefix]-window.$[prefix]-is-suspended > .$[prefix]-main-content {
+    display: none;
+}
+.$[prefix]-window.$[prefix]-is-suspended::after {
+    content: "Suspended";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--$[prefix]-border);
+    font-size: 1.5em;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 15;
 }
 
 /**
@@ -177,7 +199,7 @@ const styleData: string = `
     z-index: 15; /* ローダーより手前 */
 }
 /* ========================================================================
-    4. ウィンドウ
+    5. ウィンドウ
    ======================================================================== */
 /* --- ウィンドウ基本スタイル --- */
 .$[prefix]-window {
@@ -283,7 +305,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    5. ゴーストウィンドウ
+    6. ゴーストウィンドウ
    ======================================================================== */
 /**
  * ドラッグ・リサイズ時に表示される輪郭
@@ -298,7 +320,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    6. タイトルバー
+    7. タイトルバー
    ======================================================================== */
 /* --- タイトルバー基本スタイル --- */
 .$[prefix]-title-bar {
@@ -411,7 +433,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    7. メインコンテンツエリア
+    8. メインコンテンツエリア
    ======================================================================== */
 .$[prefix]-main-content {
     all: initial;
@@ -466,7 +488,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    8. メニューバー
+    9. メニューバー
    ======================================================================== */
 .$[prefix]-menu-bar {
     color: var(--$[prefix]-menu-item-color);

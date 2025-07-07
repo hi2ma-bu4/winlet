@@ -1,7 +1,14 @@
 export const LIBRARY_NAME = "winlet";
 
 export type WindowState = "normal" | "minimized" | "maximized";
-export type VirtualizationLevel = "none" | "frozen" | "unloaded";
+/**
+ * ウィンドウの仮想化レベル
+ * - `none`: 仮想化されていない状態
+ * - `frozen`: ウィンドウのコンテンツは保持されるが、インタラクションは停止
+ * - `suspended`: ウィンドウのコンテンツはDOMから非表示にされ、描画負荷を削減
+ * - `unloaded`: ウィンドウのコンテンツはメモリから解放され、リソースを最大限制御
+ */
+export type VirtualizationLevel = "none" | "frozen" | "suspended" | "unloaded";
 
 export interface WindowContentOptions {
 	/**
@@ -480,17 +487,17 @@ export interface GlobalConfigOptions {
 	 */
 	enableVirtualization?: boolean;
 	/**
-	 * 最小化されたウィンドウをフリーズするまでの遅延時間（ミリ秒）。
-	 * `enableVirtualization` がtrueの場合にのみ有効です。
-	 * @default 5000
+	 * 仮想化がアクティブになる最小ウィンドウ数。
+	 * この数を超えると、非表示のウィンドウの仮想化が開始されます。
+	 * @default 5
 	 */
-	virtualizationFreezeDelay?: number;
+	virtualizationThreshold?: number;
 	/**
-	 * 最小化されたウィンドウをアンロードするまでの遅延時間（ミリ秒）。
+	 * 最小化されたウィンドウを仮想化するまでの遅延時間（ミリ秒）。
 	 * `enableVirtualization` がtrueの場合にのみ有効です。
-	 * @default 1800000
+	 * @default 10000
 	 */
-	virtualizationUnloadDelay?: number;
+	virtualizationDelay?: number;
 	/**
 	 * 初期テーマ
 	 * 'dark'などの登録済みテーマ名、またはThemeオブジェクトを指定

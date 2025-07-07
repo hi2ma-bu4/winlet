@@ -40,6 +40,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private debugOverlayEl: HTMLElement | null = null;
 	public virtualizationLevel: VirtualizationLevel = "none";
 	private minimizeVirtualizeTimer: number | null = null;
+	private readonly virtualizationHierarchy: readonly VirtualizationLevel[] = ["none", "frozen", "suspended", "unloaded"];
 
 	constructor(options: WindowOptions, manager: WindowManager) {
 		super();
@@ -878,7 +879,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		return hasPrefix && hasIcon;
 	}
 
-	private updateDebugOverlay(): void {
+	public updateDebugOverlay(): void {
 		if (this.debugOverlayEl) {
 			const pos = this.getPosition();
 			const size = this.getSize();
@@ -895,35 +896,64 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	/**
 	 * ウィンドウ内に不安全なコンテンツがあるか判定する
 	 */
-	public hasUnsafeContent(): boolean {
-		return !!this.mainContentEl.querySelector("iframe, frame, object, input, textarea, select, canvas, video, audio");
+	public getUnsafeContentLevel(): VirtualizationLevel {
+		if (this.mainContentEl.querySelector("iframe, frame, video, audio, applet, embed, object")) {
+			return "frozen";
+		}
+		if (this.mainContentEl.querySelector("img, input, textarea, select, canvas, [contentEditable=true]")) {
+			return "suspended";
+		}
+		return "unloaded";
 	}
 
 	/**
 	 * ウィンドウを指定されたレベルまで仮想化する
 	 * @param level - 仮想化の目標レベル
 	 */
-	public virtualize(level?: "frozen" | "unloaded" | "auto"): void {
-		if (this.virtualizationLevel === level) return;
-
+	public virtualize(level: "none" | "frozen" | "suspended" | "unloaded" | "auto"): void {
 		if (level === "auto") {
-			level = this.hasUnsafeContent() ? "frozen" : "unloaded";
+			level = this.getUnsafeContentLevel();
+		}
+		if (level === "none") {
+			return;
 		}
 
-		// Stage 1: Freeze
-		if (level === "frozen") {
-			this.virtualizationLevel = "frozen";
-			this.el.classList.add(`${LIBRARY_NAME}-is-frozen`);
-			this.el.classList.remove(`${LIBRARY_NAME}-is-virtualized`); // Unload状態は解除
+		const currentIndex = this.virtualizationHierarchy.indexOf(this.virtualizationLevel);
+		const targetIndex = this.virtualizationHierarchy.indexOf(level);
+
+		// 下位レベルへの変更は、一度unvirtualize()を呼び出してリセットする必要がある
+		if (targetIndex <= currentIndex) {
+			return;
 		}
-		// Stage 2: Unload
-		else if (level === "unloaded") {
-			this.virtualizationLevel = "unloaded";
-			this.el.classList.add(`${LIBRARY_NAME}-is-virtualized`);
-			this.el.classList.remove(`${LIBRARY_NAME}-is-frozen`); // Freeze状態は解除
-			// コンテンツをクリアしてリソースを解放
-			this.contentEl.innerHTML = "";
+
+		// 現在の仮想化状態に関連するスタイルなどをクリーンアップ
+		this.cleanupVirtualizationStyles();
+
+		// 新しいレベルを設定し、その効果を適用
+		this.virtualizationLevel = level;
+
+		switch (level) {
+			case "frozen":
+				// cssでvisibility: hiddenを適用
+				this.el.classList.add(`${LIBRARY_NAME}-is-frozen`);
+				break;
+			case "suspended":
+				// cssでdisplay: noneを適用
+				this.el.classList.add(`${LIBRARY_NAME}-is-suspended`);
+				break;
+			case "unloaded":
+				this.el.classList.add(`${LIBRARY_NAME}-is-virtualized`);
+				// コンテンツをメモリから解放
+				if (this.tabs.length > 0) {
+					this.tabs.forEach((tab) => {
+						tab.contentEl.innerHTML = "";
+					});
+				} else {
+					this.contentEl.innerHTML = "";
+				}
+				break;
 		}
+
 		this.updateDebugOverlay();
 	}
 	/**
@@ -934,20 +964,35 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 		const previousLevel = this.virtualizationLevel;
 		this.virtualizationLevel = "none";
-		this.el.classList.remove(`${LIBRARY_NAME}-is-virtualized`, `${LIBRARY_NAME}-is-frozen`);
+		// すべての仮想化関連クラスを削除
+		this.cleanupVirtualizationStyles();
 
-		// Unload状態から復元する場合はコンテンツを再描画
+		// 前のレベルに応じてコンテンツを復元
 		if (previousLevel === "unloaded") {
-			if (this.options.tabs.length > 0) {
-				this.tabs.forEach((tab) => {
-					const tabIndex = parseInt(tab.tabEl.dataset.tabId!, 10);
-					this.renderContent(tab.contentEl, this.options.tabs[tabIndex].content);
-				});
-			} else {
-				this.renderContent(this.contentEl, this.options.content);
-			}
+			// コンテンツを再描画
+			this.loaderEl.style.display = "flex"; // ローディング表示
+			// 非同期でコンテンツを再読み込み・再描画
+			setTimeout(() => {
+				if (this.options.tabs.length > 0) {
+					this.tabs.forEach((tab) => {
+						const tabIndex = parseInt(tab.tabEl.dataset.tabId!, 10);
+						this.renderContent(tab.contentEl, this.options.tabs[tabIndex].content);
+					});
+				} else {
+					this.renderContent(this.contentEl, this.options.content);
+				}
+				this.loaderEl.style.display = "none";
+			}, 0);
 		}
 		this.updateDebugOverlay();
+	}
+
+	/**
+	 * 仮想化に関連するスタイルと属性をリセットします。
+	 */
+	private cleanupVirtualizationStyles(): void {
+		this.el.classList.remove(`${LIBRARY_NAME}-is-frozen`, `${LIBRARY_NAME}-is-suspended`, `${LIBRARY_NAME}-is-virtualized`);
+		this.contentEl.style.display = "";
 	}
 
 	// --- Public API ---
@@ -981,14 +1026,10 @@ Virt:  ${this.virtualizationLevel}`.trim();
 					}
 					this.minimizeVirtualizeTimer = window.setTimeout(() => {
 						this.virtualize("auto");
-						if (this.virtualizationLevel !== "unloaded") {
-							this.minimizeVirtualizeTimer = window.setTimeout(() => {
-								this.virtualize("unloaded");
-							}, globalConfig.virtualizationUnloadDelay ?? 5000);
-						}
-					}, globalConfig.virtualizationFreezeDelay ?? 5000);
+					}, globalConfig.virtualizationDelay ?? 5000);
 				}
 				this.updateDebugOverlay();
+				this.manager.updateVirtualization();
 			};
 
 			this.el.setAttribute("inert", "");
@@ -1085,6 +1126,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			}
 		}
 		this.updateDebugOverlay();
+		this.manager.updateVirtualization();
 	}
 
 	public focus(): void {

@@ -8,8 +8,7 @@ jasc.on("DOMContentLoaded", () => {
 		windowSwitchShortcut: "Ctrl+@",
 		enableAnimations: true,
 		enableTaskbar: true,
-		virtualizationFreezeDelay: 5000,
-		virtualizationUnloadDelay: 10000, // デバッグ用に10秒
+		virtualizationDelay: 10000,
 		taskbar: {
 			position: "bottom",
 		},
@@ -38,7 +37,6 @@ jasc.on("DOMContentLoaded", () => {
 // TODO: プラグインアーキテクチャ: テーマやスナップ機能などを、コアライブラリを直接変更せずに機能追加できるプラグインシステムを導入
 // TODO: 設定の動的変更: win.setOptions({ resizableX: false, title: 'New Title' })のように、インスタンス生成後にもオプションを動的に変更できるAPIを整備
 // TODO: コンテンツのキャッシュ機構: templateやhtmlコンテンツをキャッシュし、同じコンテンツを再度開く際の表示を高速化するオプション
-// TODO: 仮想化機能はウィンドウ数がN以上で動作するようにする
 // アクセシビリティ
 // TODO: ハイコントラストモード対応: OSのハイコントラスト設定を検知し、それに追従する専用の表示スタイルを適用
 // TODO: メニューとタブのキーボード操作: メニューバーやタブバー内を矢印キーで移動し、Enterキーで選択や切り替えができるように

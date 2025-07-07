@@ -467,11 +467,10 @@ export default class WindowManager extends WinLetBaseClass {
 			this.focusWindow(win);
 			win.focus();
 		} else {
-			// フォーカスしない場合でも、z-indexの管理は必要
-			win.el.style.zIndex = `${win.options.windowOptions.alwaysOnTop ? ++this.zIndexCounterOnTop : ++this.zIndexCounter}`;
+			win.el.style.zIndex = `${(win.options.windowOptions.alwaysOnTop ? this.zIndexCounterOnTop : this.zIndexCounter) - 1}`;
+			this.updateVirtualization();
+			win.updateDebugOverlay();
 		}
-		// ウィンドウ作成後に仮想化状態を更新
-		this.updateVirtualization();
 		return win;
 	}
 
@@ -948,6 +947,17 @@ export default class WindowManager extends WinLetBaseClass {
 	public updateVirtualization(): void {
 		if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
 
+		const threshold = this.globalConfig.virtualizationThreshold ?? 5;
+		if (this.windows.size <= threshold) {
+			// しきい値以下の場合は、すべてのウィンドウが仮想化されていないことを確認
+			for (const win of this.windows.values()) {
+				if (win.virtualizationLevel !== "none") {
+					win.unvirtualize();
+				}
+			}
+			return; // さらに処理を停止
+		}
+
 		// z-indexでソートし、奥のウィンドウから手前のウィンドウの順で並べる
 		const windows = Array.from(this.windows.values()).sort((a, b) => parseInt(a.el.style.zIndex || "0", 10) - parseInt(b.el.style.zIndex || "0", 10));
 
@@ -965,7 +975,7 @@ export default class WindowManager extends WinLetBaseClass {
 			const targetRect = targetWin.el.getBoundingClientRect();
 			// 面積が非常に小さいウィンドウは非表示として扱う
 			if (targetRect.width <= 1 || targetRect.height <= 1) {
-				targetWin.virtualize(targetWin.hasUnsafeContent() ? "frozen" : "unloaded");
+				targetWin.virtualize("auto");
 				continue;
 			}
 
