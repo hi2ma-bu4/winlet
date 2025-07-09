@@ -3202,7 +3202,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         try {
           for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
             var win = _step3.value;
-            if (win.virtualizationLevel !== "none") {
+            if (win.virtualizationLevel !== "none" && win.state !== "minimized") {
               win.unvirtualize();
             }
           }
@@ -3219,7 +3219,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       var viewportRect = this.workspaceEl.getBoundingClientRect();
       for (var i = 0; i < windows.length; i++) {
         var targetWin = windows[i];
-        if (!targetWin.options.virtualizable || targetWin.state !== "normal" || targetWin === this.activeWindow) {
+        if (!targetWin.options.virtualizable || targetWin.state !== "normal" && targetWin.state !== "minimized" || targetWin === this.activeWindow) {
           targetWin.unvirtualize();
           continue;
         }
@@ -3746,7 +3746,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.0";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.1";
 
 },{}]},{},[43])
 //# sourceMappingURL=winlet.js.map

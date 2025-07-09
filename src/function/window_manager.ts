@@ -989,7 +989,7 @@ export default class WindowManager extends WinLetBaseClass {
 		if (this.windows.size <= threshold) {
 			// しきい値以下の場合は、すべてのウィンドウが仮想化されていないことを確認
 			for (const win of this.windows.values()) {
-				if (win.virtualizationLevel !== "none") {
+				if (win.virtualizationLevel !== "none" && win.state !== "minimized") {
 					win.unvirtualize();
 				}
 			}
@@ -1005,7 +1005,7 @@ export default class WindowManager extends WinLetBaseClass {
 			const targetWin = windows[i];
 
 			// 1. 仮想化対象外のウィンドウ、またはアクティブなウィンドウは常に非仮想化
-			if (!targetWin.options.virtualizable || targetWin.state !== "normal" || targetWin === this.activeWindow) {
+			if (!targetWin.options.virtualizable || (targetWin.state !== "normal" && targetWin.state !== "minimized") || targetWin === this.activeWindow) {
 				targetWin.unvirtualize();
 				continue;
 			}
