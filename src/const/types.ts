@@ -487,6 +487,11 @@ export interface GlobalConfigOptions {
 	 */
 	enableVirtualization?: boolean;
 	/**
+	 * 仮想化されたウィンドウをタスクバーで視覚的に示すか
+	 * @default true
+	 */
+	indicateVirtualizationInTaskbar?: boolean;
+	/**
 	 * 仮想化がアクティブになる最小ウィンドウ数。
 	 * この数を超えると、非表示のウィンドウの仮想化が開始されます。
 	 * @default 5
@@ -504,6 +509,11 @@ export interface GlobalConfigOptions {
 	 * @default 'default'
 	 */
 	theme?: string | Theme;
+	/**
+	 * Bootstrapのカラースキームを自動検出し、テーマを同期させるか
+	 * @default true
+	 */
+	autoDetectBootstrapTheme?: boolean;
 	/**
 	 * デバッグモードを有効にするか。
 	 * ウィンドウにID、座標、状態などのデバッグ情報をオーバーレイ表示します。
@@ -547,6 +557,12 @@ export interface WinLetApi {
 	 * 現在アクティブなウィンドウを取得します。
 	 */
 	getActiveWindow: () => IWindow | null;
+	/**
+	 * タスクバーのアイテムを更新します。
+	 * @param win - 更新するウィンドウ
+	 * @param state - 更新する状態
+	 */
+	updateTaskbarItem: (win: IWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged" | "virtualized" | "unvirtualized") => void;
 	/**
 	 * ウィンドウのデフォルトの設定を変更します。
 	 */

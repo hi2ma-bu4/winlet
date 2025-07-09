@@ -1015,6 +1015,15 @@ const styleData: string = `
     opacity: 0.7;
 }
 
+/**
+ * 仮想化されたウィンドウを示すタスクバーアイテム
+ */
+.$[prefix]-taskbar-item.$[prefix]-virtualized {
+    filter: grayscale(80%);
+    opacity: 0.7;
+    font-style: italic;
+}
+
 /* ========================================================================
     15. モバイル・タッチデバイス対応
    ======================================================================== */
@@ -1030,7 +1039,21 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    16. アニメーション無効化
+    16. ハイコントラストモード対応
+   ======================================================================== */
+/* high-contrast.tsと合わせる */
+@media (prefers-contrast: more) {
+    .$[prefix]-window,
+    .$[prefix]-window.$[prefix]-active {
+        box-shadow: none;
+    }
+    .$[prefix]-window.$[prefix]-active {
+        border: 2px solid var(--$[prefix]-title-bar-active-bg);
+    }
+}
+
+/* ========================================================================
+    17. アニメーション無効化
    ======================================================================== */
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,
@@ -1040,7 +1063,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    17. デバッグモード
+    18. デバッグモード
    ======================================================================== */
 .$[prefix]-debug-overlay {
     display: none;

@@ -932,6 +932,11 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		// 新しいレベルを設定し、その効果を適用
 		this.virtualizationLevel = level;
 
+		// 以前が非仮想化状態だった場合にのみ通知
+		if (currentIndex === 0 && targetIndex > 0) {
+			this.manager.updateTaskbarItem(this, "virtualized");
+		}
+
 		switch (level) {
 			case "frozen":
 				// cssでvisibility: hiddenを適用
@@ -961,6 +966,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	 */
 	public unvirtualize(): void {
 		if (this.virtualizationLevel === "none") return;
+		this.manager.updateTaskbarItem(this, "unvirtualized");
 
 		const previousLevel = this.virtualizationLevel;
 		this.virtualizationLevel = "none";

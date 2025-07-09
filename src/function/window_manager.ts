@@ -8,6 +8,7 @@ import Utils from "../libs/utils";
 import styleData from "../style/styles";
 import { darkTheme } from "../style/themes/dark";
 import { defaultTheme } from "../style/themes/default";
+import { highContrastTheme } from "../style/themes/high-contrast";
 import WinLetWindow from "./window";
 
 export default class WindowManager extends WinLetBaseClass {
@@ -34,13 +35,20 @@ export default class WindowManager extends WinLetBaseClass {
 	private themes = new Map<string, Theme>();
 	private activeTheme: Theme | null = null;
 	private boundTabPressHandler: ((e: KeyboardEvent) => void) | null = null;
-	private virtualizationIntervalId: number | null = null;
+
+	private bootstrapThemeObserver: MutationObserver | null = null;
+	private prefersDarkMatcher: MediaQueryList | null = null;
+	private prefersColorSchemeListener: ((e: MediaQueryListEvent) => void) | null = null;
+
+	private highContrastMatcher: MediaQueryList | null = null;
+	private highContrastListener: ((e: MediaQueryListEvent) => void) | null = null;
 
 	constructor(initialConfig: GlobalConfigOptions) {
 		super();
 		this.globalConfig = initialConfig;
 		this.registerTheme(defaultTheme);
 		this.registerTheme(darkTheme);
+		this.registerTheme(highContrastTheme);
 	}
 
 	/**
@@ -71,6 +79,13 @@ export default class WindowManager extends WinLetBaseClass {
 				// flex-directionをリセット
 				this.container.style.flexDirection = "";
 			}
+		}
+
+		// Bootstrapテーマ監視の開始/停止
+		if (this.globalConfig.autoDetectBootstrapTheme) {
+			this.startBootstrapThemeObserver();
+		} else {
+			this.stopBootstrapThemeObserver();
 		}
 	}
 
@@ -877,7 +892,7 @@ export default class WindowManager extends WinLetBaseClass {
 		}
 	}
 
-	public updateTaskbarItem(win: WinLetWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged"): void {
+	public updateTaskbarItem(win: WinLetWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged" | "virtualized" | "unvirtualized"): void {
 		const item = win.options._taskbarItem;
 		if (!item) return;
 
@@ -890,8 +905,15 @@ export default class WindowManager extends WinLetBaseClass {
 				break;
 			case "titleChanged":
 			case "iconChanged":
-				item.textContent = win.getTitle();
-				item.title = win.getTitle();
+				this.updateTaskbarItemContent(item, win);
+				break;
+			case "virtualized":
+				if (this.globalConfig.indicateVirtualizationInTaskbar) {
+					item.classList.add(`${LIBRARY_NAME}-virtualized`);
+				}
+				break;
+			case "unvirtualized":
+				item.classList.remove(`${LIBRARY_NAME}-virtualized`);
 				break;
 		}
 	}
@@ -1028,5 +1050,112 @@ export default class WindowManager extends WinLetBaseClass {
 				targetWin.virtualize("auto");
 			}
 		}
+	}
+
+	/**
+	 * Bootstrapのテーマ属性の変更を監視するMutationObserverを開始します。
+	 */
+	private startBootstrapThemeObserver(): void {
+		if (this.bootstrapThemeObserver || !this.container) return;
+
+		// --- ハイコントラストのリスナー設定 ---
+		this.highContrastMatcher = window.matchMedia("(prefers-contrast: more)");
+		this.highContrastListener = (e: MediaQueryListEvent) => {
+			// ハイコントラストがONになったら、high-contrastテーマを強制適用
+			if (e.matches) {
+				this.stopAutoThemeListener();
+				this.setTheme("high-contrast");
+			} else {
+				// OFFになったら、Bootstrapのテーマ設定を再評価
+				this.applyBootstrapTheme(document.documentElement.getAttribute("data-bs-theme"));
+			}
+		};
+		this.highContrastMatcher.addEventListener("change", this.highContrastListener);
+
+		// --- Bootstrapテーマのリスナー設定 ---
+		const targetNode = document.documentElement;
+		const config = { attributes: true, attributeFilter: ["data-bs-theme"] };
+		const callback = (mutationsList: MutationRecord[]) => {
+			// ハイコントラストが有効でなければ、テーマ変更を処理
+			if (!this.highContrastMatcher?.matches) {
+				for (const mutation of mutationsList) {
+					if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
+						const themeValue = (mutation.target as HTMLElement).getAttribute("data-bs-theme");
+						this.applyBootstrapTheme(themeValue);
+					}
+				}
+			}
+		};
+		this.bootstrapThemeObserver = new MutationObserver(callback);
+		this.bootstrapThemeObserver.observe(targetNode, config);
+
+		// --- 初期チェック ---
+		// 優先度1: ハイコントラストモード
+		if (this.highContrastMatcher.matches) {
+			this.setTheme("high-contrast");
+		} else {
+			// 優先度2: Bootstrapテーマ
+			this.applyBootstrapTheme(targetNode.getAttribute("data-bs-theme"));
+		}
+	}
+
+	/**
+	 * Bootstrapのテーマ属性の監視を停止します。
+	 */
+	private stopBootstrapThemeObserver(): void {
+		if (this.bootstrapThemeObserver) {
+			this.bootstrapThemeObserver.disconnect();
+			this.bootstrapThemeObserver = null;
+		}
+		if (this.highContrastMatcher && this.highContrastListener) {
+			this.highContrastMatcher.removeEventListener("change", this.highContrastListener);
+		}
+		this.stopAutoThemeListener(); // OSのリスナーも停止
+	}
+
+	/**
+	 * 適用されたBootstrapのテーマに応じてWinLetのテーマを設定します。
+	 * @param themeValue - data-bs-theme属性の値 ('dark', 'light', 'auto', or null)
+	 */
+	private applyBootstrapTheme(themeValue: string | null): void {
+		this.stopAutoThemeListener(); // 競合を避けるため、まずOSのリスナーを停止
+
+		if (themeValue === "dark") {
+			this.setTheme("dark");
+		} else if (themeValue === "auto") {
+			this.startAutoThemeListener();
+		} else {
+			// 'light' または属性が存在しない場合
+			this.setTheme("default");
+		}
+	}
+
+	/**
+	 * OSのカラースキーム変更の監視を開始します。
+	 */
+	private startAutoThemeListener(): void {
+		if (this.prefersColorSchemeListener || !window.matchMedia) return;
+
+		this.prefersDarkMatcher = window.matchMedia("(prefers-color-scheme: dark)");
+
+		this.prefersColorSchemeListener = (e: MediaQueryListEvent) => {
+			this.setTheme(e.matches ? "dark" : "default");
+		};
+
+		this.prefersDarkMatcher.addEventListener("change", this.prefersColorSchemeListener);
+
+		// 現在のOS設定に基づいて初期テーマを適用
+		this.setTheme(this.prefersDarkMatcher.matches ? "dark" : "default");
+	}
+
+	/**
+	 * OSのカラースキーム変更の監視を停止します。
+	 */
+	private stopAutoThemeListener(): void {
+		if (this.prefersDarkMatcher && this.prefersColorSchemeListener) {
+			this.prefersDarkMatcher.removeEventListener("change", this.prefersColorSchemeListener);
+		}
+		this.prefersDarkMatcher = null;
+		this.prefersColorSchemeListener = null;
 	}
 }

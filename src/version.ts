@@ -1,2 +1,2 @@
 // このファイルは自動生成されます
-export const LIB_VERSION = "v1.0.1.6";
+export const LIB_VERSION = "v1.0.1.7";

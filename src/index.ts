@@ -2,6 +2,7 @@
 
 import { defaultConfig } from "./const/config";
 import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
+import WinLetWindow from "./function/window";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
 import { LIB_VERSION } from "./version";
@@ -14,11 +15,13 @@ const globalConfig: GlobalConfigOptions = {
 	enableAnimations: true,
 	enableFocusTrapping: true,
 	enableVirtualization: true,
+	indicateVirtualizationInTaskbar: true,
 	virtualizationThreshold: 5,
 	virtualizationDelay: 1000 * 10,
 	taskbar: {
 		position: "bottom",
 	},
+	autoDetectBootstrapTheme: true,
 	enableDebugMode: false,
 };
 
@@ -71,6 +74,13 @@ const api: WinLetApi = {
 	 */
 	getActiveWindow: (): IWindow | null => {
 		return manager.getActiveWindow();
+	},
+
+	/**
+	 * タスクバーのアイテムを更新
+	 */
+	updateTaskbarItem(win: IWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged" | "virtualized" | "unvirtualized"): void {
+		manager.updateTaskbarItem(win as WinLetWindow, state);
 	},
 
 	/**
