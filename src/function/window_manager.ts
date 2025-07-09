@@ -529,7 +529,11 @@ export default class WindowManager extends WinLetBaseClass {
 		const closeCallback = (result: PopupResult) => {
 			if (timeoutId) clearTimeout(timeoutId);
 			timeoutId = null;
-			options.onClose?.(result);
+			try {
+				options.onClose?.(result);
+			} catch (e) {
+				console.error(e);
+			}
 		};
 
 		const messageHTML = `<div class="${LIBRARY_NAME}-popup-message">${Utils.sanitizeHTML(options.message)}</div>`;
@@ -606,6 +610,18 @@ export default class WindowManager extends WinLetBaseClass {
 			}, options.timeout);
 		}
 		return win;
+	}
+
+	public popupAsync(options: PopupOptions): Promise<PopupResult> {
+		const opt = Utils.deepCopy(options);
+		return new Promise((resolve) => {
+			const tmpOnClose = opt.onClose;
+			opt.onClose = (result) => {
+				tmpOnClose?.(result);
+				resolve(result);
+			};
+			this.popup(opt);
+		});
 	}
 
 	public destroyWindow(id: string): void {

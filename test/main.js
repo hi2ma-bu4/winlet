@@ -26,10 +26,7 @@ jasc.on("DOMContentLoaded", () => {
 // TODO: ステータスバーの追加: ウィンドウ下部に、補足情報やフィードバックメッセージを表示するためのステータスバー領域を追加するオプション
 // TODO: 分割ビュー機能: 一つのウィンドウ内を複数のペインに分割し、それぞれに異なるコンテンツを表示できる機能
 // TODO: ウィンドウ内検索: ウィンドウのコンテンツ（特にHTML）に対して、Ctrl+Fのような検索UIを提供するヘルパー機能
-// TODO: スクリーンショットAPI: win.capture()のように、ウィンドウの表示内容を画像データ（PNGなど）として取得できるAPI
-// TODO: 印刷API: win.print()で、ウィンドウのコンテンツ部分を印刷プレビューに送る機能
 // イベント・通信
-// TODO: PromiseベースのPopup: createPopup()がPromiseを返すようにし、ユーザーのボタン操作の結果でresolveまたはrejectされるようにします。これにより、async/await構文でポップアップの応答を待てるように
 // TODO: グローバルイベントバス: WinLet.on('event', ...)やWinLet.emit('event', ...)のように、特定のウィンドウに依存しないグローバルなイベントを発行・購読できる仕組み
 // TODO: ブロードキャスト機能: あるウィンドウから、他の全てのウィンドウ（または特定の条件を満たすウィンドウ）へ一斉にメッセージを送信するwin.broadcast('message', data)機能
 // TODO: 詳細なライフサイクルイベント: onBeforeClose（閉じる前に確認ダイアログを挟むなど）、onMoveStart/onMoveEnd、onResizeStart/onResizeEndなど、よりきめ細かいイベントフックを提供します

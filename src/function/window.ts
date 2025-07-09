@@ -1284,6 +1284,121 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		return manager.popup(Object.assign(options, winOptions));
 	}
 
+	public createAsyncPopup(options: PopupOptions): Promise<PopupResult> {
+		const manager = this.getChildManager();
+		const popupOptionsWithParent = { ...options, _parent: this };
+		return manager.popupAsync(popupOptionsWithParent);
+	}
+
+	public async capture(): Promise<string> {
+		// HTML2Canvasがロードされているかどうかを確認します（例：CDN経由）
+		if (typeof window.html2canvas !== "function") {
+			const e = new WinLetError("The capture() feature requires the 'html2canvas' library. Please include it from a CDN to use this feature. https://html2canvas.hertzen.com/");
+			console.warn(e);
+			return Promise.reject(e);
+		}
+
+		try {
+			const canvas = await window.html2canvas(this.el, {
+				allowTaint: true,
+				useCORS: true,
+				logging: false,
+				onclone: (clonedDoc: Document) => {
+					// 一時的なUI要素のキャプチャを避けるため
+					clonedDoc.querySelector(`#${this.id}`)?.classList.remove(`${LIBRARY_NAME}-is-resizing`, `${LIBRARY_NAME}-is-dragging`);
+				},
+			});
+			return canvas.toDataURL("image/png");
+		} catch (error: any) {
+			const e = new WinLetError(`html2canvas failed to capture the window. Error: ${error.message}`);
+			e.stack += "\n\n--- Caused by ---\n" + error.stack;
+			console.error(e);
+			return Promise.reject(e);
+		}
+	}
+
+	public print(): void {
+		const contentSource = this.getContent();
+
+		// コンテンツがiframeの場合は、直接印刷
+		if (contentSource.tagName === "IFRAME") {
+			const iframe = contentSource as HTMLIFrameElement;
+			try {
+				// 印刷する前にiframeが完全にロードされていることを確認
+				if (document.readyState === "complete") {
+					iframe.contentWindow?.print();
+				} else {
+					window.addEventListener("load", () => {
+						iframe.contentWindow?.print();
+					});
+				}
+			} catch (e) {
+				console.error("WinLet: Could not print iframe content, possibly due to cross-origin restrictions.", e);
+			}
+			return;
+		}
+
+		const size = this.getSize();
+
+		// HTMLコンテンツの場合、印刷する一時的なiframeを作成します。
+		const printFrame = document.createElement("iframe");
+		printFrame.style.position = "absolute";
+		printFrame.style.opacity = "0.01";
+		printFrame.style.border = "0";
+		printFrame.style.top = "0";
+		printFrame.style.left = "0";
+		printFrame.style.width = size.width + "px";
+		printFrame.style.height = size.height + "px";
+		printFrame.style.zIndex = "1";
+		printFrame.style.transform = "scale(0.5)";
+		printFrame.style.pointerEvents = "none";
+		printFrame.setAttribute("inert", "");
+		document.body.appendChild(printFrame);
+
+		const frameDoc = printFrame.contentWindow?.document;
+		if (!frameDoc) {
+			console.error("WinLet: Could not create a document for printing.");
+			document.body.removeChild(printFrame);
+			return;
+		}
+		frameDoc.open();
+		frameDoc.write("<!DOCTYPE html><html><head>");
+		frameDoc.write(`<title>${this.getTitle()}</title>`);
+
+		// メインドキュメントから印刷iframeにスタイルをコピーします
+		const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+		styles.forEach((style) => {
+			frameDoc.write(style.outerHTML);
+		});
+
+		frameDoc.write("</head><body>");
+		frameDoc.write(contentSource.innerHTML);
+		frameDoc.write("</body></html>");
+		frameDoc.close();
+
+		const doPrint = async () => {
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			try {
+				printFrame.contentWindow?.focus();
+				printFrame.contentWindow?.print();
+			} catch (e) {
+				console.error("WinLet: Printing failed.", e);
+			} finally {
+				// 印刷ダイアログが閉じられた後にiframeが削除されます（またはキャンセルされます）
+				// タイムアウトを使用すると、印刷ダイアログが適切に開くことができます
+				setTimeout(() => {
+					document.body.removeChild(printFrame);
+				}, 500);
+			}
+		};
+
+		if (printFrame.contentWindow?.document.readyState === "complete") {
+			doPrint();
+		} else {
+			printFrame.contentWindow?.addEventListener("load", doPrint);
+		}
+	}
+
 	public getTitle(): string {
 		return this.options.title;
 	}

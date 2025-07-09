@@ -1,7 +1,7 @@
 // src/index.ts
 
 import { defaultConfig } from "./const/config";
-import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
+import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, PopupResult, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
 import WinLetWindow from "./function/window";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
@@ -53,6 +53,13 @@ const api: WinLetApi = {
 	 */
 	createPopup: (options: PopupOptions): IWindow => {
 		return manager.popup(options);
+	},
+
+	/**
+	 * 新しいポップアップウィンドウを作成
+	 */
+	createAsyncPopup: (options: PopupOptions): Promise<PopupResult> => {
+		return manager.popupAsync(options);
 	},
 
 	/**

@@ -62,6 +62,16 @@ interface IWindow {
      * 注意を引くためにウィンドウを揺らします。
      */
     shake(): void;
+    /**
+     * ウィンドウの内容をキャプチャして、画像データとして取得します。
+     * @returns PNG形式のデータURLを含むPromise
+     * @see https://github.com/niklasvh/html2canvas
+     */
+    capture(): Promise<string>;
+    /**
+     * ウィンドウのコンテンツを印刷します。
+     */
+    print(): void;
     getTitle(): string;
     setTitle(title: string): void;
     setIcon(icon: string | null): void;
@@ -101,6 +111,12 @@ interface IWindow {
      * @returns 作成されたIWindowインスタンス
      */
     createPopup(options: PopupOptions): IWindow;
+    /**
+     * このウィンドウの内部に新しいポップアップを作成します。
+     * @param options - 新しいポップアップのオプション
+     * @returns Promiseオブジェクト
+     */
+    createAsyncPopup(options: PopupOptions): Promise<PopupResult>;
     /**
      * ウィンドウのオプションを動的に変更します。
      *
@@ -503,12 +519,22 @@ interface WinLetApi {
     init: (options?: GlobalConfigOptions) => void;
     /**
      * ウィンドウを作成します。
+     * @param options - 新しいウィンドウのオプション
+     * @returns 作成されたIWindowインスタンス
      */
     createWindow: (options?: WindowOptions) => IWindow;
     /**
      * ポップアップウィンドウを作成します。
+     * @param options - 新しいポップアップのオプション
+     * @returns 作成されたIWindowインスタンス
      */
     createPopup: (options: PopupOptions) => IWindow;
+    /**
+     * ポップアップウィンドウを作成します。
+     * @param options - 新しいポップアップのオプション
+     * @returns Promiseオブジェクト
+     */
+    createAsyncPopup(options: PopupOptions): Promise<PopupResult>;
     /**
      * 指定されたIDのウィンドウインスタンスを取得します。
      * @param id - 取得するウィンドウのID
@@ -533,10 +559,12 @@ interface WinLetApi {
     updateTaskbarItem: (win: IWindow, state: "minimized" | "restored" | "titleChanged" | "iconChanged" | "virtualized" | "unvirtualized") => void;
     /**
      * ウィンドウのデフォルトの設定を変更します。
+     * @param options - 新しいウィンドウのオプション
      */
     setDefaultConfig: (options: WindowOptions) => void;
     /**
      * グローバル設定を変更します。
+     * @param options - 新しいウィンドウのオプション
      */
     setGlobalConfig: (options: GlobalConfigOptions) => void;
     /**
@@ -569,6 +597,7 @@ interface WinLetApi {
 declare global {
     interface Window {
         WinLet: WinLetApi;
+        html2canvas?: (element: HTMLElement, options?: any) => Promise<HTMLCanvasElement>;
     }
 }
 
