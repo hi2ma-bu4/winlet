@@ -765,7 +765,7 @@ const styleData: string = `
     align-items: center;
     gap: 4px;
     border-radius: 3px;
-    z-index: 100;
+    z-index: 80;
 }
 .$[prefix]-search-input {
     border: 1px solid var(--$[prefix]-border);
@@ -1130,6 +1130,14 @@ const styleData: string = `
     filter: grayscale(80%);
     opacity: 0.7;
     font-style: italic;
+}
+.$[prefix]-taskbar-item.$[prefix]-virtualized .$[prefix]-taskbar-item-icon img {
+    width: calc(var(--winlet-taskbar-icon-size) - 9px);
+    height: calc(var(--winlet-taskbar-icon-size) - 9px);
+}
+.$[prefix]-taskbar-item.$[prefix]-virtualized .$[prefix]-taskbar-item-icon i {
+    font-size: calc((var(--winlet-taskbar-icon-size) - 18px) * 0.8);
+    line-height: calc(var(--winlet-taskbar-icon-size) - 27px);
 }
 
 /* ========================================================================

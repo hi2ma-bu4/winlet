@@ -1469,7 +1469,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			<button class="${LIBRARY_NAME}-search-btn" data-action="close" title="Close">&times;</button>
 		`;
 
-		this.mainContentEl.insertBefore(this.searchBarEl, this.mainContentEl.firstChild);
+		this.contentEl.insertBefore(this.searchBarEl, this.contentEl.firstChild);
 
 		// ボタンのアクティブ状態を反映
 		this.updateSearchButtonState();
