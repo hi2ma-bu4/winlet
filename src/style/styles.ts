@@ -40,6 +40,10 @@ const styleData: string = `
     --$[prefix]-tab-close-btn-hover-bg: #ccc;
     --$[prefix]-tab-active-close-btn-hover-bg: #ddd;
 
+    /* 検索ハイライト */
+    --$[prefix]-search-highlight-bg: yellow;
+    --$[prefix]-search-highlight-active-bg: orange;
+
     /* ポップアップボタン */
     --$[prefix]-popup-button-hover-bg: #e9e9e9;
     --$[prefix]-popup-button-hover-border-color: #bbb;
@@ -446,6 +450,8 @@ const styleData: string = `
 }
 
 .$[prefix]-content {
+    display: flex;
+    flex-direction: column;
     flex-grow: 1;
     position: relative;
     overflow: auto;
@@ -690,9 +696,111 @@ const styleData: string = `
     height: 100%;
 }
 
+/* ========================================================================
+    10. 分割ビュー (Split View)
+   ======================================================================== */
+.$[prefix]-split-view {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+.$[prefix]-split-view-horizontal {
+    flex-direction: row;
+}
+.$[prefix]-split-view-vertical {
+    flex-direction: column;
+}
+.$[prefix]-split-pane {
+    position: relative;
+    overflow: auto;
+}
+.$[prefix]-split-resizer {
+    background-color: var(--$[prefix]-border);
+    flex-shrink: 0;
+    z-index: 1;
+    transition: background-color 0.2s;
+}
+.$[prefix]-split-resizer:hover {
+    background-color: var(--$[prefix]-title-bar-active-bg);
+}
+.$[prefix]-split-view-horizontal > .$[prefix]-split-resizer {
+    width: 4px;
+    cursor: col-resize;
+}
+.$[prefix]-split-view-vertical > .$[prefix]-split-resizer {
+    height: 4px;
+    cursor: row-resize;
+}
 
 /* ========================================================================
-    10. リサイズハンドル
+    11. ステータスバー (Status Bar)
+   ======================================================================== */
+.$[prefix]-statusbar {
+    flex-shrink: 0;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 8px;
+    background-color: var(--$[prefix]-title-bar-bg);
+    border-top: 1px solid var(--$[prefix]-border);
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+
+/* ========================================================================
+    12. ウィンドウ内検索 (In-window Search)
+   ======================================================================== */
+.$[prefix]-search-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--$[prefix]-bg);
+    border: 1px solid var(--$[prefix]-border);
+    box-shadow: var(--$[prefix]-shadow-color-light) -2px 2px 5px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 3px;
+    z-index: 100;
+}
+.$[prefix]-search-input {
+    border: 1px solid var(--$[prefix]-border);
+    padding: 2px 4px;
+    width: 150px;
+}
+.$[prefix]-search-results {
+    font-size: 12px;
+    padding: 0 4px;
+}
+.$[prefix]-search-btn {
+    border: 1px solid var(--$[prefix]-border);
+    background-color: var(--$[prefix]-bg);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 12px;
+    min-width: 22px;
+}
+.$[prefix]-search-btn:hover {
+    background-color: var(--$[prefix]-popup-button-hover-bg);
+}
+.$[prefix]-search-btn-active {
+    background-color: var(--$[prefix]-title-bar-active-bg);
+    color: var(--$[prefix]-title-bar-active-color);
+}
+.$[prefix]-search-highlight {
+    background-color: var(--$[prefix]-search-highlight-bg);
+    color: black;
+}
+.$[prefix]-search-highlight-active {
+    background-color: var(--$[prefix]-search-highlight-active-bg);
+}
+
+/* ========================================================================
+    13. リサイズハンドル
    ======================================================================== */
 .$[prefix]-resize-handle {
     position: absolute;
@@ -710,7 +818,7 @@ const styleData: string = `
 .$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }
 
 /* ========================================================================
-    11. コンテキストメニュー
+    14. コンテキストメニュー
    ======================================================================== */
 .$[prefix]-context-menu {
     color: var(--$[prefix]-menu-item-color);
@@ -743,7 +851,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    12. ポップアップ
+    15. ポップアップ
    ======================================================================== */
 .$[prefix]-popup-window .$[prefix]-content {
     display: flex;
@@ -788,7 +896,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    13. 統合スタイル (Merged Styles)
+    16. 統合スタイル (Merged Styles)
    ======================================================================== */
 /* --- メニュー/タブ統合時の基本タイトルバー --- */
 .$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,
@@ -885,7 +993,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    14. タスクバー
+    17. タスクバー
    ======================================================================== */
 .$[prefix]-taskbar {
     position: absolute;
@@ -1025,7 +1133,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    15. モバイル・タッチデバイス対応
+    18. モバイル・タッチデバイス対応
    ======================================================================== */
 @media (pointer: coarse), (max-width: 768px) {
     /* リサイズハンドルとコントロールボタンを大きくして操作しやすくする */
@@ -1039,7 +1147,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    16. ハイコントラストモード対応
+    19. ハイコントラストモード対応
    ======================================================================== */
 /* high-contrast.tsと合わせる */
 @media (prefers-contrast: more) {
@@ -1053,7 +1161,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    17. アニメーション無効化
+    20. アニメーション無効化
    ======================================================================== */
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,
 .$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,
@@ -1063,7 +1171,7 @@ const styleData: string = `
 }
 
 /* ========================================================================
-    18. デバッグモード
+    21. デバッグモード
    ======================================================================== */
 .$[prefix]-debug-overlay {
     display: none;

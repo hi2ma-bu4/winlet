@@ -1,6 +1,6 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, TabItem, VirtualizationLevel, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
+import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";
@@ -26,6 +26,18 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 	private addTabBtn: HTMLElement | null = null;
 	private isMenuOpen = false;
 	private boundGlobalClickHandler: ((event: MouseEvent) => void) | null = null;
+
+	private statusBarEl: HTMLElement | null = null;
+	private searchBarEl: HTMLElement | null = null;
+	private searchResults: HTMLElement[] = [];
+	private currentSearchIndex = -1;
+
+	// 検索オプションのライブ状態
+	private searchOptionsState = {
+		caseSensitive: false,
+		regex: false,
+		wholeWord: false,
+	};
 
 	// モバイル対応
 	private readonly MOBILE_CONTEXT_MENU_TIMEOUT = 700;
@@ -54,6 +66,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.manager = manager;
 		this.options = Utils.deepMerge(Utils.deepCopy(defaultConfig), options) as Required<WindowOptions>;
 		this.parentWindow = options._parent || null;
+
+		// 検索オプションの初期状態を設定
+		this.searchOptionsState.caseSensitive = !!this.options.search.caseSensitive;
 
 		this.el = this.createDOM();
 
@@ -84,6 +99,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.contentEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
 		this.loaderEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-loader-overlay`)!;
 		this.debugOverlayEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-debug-overlay`);
+		this.statusBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-statusbar`);
 
 		this.applyOptions();
 		this.setupEventListeners();
@@ -146,6 +162,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
             </div>
         `;
 
+		const statusBarHTML = this.options.statusBar.enabled ? `<div class="${LIBRARY_NAME}-statusbar"></div>` : "";
 		const debugHTML = `<div class="${LIBRARY_NAME}-debug-overlay"></div>`;
 
 		windowEl.innerHTML = `
@@ -159,6 +176,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
                 <div class="${LIBRARY_NAME}-content"></div>
 				${loaderHTML}
             </div>
+			${statusBarHTML}
             ${resizableHandlesHTML}
         `;
 		return windowEl;
@@ -175,7 +193,10 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			this.titleBarEl.classList.add(`${LIBRARY_NAME}-controls-left`);
 		}
 
-		if (this.options.tabs.length > 0) {
+		// 分割ビューが定義されていれば、そちらを優先
+		if (this.options.splitView && this.options.splitView.panes.length > 0) {
+			this.createSplitView(this.contentEl, this.options.splitView);
+		} else if (this.options.tabs.length > 0) {
 			this.createTabs();
 		} else {
 			this.renderContent(this.contentEl, this.options.content);
@@ -183,6 +204,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 		if (this.options.menu.length > 0) {
 			this.createMenu();
+		}
+		if (this.statusBarEl) {
+			this.setStatusBarText(this.options.statusBar.text || "");
 		}
 	}
 
@@ -280,23 +304,31 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			if (menuItemData.items) {
 				const dropdownEl = this.createDropdownMenu(menuItemData.items);
 
-				menuItemEl.addEventListener("click", (e) => {
-					e.stopPropagation();
-					const isVisible = dropdownEl.style.display === "block";
-					this.closeAllMenus();
-					if (!isVisible) {
-						dropdownEl.style.display = "block";
-						this.isMenuOpen = true;
-					}
-				});
-
-				menuItemEl.addEventListener("mouseenter", () => {
-					if (this.isMenuOpen) {
+				menuItemEl.addEventListener(
+					"click",
+					(e) => {
+						e.stopPropagation();
+						const isVisible = dropdownEl.style.display === "block";
 						this.closeAllMenus();
-						dropdownEl.style.display = "block";
-						this.isMenuOpen = true;
-					}
-				});
+						if (!isVisible) {
+							dropdownEl.style.display = "block";
+							this.isMenuOpen = true;
+						}
+					},
+					{ passive: false }
+				);
+
+				menuItemEl.addEventListener(
+					"mouseenter",
+					() => {
+						if (this.isMenuOpen) {
+							this.closeAllMenus();
+							dropdownEl.style.display = "block";
+							this.isMenuOpen = true;
+						}
+					},
+					{ passive: true }
+				);
 
 				menuItemEl.appendChild(dropdownEl);
 			}
@@ -319,11 +351,15 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					text += `<span class="${LIBRARY_NAME}-shortcut-text">(${itemData.shortcut})</span>`;
 				}
 				itemEl.innerHTML = `<div class="${LIBRARY_NAME}-menu-dropdown-item" role="menuitem">${text}</div>`;
-				itemEl.addEventListener("click", (e) => {
-					e.stopPropagation();
-					this.closeAllMenus();
-					itemData.action?.(this);
-				});
+				itemEl.addEventListener(
+					"click",
+					(e) => {
+						e.stopPropagation();
+						this.closeAllMenus();
+						itemData.action?.(this);
+					},
+					{ passive: false }
+				);
 				if (itemData.items) {
 					itemEl.classList.add(`${LIBRARY_NAME}-has-submenu`); // スタイル付けのためのクラス
 					const subMenuEl = this.createDropdownMenu(itemData.items);
@@ -349,12 +385,16 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			this.addTabBtn = document.createElement("div");
 			this.addTabBtn.className = `${LIBRARY_NAME}-tab-add-btn`;
 			this.addTabBtn.textContent = "+";
-			this.addTabBtn.addEventListener("click", (e) => {
-				const newTabItem = tabOpts.onAdd?.(this);
-				if (newTabItem) {
-					this.addTab(newTabItem);
-				}
-			});
+			this.addTabBtn.addEventListener(
+				"click",
+				(e) => {
+					const newTabItem = tabOpts.onAdd?.(this);
+					if (newTabItem) {
+						this.addTab(newTabItem);
+					}
+				},
+				{ passive: true }
+			);
 			tabBar.appendChild(this.addTabBtn);
 		}
 		// タブの並び替えと統合のためのドロップゾーンを設定
@@ -367,56 +407,68 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		const tabBar = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab-bar`)!;
 		if (!tabBar || !this.options.tabOptions.reorderable) return;
 
-		tabBar.addEventListener("dragover", (e) => {
-			if (e.dataTransfer?.types.includes("application/winlet-tab")) {
+		tabBar.addEventListener(
+			"dragover",
+			(e) => {
+				if (e.dataTransfer?.types.includes("application/winlet-tab")) {
+					e.preventDefault();
+					if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+					tabBar.classList.add(`${LIBRARY_NAME}-drag-over`);
+				}
+			},
+			{ passive: false }
+		);
+		tabBar.addEventListener(
+			"dragleave",
+			() => {
+				tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
+			},
+			{ passive: true }
+		);
+		tabBar.addEventListener(
+			"drop",
+			(e) => {
 				e.preventDefault();
-				if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-				tabBar.classList.add(`${LIBRARY_NAME}-drag-over`);
-			}
-		});
-		tabBar.addEventListener("dragleave", () => {
-			tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
-		});
-		tabBar.addEventListener("drop", (e) => {
-			e.preventDefault();
-			tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
+				tabBar.classList.remove(`${LIBRARY_NAME}-drag-over`);
 
-			const tabDataJSON = e.dataTransfer?.getData("application/winlet-tab");
-			const sourceWindowId = e.dataTransfer?.getData("application/winlet-source-window-id");
-			const sourceTabId = e.dataTransfer?.getData("text/plain");
-			if (!tabDataJSON || !sourceWindowId || !sourceTabId) return;
+				const tabDataJSON = e.dataTransfer?.getData("application/winlet-tab");
+				const sourceWindowId = e.dataTransfer?.getData("application/winlet-source-window-id");
+				const sourceTabId = e.dataTransfer?.getData("text/plain");
+				if (!tabDataJSON || !sourceWindowId || !sourceTabId) return;
 
-			const draggingEl = this.manager.container?.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.${LIBRARY_NAME}-dragging`);
+				const draggingEl = this.manager.container?.querySelector<HTMLElement>(`.${LIBRARY_NAME}-tab.${LIBRARY_NAME}-dragging`);
 
-			// 自分自身のウィンドウ内での並び替え
-			if (sourceWindowId === this.id) {
-				if (draggingEl) {
-					// ドロップされた位置に挿入
-					this.updateTabOrderFromDOM();
-				}
-				return;
-			}
-
-			// 外部ウィンドウからのタブ統合
-			const sourceWindow = this.manager.getWindow(sourceWindowId);
-			if (sourceWindow) {
-				const sourceOpts = sourceWindow.options.tabOptions;
-				const targetOpts = this.options.tabOptions;
-
-				const isMergeable = sourceOpts.mergeable ?? sourceOpts.detachable; // ソースをマージできるかどうかを確認
-				const allowsIncoming = targetOpts.allowIncomingMerge ?? true; // ターゲットが受け入れるかどうかを確認
-				const customFilterPassed = !targetOpts.onMergeAttempt || targetOpts.onMergeAttempt(sourceWindow, this);
-
-				if (!isMergeable || !allowsIncoming || !customFilterPassed) {
-					return; // 条件が満たされていない場合は、マージを中止
+				// 自分自身のウィンドウ内での並び替え
+				if (sourceWindowId === this.id) {
+					if (draggingEl) {
+						// ドロップされた位置に挿入
+						this.updateTabOrderFromDOM();
+					}
+					return;
 				}
 
-				const tabData: TabItem = JSON.parse(tabDataJSON);
-				this.addTab(tabData, true);
+				// 外部ウィンドウからのタブ統合
+				const sourceWindow = this.manager.getWindow(sourceWindowId);
+				if (sourceWindow) {
+					const sourceOpts = sourceWindow.options.tabOptions;
+					const targetOpts = this.options.tabOptions;
 
-				sourceWindow.closeTab(parseInt(sourceTabId, 10));
-			}
-		});
+					const isMergeable = sourceOpts.mergeable ?? sourceOpts.detachable; // ソースをマージできるかどうかを確認
+					const allowsIncoming = targetOpts.allowIncomingMerge ?? true; // ターゲットが受け入れるかどうかを確認
+					const customFilterPassed = !targetOpts.onMergeAttempt || targetOpts.onMergeAttempt(sourceWindow, this);
+
+					if (!isMergeable || !allowsIncoming || !customFilterPassed) {
+						return; // 条件が満たされていない場合は、マージを中止
+					}
+
+					const tabData: TabItem = JSON.parse(tabDataJSON);
+					this.addTab(tabData, true);
+
+					sourceWindow.closeTab(parseInt(sourceTabId, 10));
+				}
+			},
+			{ passive: false }
+		);
 	}
 
 	private createTabElement(tabData: TabItem, index: number): void {
@@ -439,14 +491,18 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 			const closeBtn = document.createElement("span");
 			closeBtn.className = `${LIBRARY_NAME}-tab-close-btn`;
 			closeBtn.innerHTML = "&times;";
-			closeBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				// クロージャのindexに依存せず、クリックされた時点の最新のインデックスを探す
-				const indexToClose = this.tabs.findIndex((t) => t.tabEl === tabEl);
-				if (indexToClose !== -1) {
-					this.closeTab(indexToClose);
-				}
-			});
+			closeBtn.addEventListener(
+				"click",
+				(e) => {
+					e.stopPropagation();
+					// クロージャのindexに依存せず、クリックされた時点の最新のインデックスを探す
+					const indexToClose = this.tabs.findIndex((t) => t.tabEl === tabEl);
+					if (indexToClose !== -1) {
+						this.closeTab(indexToClose);
+					}
+				},
+				{ passive: false }
+			);
 			tabEl.appendChild(closeBtn);
 		}
 
@@ -457,9 +513,13 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.contentEl.appendChild(tabContentEl);
 		this.renderContent(tabContentEl, tabData.content);
 
-		tabEl.addEventListener("click", (e) => {
-			this.activateTab(+tabEl.dataset.tabId!);
-		});
+		tabEl.addEventListener(
+			"click",
+			(e) => {
+				this.activateTab(+tabEl.dataset.tabId!);
+			},
+			{ passive: false }
+		);
 		this.tabs.splice(index, 0, { tabEl, contentEl: tabContentEl }); // 指定位置に挿入
 
 		if (tabOpts.reorderable) {
@@ -469,26 +529,34 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 	private makeTabReorderable(tabEl: HTMLElement) {
 		tabEl.draggable = true;
-		tabEl.addEventListener("dragstart", (e) => {
-			e.dataTransfer!.setData("text/plain", tabEl.dataset.tabId!);
-			tabEl.classList.add(`${LIBRARY_NAME}-dragging`);
+		tabEl.addEventListener(
+			"dragstart",
+			(e) => {
+				e.dataTransfer!.setData("text/plain", tabEl.dataset.tabId!);
+				tabEl.classList.add(`${LIBRARY_NAME}-dragging`);
 
-			// 分離機能が有効な場合、追加情報をセット
-			if (this.options.tabOptions.detachable) {
-				const tabIndex = parseInt(tabEl.dataset.tabId!, 10);
-				if (!isNaN(tabIndex) && this.options.tabs[tabIndex]) {
-					const tabData = this.options.tabs[tabIndex];
-					e.dataTransfer!.setData("application/winlet-tab", JSON.stringify(tabData));
-					e.dataTransfer!.setData("application/winlet-source-window-id", this.id);
+				// 分離機能が有効な場合、追加情報をセット
+				if (this.options.tabOptions.detachable) {
+					const tabIndex = parseInt(tabEl.dataset.tabId!, 10);
+					if (!isNaN(tabIndex) && this.options.tabs[tabIndex]) {
+						const tabData = this.options.tabs[tabIndex];
+						e.dataTransfer!.setData("application/winlet-tab", JSON.stringify(tabData));
+						e.dataTransfer!.setData("application/winlet-source-window-id", this.id);
 
-					this.manager.onTabDragStart(this.id);
+						this.manager.onTabDragStart(this.id);
+					}
 				}
-			}
-		});
-		tabEl.addEventListener("dragend", () => {
-			tabEl.classList.remove(`${LIBRARY_NAME}-dragging`);
-			this.manager.onTabDragEnd();
-		});
+			},
+			{ passive: true }
+		);
+		tabEl.addEventListener(
+			"dragend",
+			() => {
+				tabEl.classList.remove(`${LIBRARY_NAME}-dragging`);
+				this.manager.onTabDragEnd();
+			},
+			{ passive: true }
+		);
 
 		tabEl.addEventListener(
 			"dragover",
@@ -550,11 +618,24 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		}
 	}
 
+	/**
+	 * タブをアクティブにします。
+	 * @param index - アクティブにするタブのインデックス
+	 */
 	public activateTab(index: number): void {
+		if (index < 0 || index >= this.tabs.length) return;
+
 		this.tabs.forEach((tab, i) => {
-			tab.tabEl.classList.toggle(`${LIBRARY_NAME}-active`, i === index);
-			tab.contentEl.classList.toggle(`${LIBRARY_NAME}-active`, i === index);
+			const isActive = i === index;
+			tab.tabEl.classList.toggle(`${LIBRARY_NAME}-active`, isActive);
+			tab.tabEl.setAttribute("aria-selected", String(isActive));
+			tab.contentEl.classList.toggle(`${LIBRARY_NAME}-active`, isActive);
 		});
+
+		// 検索バーが開いていれば、再検索を実行
+		if (this.searchBarEl) {
+			this._performSearch();
+		}
 	}
 
 	public addTab(tabItem: TabItem, setActive: boolean = true): void {
@@ -597,11 +678,85 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.tabs.forEach((tab, i) => (tab.tabEl.dataset.tabId = i.toString()));
 	}
 
+	private createSplitView(container: HTMLElement, options: SplitViewOptions) {
+		container.innerHTML = ""; // コンテナをクリア
+		const splitViewEl = document.createElement("div");
+		splitViewEl.className = `${LIBRARY_NAME}-split-view ${LIBRARY_NAME}-split-view-${options.direction}`;
+		container.appendChild(splitViewEl);
+
+		options.panes.forEach((paneOptions, index) => {
+			const paneEl = document.createElement("div");
+			paneEl.className = `${LIBRARY_NAME}-split-pane`;
+			paneEl.id = paneOptions.id;
+
+			if (paneOptions.size) {
+				paneEl.style.flex = `0 0 ${paneOptions.size}`;
+			} else {
+				paneEl.style.flex = "1 1 0";
+			}
+			if (paneOptions.minSize) {
+				if (options.direction === "horizontal") {
+					paneEl.style.minWidth = paneOptions.minSize;
+				} else {
+					paneEl.style.minHeight = paneOptions.minSize;
+				}
+			}
+
+			// コンテンツを描画
+			this.renderContent(paneEl, paneOptions.content);
+			splitViewEl.appendChild(paneEl);
+
+			// 最後以外のペインの後ろにリサイザーを追加
+			if (index < options.panes.length - 1) {
+				const resizerEl = document.createElement("div");
+				resizerEl.className = `${LIBRARY_NAME}-split-resizer`;
+				if (paneOptions.resizable !== false) {
+					this.makePaneResizable(resizerEl, paneEl, options.direction);
+				} else {
+					resizerEl.style.pointerEvents = "none";
+				}
+				splitViewEl.appendChild(resizerEl);
+			}
+		});
+	}
+
+	private makePaneResizable(resizer: HTMLElement, prevPane: HTMLElement, direction: "horizontal" | "vertical") {
+		resizer.addEventListener(
+			"pointerdown",
+			(e: PointerEvent) => {
+				e.preventDefault();
+				const startX = e.clientX;
+				const startY = e.clientY;
+				const startWidth = prevPane.offsetWidth;
+				const startHeight = prevPane.offsetHeight;
+
+				const onPointerMove = (moveE: PointerEvent) => {
+					if (direction === "horizontal") {
+						const newWidth = startWidth + (moveE.clientX - startX);
+						prevPane.style.flexBasis = `${newWidth}px`;
+					} else {
+						const newHeight = startHeight + (moveE.clientY - startY);
+						prevPane.style.flexBasis = `${newHeight}px`;
+					}
+				};
+
+				const onPointerUp = () => {
+					document.removeEventListener("pointermove", onPointerMove);
+					document.removeEventListener("pointerup", onPointerUp);
+				};
+
+				document.addEventListener("pointermove", onPointerMove, { passive: true });
+				document.addEventListener("pointerup", onPointerUp, { passive: true });
+			},
+			{ passive: false }
+		);
+	}
+
 	private setupEventListeners(): void {
 		this.el.addEventListener("click", () => this.focus(), true);
 
 		// iframeなどにフォーカスが移った際にウィンドウ自体をアクティブにする
-		this.el.addEventListener("focusin", () => this.focus());
+		this.el.addEventListener("focusin", () => this.focus(), { passive: true });
 
 		// グローバルクリックリスナーを追加して、外側をクリックするときにメニューを閉じる
 		this.boundGlobalClickHandler = () => {
@@ -609,36 +764,40 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				this.closeAllMenus();
 			}
 		};
-		document.addEventListener("click", this.boundGlobalClickHandler);
+		document.addEventListener("click", this.boundGlobalClickHandler, { passive: true });
 
 		const controlsEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-controls`);
-		controlsEl?.addEventListener("click", (e) => {
-			const target = e.target as HTMLElement;
-			const button = target.closest<HTMLElement>(`.${LIBRARY_NAME}-control-btn`);
-			if (!button) return;
+		controlsEl?.addEventListener(
+			"click",
+			(e) => {
+				const target = e.target as HTMLElement;
+				const button = target.closest<HTMLElement>(`.${LIBRARY_NAME}-control-btn`);
+				if (!button) return;
 
-			// 標準ボタン
-			if (button.classList.contains(`${LIBRARY_NAME}-close-btn`)) {
-				e.stopPropagation();
-				if (this.options._isPopup) {
-					this.popupCloseCallback?.(CLOSE_BUTTON_RESULT);
+				// 標準ボタン
+				if (button.classList.contains(`${LIBRARY_NAME}-close-btn`)) {
+					e.stopPropagation();
+					if (this.options._isPopup) {
+						this.popupCloseCallback?.(CLOSE_BUTTON_RESULT);
+					}
+					this.close();
+				} else if (button.classList.contains(`${LIBRARY_NAME}-maximize-btn`)) {
+					e.stopPropagation();
+					this.toggleMaximize();
+				} else if (button.classList.contains(`${LIBRARY_NAME}-minimize-btn`)) {
+					e.stopPropagation();
+					this.minimize();
 				}
-				this.close();
-			} else if (button.classList.contains(`${LIBRARY_NAME}-maximize-btn`)) {
-				e.stopPropagation();
-				this.toggleMaximize();
-			} else if (button.classList.contains(`${LIBRARY_NAME}-minimize-btn`)) {
-				e.stopPropagation();
-				this.minimize();
-			}
-			// カスタムボタン
-			else if (button.classList.contains(`${LIBRARY_NAME}-custom-control-btn`)) {
-				e.stopPropagation();
-				const name = button.dataset.name;
-				const control = this.options.customControls.find((c) => c.name === name);
-				control?.action(this);
-			}
-		});
+				// カスタムボタン
+				else if (button.classList.contains(`${LIBRARY_NAME}-custom-control-btn`)) {
+					e.stopPropagation();
+					const name = button.dataset.name;
+					const control = this.options.customControls.find((c) => c.name === name);
+					control?.action(this);
+				}
+			},
+			{ passive: false }
+		);
 
 		if (this.options.windowOptions.movable) this.makeMovable();
 		if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
@@ -653,23 +812,43 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				{ passive: false }
 			);
 			// モバイル用: 長押し
-			this.el.addEventListener("pointerdown", (e) => {
-				if (e.pointerType !== "touch") return;
-				this.contextMenuTimer = window.setTimeout(() => {
-					this.contextMenuTimer = null;
-					this.manager.showContextMenu(e.clientX, e.clientY, this.options.contextMenu, this);
-				}, this.MOBILE_CONTEXT_MENU_TIMEOUT);
-			});
+			this.el.addEventListener(
+				"pointerdown",
+				(e) => {
+					if (e.pointerType !== "touch") return;
+					this.contextMenuTimer = window.setTimeout(() => {
+						this.contextMenuTimer = null;
+						this.manager.showContextMenu(e.clientX, e.clientY, this.options.contextMenu, this);
+					}, this.MOBILE_CONTEXT_MENU_TIMEOUT);
+				},
+				{ passive: true }
+			);
 			const clearContextMenuTimer = () => {
 				if (this.contextMenuTimer) {
 					clearTimeout(this.contextMenuTimer);
 					this.contextMenuTimer = null;
 				}
 			};
-			this.el.addEventListener("pointermove", clearContextMenuTimer);
-			this.el.addEventListener("pointerup", clearContextMenuTimer);
-			this.el.addEventListener("pointercancel", clearContextMenuTimer);
+			this.el.addEventListener("pointermove", clearContextMenuTimer, { passive: true });
+			this.el.addEventListener("pointerup", clearContextMenuTimer, { passive: true });
+			this.el.addEventListener("pointercancel", clearContextMenuTimer, { passive: true });
 		}
+
+		// 検索ショートカット (Ctrl+F)
+		document.addEventListener(
+			"keydown",
+			(e) => {
+				if (!this.focused) return;
+				if (this.options.search.enabled && e.ctrlKey && e.key === "f") {
+					e.preventDefault();
+					this.openSearch();
+				}
+				if (e.key === "Escape" && this.searchBarEl) {
+					this.closeSearch();
+				}
+			},
+			{ passive: false }
+		);
 	}
 
 	private makeMovable(): void {
@@ -771,8 +950,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				this.el.classList.remove(`${LIBRARY_NAME}-is-dragging`);
 			};
 
-			document.addEventListener("pointermove", onPointerMove);
-			document.addEventListener("pointerup", onPointerUp);
+			document.addEventListener("pointermove", onPointerMove, { passive: true });
+			document.addEventListener("pointerup", onPointerUp, { passive: true });
 		};
 
 		this.titleBarEl.addEventListener("pointerdown", onPointerDown, { passive: false });
@@ -864,8 +1043,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 						this.el.classList.remove(`${LIBRARY_NAME}-is-resizing`);
 					};
-					document.addEventListener("pointermove", onPointerMove);
-					document.addEventListener("pointerup", onPointerUp);
+					document.addEventListener("pointermove", onPointerMove, { passive: true });
+					document.addEventListener("pointerup", onPointerUp, { passive: true });
 				},
 				{ passive: false }
 			);
@@ -978,7 +1157,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			// コンテンツを再描画
 			this.loaderEl.style.display = "flex"; // ローディング表示
 			// 非同期でコンテンツを再読み込み・再描画
-			setTimeout(() => {
+			requestAnimationFrame(() => {
 				if (this.options.tabs.length > 0) {
 					this.tabs.forEach((tab) => {
 						const tabIndex = parseInt(tab.tabEl.dataset.tabId!, 10);
@@ -988,7 +1167,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 					this.renderContent(this.contentEl, this.options.content);
 				}
 				this.loaderEl.style.display = "none";
-			}, 0);
+			});
 		}
 		this.updateDebugOverlay();
 	}
@@ -1042,7 +1221,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			if (this.manager.getGlobalConfig().enableAnimations) {
 				this.el.classList.add(`${LIBRARY_NAME}-is-minimizing`);
 				this.el.setAttribute("inert", "");
-				this.el.addEventListener("transitionend", doMinimize, { once: true });
+				this.el.addEventListener("transitionend", doMinimize, { once: true, passive: true });
 			} else {
 				doMinimize();
 			}
@@ -1074,7 +1253,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 				this.el.style.left = "0px";
 				this.el.style.width = "100%";
 				this.el.style.height = "100%";
-				this.el.addEventListener("transitionend", doMaximize, { once: true });
+				this.el.addEventListener("transitionend", doMaximize, { once: true, passive: true });
 			} else {
 				doMaximize();
 			}
@@ -1124,7 +1303,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 				this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
 				this.setSize(this.lastState.width, this.lastState.height);
 				this.setPosition(this.lastState.x, this.lastState.y);
-				this.el.addEventListener("transitionend", doRestore, { once: true });
+				this.el.addEventListener("transitionend", doRestore, { once: true, passive: true });
 			} else {
 				this.setSize(this.lastState.width, this.lastState.height);
 				this.setPosition(this.lastState.x, this.lastState.y);
@@ -1169,7 +1348,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			() => {
 				this.el.classList.remove(className);
 			},
-			{ once: true }
+			{ once: true, passive: true }
 		);
 	}
 
@@ -1245,6 +1424,275 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			this.childManager.init();
 		}
 		return this.childManager;
+	}
+
+	/**
+	 * ステータスバーのテキストを更新します。
+	 */
+	public setStatusBarText(text: string): void {
+		if (this.statusBarEl) {
+			if (this.options.statusBar.allowHTML) {
+				this.statusBarEl.innerHTML = text;
+			} else {
+				this.statusBarEl.textContent = text;
+			}
+		}
+	}
+
+	/**
+	 * ウィンドウ内検索UIを開きます。
+	 */
+	public openSearch(): void {
+		if (this.searchBarEl) {
+			const input = this.searchBarEl.querySelector<HTMLInputElement>(`.${LIBRARY_NAME}-search-input`);
+			input?.focus();
+			input?.select();
+			return;
+		}
+
+		this.searchBarEl = document.createElement("div");
+		this.searchBarEl.className = `${LIBRARY_NAME}-search-bar`;
+
+		const s = this.options.search;
+		const caseBtn = s.showCaseSensitiveButton ? `<button class="${LIBRARY_NAME}-search-btn" data-action="case-sensitive" title="Case Sensitive">Aa</button>` : "";
+		const regexBtn = s.showRegexButton ? `<button class="${LIBRARY_NAME}-search-btn" data-action="regex" title="Use Regular Expression">.*</button>` : "";
+		const wordBtn = s.showWholeWordButton ? `<button class="${LIBRARY_NAME}-search-btn" data-action="whole-word" title="Match Whole Word">ab</button>` : "";
+
+		this.searchBarEl.innerHTML = `
+			<input type="text" class="${LIBRARY_NAME}-search-input" placeholder="Search...">
+			<span class="${LIBRARY_NAME}-search-results">0/0</span>
+			${caseBtn}
+			${regexBtn}
+			${wordBtn}
+			<button class="${LIBRARY_NAME}-search-btn" data-action="prev" title="Previous Match">&uarr;</button>
+			<button class="${LIBRARY_NAME}-search-btn" data-action="next" title="Next Match">&darr;</button>
+			<button class="${LIBRARY_NAME}-search-btn" data-action="close" title="Close">&times;</button>
+		`;
+
+		this.mainContentEl.insertBefore(this.searchBarEl, this.mainContentEl.firstChild);
+
+		// ボタンのアクティブ状態を反映
+		this.updateSearchButtonState();
+
+		const input = this.searchBarEl.querySelector<HTMLInputElement>(`.${LIBRARY_NAME}-search-input`)!;
+		input.focus();
+
+		input.addEventListener("input", () => this._performSearch(), { passive: true });
+		input.addEventListener(
+			"keydown",
+			(e) => {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					if (e.shiftKey) {
+						this.navigateSearch("prev");
+					} else {
+						this.navigateSearch("next");
+					}
+				}
+			},
+			{ passive: false }
+		);
+
+		this.searchBarEl.addEventListener(
+			"click",
+			(e) => {
+				const target = e.target as HTMLElement;
+				const button = target.closest<HTMLElement>("[data-action]");
+				if (!button) return;
+				const action = button.dataset.action;
+
+				switch (action) {
+					case "close":
+						this.closeSearch();
+						break;
+					case "prev":
+						this.navigateSearch("prev");
+						break;
+					case "next":
+						this.navigateSearch("next");
+						break;
+					case "case-sensitive":
+						this.searchOptionsState.caseSensitive = !this.searchOptionsState.caseSensitive;
+						this.updateSearchButtonState(button, this.searchOptionsState.caseSensitive);
+						this._performSearch();
+						break;
+					case "regex":
+						this.searchOptionsState.regex = !this.searchOptionsState.regex;
+						this.updateSearchButtonState(button, this.searchOptionsState.regex);
+						this._performSearch();
+						break;
+					case "whole-word":
+						this.searchOptionsState.wholeWord = !this.searchOptionsState.wholeWord;
+						this.updateSearchButtonState(button, this.searchOptionsState.wholeWord);
+						this._performSearch();
+						break;
+				}
+			},
+			{ passive: true }
+		);
+	}
+
+	/**
+	 * ウィンドウ内検索UIを閉じます。
+	 */
+	public closeSearch(): void {
+		if (this.searchBarEl) {
+			this.clearSearchHighlights();
+			this.searchBarEl.remove();
+			this.searchBarEl = null;
+		}
+	}
+
+	private navigateSearch(direction: "next" | "prev"): void {
+		if (this.searchResults.length === 0) return;
+
+		if (direction === "next") {
+			this.currentSearchIndex = (this.currentSearchIndex + 1) % this.searchResults.length;
+		} else {
+			this.currentSearchIndex = (this.currentSearchIndex - 1 + this.searchResults.length) % this.searchResults.length;
+		}
+		this.updateSearchResults(this.currentSearchIndex + 1, this.searchResults.length);
+		this.highlightCurrentResult();
+	}
+
+	private highlightCurrentResult(): void {
+		this.searchResults.forEach((el, index) => {
+			el.classList.toggle(`${LIBRARY_NAME}-search-highlight-active`, index === this.currentSearchIndex);
+		});
+		if (this.currentSearchIndex > -1) {
+			this.searchResults[this.currentSearchIndex].scrollIntoView({
+				behavior: "instant",
+				block: "nearest",
+			});
+		}
+	}
+
+	private clearSearchHighlights(): void {
+		// 検索対象は動的に変わるため、ハイライト解除はウィンドウ全体を対象に行う
+		const allContentAreas = this.el.querySelectorAll(`.${LIBRARY_NAME}-content, .${LIBRARY_NAME}-split-pane`);
+		allContentAreas.forEach((area) => {
+			const highlights = area.querySelectorAll<HTMLElement>(`.${LIBRARY_NAME}-search-highlight`);
+			highlights.forEach((el) => {
+				const parent = el.parentNode;
+				if (parent) {
+					parent.replaceChild(document.createTextNode(el.textContent || ""), el);
+					parent.normalize(); // 隣接するテキストノードを結合
+				}
+			});
+		});
+
+		this.searchResults = [];
+		this.currentSearchIndex = -1;
+	}
+
+	private updateSearchResults(current: number, total: number): void {
+		if (this.searchBarEl) {
+			const resultsEl = this.searchBarEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-search-results`)!;
+			resultsEl.textContent = `${total > 0 ? current : 0}/${total}`;
+		}
+	}
+
+	private _performSearch(): void {
+		if (!this.searchBarEl) return;
+		this.clearSearchHighlights();
+
+		const input = this.searchBarEl.querySelector<HTMLInputElement>(`.${LIBRARY_NAME}-search-input`)!;
+		let query = input.value;
+
+		if (query.length < 1) {
+			this.updateSearchResults(0, 0);
+			return;
+		}
+
+		let searchRoot: Element | null = this.contentEl;
+		const activeTabIndex = this.tabs.findIndex((tab) => tab.tabEl.classList.contains(`${LIBRARY_NAME}-active`));
+		if (this.options.tabs.length > 0 && activeTabIndex !== -1 && this.tabs[activeTabIndex]) {
+			searchRoot = this.tabs[activeTabIndex].contentEl;
+		}
+		if (!searchRoot) return;
+
+		const contentArea = this.options.search.targetSelector ? searchRoot.querySelector(this.options.search.targetSelector) : searchRoot;
+		if (!contentArea) return;
+
+		if (!this.searchOptionsState.regex) {
+			query = Utils.escapeRegex(query);
+		}
+		if (this.searchOptionsState.wholeWord) {
+			query = `\\b${query}\\b`;
+		}
+
+		let regex: RegExp;
+		try {
+			regex = new RegExp(query, this.searchOptionsState.caseSensitive ? "g" : "gi");
+			input.style.borderColor = "";
+		} catch (e) {
+			// 不正な正規表現の場合は何もしない
+			input.style.borderColor = "red";
+			return;
+		}
+
+		const newHighlights: HTMLElement[] = [];
+		const nodesToModify: { node: Text; matches: RegExpMatchArray }[] = [];
+
+		const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, (node) => {
+			// スクリプトやスタイル、既存のハイライトの中は検索しない
+			return node.parentElement?.tagName === "SCRIPT" || node.parentElement?.tagName === "STYLE" || node.parentElement?.classList.contains(`${LIBRARY_NAME}-search-highlight`) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+		});
+
+		let currentNode: Node | null;
+		while ((currentNode = walker.nextNode())) {
+			const textNode = currentNode as Text;
+			// 空のテキストノードは無視
+			if (!textNode.textContent?.trim()) continue;
+			const matches = textNode.textContent.match(regex);
+			if (matches) {
+				nodesToModify.push({ node: textNode, matches });
+			}
+		}
+
+		// DOMの変更処理
+		for (const { node, matches } of nodesToModify) {
+			const parent = node.parentNode;
+			if (!parent) continue;
+
+			const parts = node.textContent!.split(regex);
+
+			parts.forEach((part, i) => {
+				if (part) {
+					parent.insertBefore(document.createTextNode(part), node);
+				}
+				if (i < matches.length) {
+					const highlight = document.createElement("span");
+					highlight.className = `${LIBRARY_NAME}-search-highlight`;
+					highlight.textContent = matches[i];
+					parent.insertBefore(highlight, node);
+					newHighlights.push(highlight);
+				}
+			});
+
+			parent.removeChild(node);
+		}
+
+		this.searchResults = newHighlights;
+		this.currentSearchIndex = this.searchResults.length > 0 ? 0 : -1;
+		this.updateSearchResults(this.currentSearchIndex + 1, this.searchResults.length);
+		this.highlightCurrentResult();
+	}
+
+	private updateSearchButtonState(button?: HTMLElement, isActive?: boolean): void {
+		if (!this.searchBarEl) return;
+		if (button && typeof isActive === "boolean") {
+			button.classList.toggle(`${LIBRARY_NAME}-search-btn-active`, isActive);
+		} else {
+			// 初期化用
+			const s = this.searchOptionsState;
+			const caseBtn = this.searchBarEl.querySelector(`[data-action="case-sensitive"]`);
+			const regexBtn = this.searchBarEl.querySelector(`[data-action="regex"]`);
+			const wordBtn = this.searchBarEl.querySelector(`[data-action="whole-word"]`);
+			caseBtn?.classList.toggle(`${LIBRARY_NAME}-search-btn-active`, s.caseSensitive);
+			regexBtn?.classList.toggle(`${LIBRARY_NAME}-search-btn-active`, s.regex);
+			wordBtn?.classList.toggle(`${LIBRARY_NAME}-search-btn-active`, s.wholeWord);
+		}
 	}
 
 	/**

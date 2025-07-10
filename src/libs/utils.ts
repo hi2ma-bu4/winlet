@@ -98,4 +98,12 @@ export default class Utils extends WinLetBaseClass {
 		temp.textContent = str;
 		return temp.innerHTML;
 	}
+
+	/**
+	 * 正規表現をエスケープします。
+	 * @param string - エスケープする文字列
+	 */
+	public static escapeRegex(string: string): string {
+		return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+	}
 }

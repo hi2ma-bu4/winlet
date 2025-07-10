@@ -40,6 +40,10 @@ export const defaultTheme: Theme = {
 		"--$[prefix]-tab-close-btn-hover-bg": "#ccc",
 		"--$[prefix]-tab-active-close-btn-hover-bg": "#ddd",
 
+		// 検索ハイライト
+		"--$[prefix]-search-highlight-bg": "yellow",
+		"--$[prefix]-search-highlight-active-bg": "orange",
+
 		// ポップアップボタン
 		"--$[prefix]-popup-button-hover-bg": "#e9e9e9",
 		"--$[prefix]-popup-button-hover-border-color": "#bbb",

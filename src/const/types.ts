@@ -37,6 +37,81 @@ export interface WindowContentOptions {
 	template?: string;
 }
 
+/**
+ * 分割ビューのペイン定義
+ */
+export interface SplitViewPane {
+	id: string;
+	content: WindowContentOptions;
+	size?: string; // "50%", "200px" など
+	minSize?: string;
+	resizable?: boolean;
+}
+
+/**
+ * 分割ビューのレイアウト定義
+ */
+export interface SplitViewOptions {
+	direction: "horizontal" | "vertical";
+	panes: SplitViewPane[];
+}
+
+/**
+ * ステータスバーのオプション
+ */
+export interface StatusBarOptions {
+	/**
+	 * ステータスバーを表示するかどうか
+	 * @default false
+	 */
+	enabled?: boolean;
+	/**
+	 * 初期テキスト
+	 */
+	text?: string;
+	/**
+	 * HTMLを許可するか
+	 * @default false
+	 */
+	allowHTML?: boolean;
+}
+
+/**
+ * ウィンドウ内検索機能のオプション
+ */
+export interface SearchOptions {
+	/**
+	 * 検索UIを有効にするか
+	 * @default true
+	 */
+	enabled?: boolean;
+	/**
+	 * 検索時に大文字小文字を区別するか
+	 * @default false
+	 */
+	caseSensitive?: boolean;
+	/**
+	 * 「大文字/小文字の区別」ボタンを表示するか
+	 * @default true
+	 */
+	showCaseSensitiveButton?: boolean;
+	/**
+	 * 「正規表現」ボタンを表示するか
+	 * @default true
+	 */
+	showRegexButton?: boolean;
+	/**
+	 * 「単語単位」ボタンを表示するか
+	 * @default true
+	 */
+	showWholeWordButton?: boolean;
+	/**
+	 * 検索対象のセレクタ
+	 * 指定しない場合はウィンドウのコンテンツ全体
+	 */
+	targetSelector?: string;
+}
+
 // IWindowインターフェースを先に定義することで循環参照を回避
 export interface IWindow {
 	readonly id: string;
@@ -109,6 +184,22 @@ export interface IWindow {
 	 * @returns コンテンツを内包するHTMLElement、またはiframeウィンドウの場合はHTMLIFrameElement
 	 */
 	getContent(): HTMLElement | HTMLIFrameElement;
+
+	/**
+	 * ステータスバーのテキストを更新します。
+	 * @param text - 表示するテキストまたはHTML
+	 */
+	setStatusBarText(text: string): void;
+
+	/**
+	 * ウィンドウ内検索UIを開きます。
+	 */
+	openSearch(): void;
+
+	/**
+	 * ウィンドウ内検索UIを閉じます。
+	 */
+	closeSearch(): void;
 
 	/**
 	 * このウィンドウの内部に新しいウィンドウを作成します。
@@ -289,6 +380,19 @@ export interface WindowOptions {
 	 * ウィンドウのコンテンツ
 	 */
 	content?: WindowContentOptions;
+	/**
+	 * 分割ビューの定義。
+	 * `content`オプションと同時に指定された場合、こちらが優先されます。
+	 */
+	splitView?: SplitViewOptions;
+	/**
+	 * ステータスバーのオプション
+	 */
+	statusBar?: StatusBarOptions;
+	/**
+	 * ウィンドウ内検索のオプション
+	 */
+	search?: SearchOptions;
 	/**
 	 * メニュー
 	 */

@@ -628,6 +628,23 @@ var defaultConfig = exports.defaultConfig = {
     },
     template: ""
   },
+  splitView: {
+    direction: "horizontal",
+    panes: []
+  },
+  statusBar: {
+    enabled: false,
+    text: "",
+    allowHTML: false
+  },
+  search: {
+    enabled: false,
+    caseSensitive: false,
+    showCaseSensitiveButton: true,
+    showRegexButton: true,
+    showWholeWordButton: true,
+    targetSelector: ""
+  },
   menu: [],
   menuStyle: "default",
   tabs: [],
@@ -766,6 +783,15 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     (0, _defineProperty2["default"])(_this, "addTabBtn", null);
     (0, _defineProperty2["default"])(_this, "isMenuOpen", false);
     (0, _defineProperty2["default"])(_this, "boundGlobalClickHandler", null);
+    (0, _defineProperty2["default"])(_this, "statusBarEl", null);
+    (0, _defineProperty2["default"])(_this, "searchBarEl", null);
+    (0, _defineProperty2["default"])(_this, "searchResults", []);
+    (0, _defineProperty2["default"])(_this, "currentSearchIndex", -1);
+    (0, _defineProperty2["default"])(_this, "searchOptionsState", {
+      caseSensitive: false,
+      regex: false,
+      wholeWord: false
+    });
     (0, _defineProperty2["default"])(_this, "MOBILE_CONTEXT_MENU_TIMEOUT", 700);
     (0, _defineProperty2["default"])(_this, "contextMenuTimer", null);
     (0, _defineProperty2["default"])(_this, "popupCloseCallback", null);
@@ -784,6 +810,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     _this.manager = manager;
     _this.options = _utils["default"].deepMerge(_utils["default"].deepCopy(_config.defaultConfig), options);
     _this.parentWindow = options._parent || null;
+    _this.searchOptionsState.caseSensitive = !!_this.options.search.caseSensitive;
     _this.el = _this.createDOM();
     if (_this.options._isPopup) {
       _this.el.classList.add("".concat(_types.LIBRARY_NAME, "-popup-window"));
@@ -808,6 +835,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     _this.contentEl = _this.mainContentEl.querySelector(".".concat(_types.LIBRARY_NAME, "-content"));
     _this.loaderEl = _this.mainContentEl.querySelector(".".concat(_types.LIBRARY_NAME, "-loader-overlay"));
     _this.debugOverlayEl = _this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-debug-overlay"));
+    _this.statusBarEl = _this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-statusbar"));
     _this.applyOptions();
     _this.setupEventListeners();
     _this.updateDebugOverlay();
@@ -849,8 +877,9 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       var controlsHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-controls\">\n\t\t\t\t").concat(customControlsHTML, "\n                ").concat(this.options.windowOptions.minimizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-minimize-btn\" type=\"button\" value=\"\uFF3F\" title=\"Minimize\" aria-label=\"Minimize\"/>") : "", "\n                ").concat(this.options.windowOptions.maximizable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-maximize-btn\" type=\"button\" value=\"\u25A1\" title=\"Maximize\" aria-label=\"Maximize\"/>") : "", "\n                ").concat(this.options.windowOptions.closable ? "<input class=\"".concat(_types.LIBRARY_NAME, "-control-btn ").concat(_types.LIBRARY_NAME, "-close-btn\" type=\"button\" value=\"\u2573\" title=\"Close\" aria-label=\"Close\"/>") : "", "\n            </div>");
       var titleBarContentHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-icon\"></div>\n            ").concat(isMergedMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\"></div>") : "", "\n            <div id=\"").concat(this.id, "-title\" class=\"").concat(_types.LIBRARY_NAME, "-title\"></div>\n            ").concat(isMergedTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\"></div>") : "", "\n            ").concat(controlsHTML, "\n        ");
       var loaderHTML = "\n            <div class=\"".concat(_types.LIBRARY_NAME, "-loader-overlay\" style=\"display: none;\">\n                <div class=\"").concat(_types.LIBRARY_NAME, "-loader-spinner\"></div>\n            </div>\n        ");
+      var statusBarHTML = this.options.statusBar.enabled ? "<div class=\"".concat(_types.LIBRARY_NAME, "-statusbar\"></div>") : "";
       var debugHTML = "<div class=\"".concat(_types.LIBRARY_NAME, "-debug-overlay\"></div>");
-      windowEl.innerHTML = "\n\t\t\t".concat(debugHTML, "\n            <div class=\"").concat(_types.LIBRARY_NAME, "-title-bar ").concat(_types.LIBRARY_NAME, "-us-none\">\n                ").concat(titleBarContentHTML, "\n            </div>\n            <div class=\"").concat(_types.LIBRARY_NAME, "-main-content\">\n                ").concat(!isMergedMenu && hasMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\" role=\"menubar\"></div>") : "", "\n                ").concat(!isMergedTabs && hasTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\" role=\"tablist\"></div>") : "", "\n                <div class=\"").concat(_types.LIBRARY_NAME, "-content\"></div>\n\t\t\t\t").concat(loaderHTML, "\n            </div>\n            ").concat(resizableHandlesHTML, "\n        ");
+      windowEl.innerHTML = "\n\t\t\t".concat(debugHTML, "\n            <div class=\"").concat(_types.LIBRARY_NAME, "-title-bar ").concat(_types.LIBRARY_NAME, "-us-none\">\n                ").concat(titleBarContentHTML, "\n            </div>\n            <div class=\"").concat(_types.LIBRARY_NAME, "-main-content\">\n                ").concat(!isMergedMenu && hasMenu ? "<div class=\"".concat(_types.LIBRARY_NAME, "-menu-bar\" role=\"menubar\"></div>") : "", "\n                ").concat(!isMergedTabs && hasTabs ? "<div class=\"".concat(_types.LIBRARY_NAME, "-tab-bar\" role=\"tablist\"></div>") : "", "\n                <div class=\"").concat(_types.LIBRARY_NAME, "-content\"></div>\n\t\t\t\t").concat(loaderHTML, "\n            </div>\n\t\t\t").concat(statusBarHTML, "\n            ").concat(resizableHandlesHTML, "\n        ");
       return windowEl;
     }
   }, {
@@ -864,13 +893,18 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       if (this.options.controlsPosition === "left") {
         this.titleBarEl.classList.add("".concat(_types.LIBRARY_NAME, "-controls-left"));
       }
-      if (this.options.tabs.length > 0) {
+      if (this.options.splitView && this.options.splitView.panes.length > 0) {
+        this.createSplitView(this.contentEl, this.options.splitView);
+      } else if (this.options.tabs.length > 0) {
         this.createTabs();
       } else {
         this.renderContent(this.contentEl, this.options.content);
       }
       if (this.options.menu.length > 0) {
         this.createMenu();
+      }
+      if (this.statusBarEl) {
+        this.setStatusBarText(this.options.statusBar.text || "");
       }
     }
   }, {
@@ -983,6 +1017,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               dropdownEl.style.display = "block";
               _this3.isMenuOpen = true;
             }
+          }, {
+            passive: false
           });
           menuItemEl.addEventListener("mouseenter", function () {
             if (_this3.isMenuOpen) {
@@ -990,6 +1026,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               dropdownEl.style.display = "block";
               _this3.isMenuOpen = true;
             }
+          }, {
+            passive: true
           });
           menuItemEl.appendChild(dropdownEl);
         }
@@ -1019,6 +1057,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             e.stopPropagation();
             _this4.closeAllMenus();
             (_itemData$action = itemData.action) === null || _itemData$action === void 0 || _itemData$action.call(itemData, _this4);
+          }, {
+            passive: false
           });
           if (itemData.items) {
             itemEl.classList.add("".concat(_types.LIBRARY_NAME, "-has-submenu"));
@@ -1052,6 +1092,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           if (newTabItem) {
             _this5.addTab(newTabItem);
           }
+        }, {
+          passive: true
         });
         tabBar.appendChild(this.addTabBtn);
       }
@@ -1071,9 +1113,13 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
           tabBar.classList.add("".concat(_types.LIBRARY_NAME, "-drag-over"));
         }
+      }, {
+        passive: false
       });
       tabBar.addEventListener("dragleave", function () {
         tabBar.classList.remove("".concat(_types.LIBRARY_NAME, "-drag-over"));
+      }, {
+        passive: true
       });
       tabBar.addEventListener("drop", function (e) {
         var _e$dataTransfer2, _e$dataTransfer3, _e$dataTransfer4, _this6$manager$contai;
@@ -1105,6 +1151,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           _this6.addTab(tabData, true);
           sourceWindow.closeTab(parseInt(sourceTabId, 10));
         }
+      }, {
+        passive: false
       });
     }
   }, {
@@ -1134,6 +1182,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           if (indexToClose !== -1) {
             _this7.closeTab(indexToClose);
           }
+        }, {
+          passive: false
         });
         tabEl.appendChild(closeBtn);
       }
@@ -1144,6 +1194,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.renderContent(tabContentEl, tabData.content);
       tabEl.addEventListener("click", function (e) {
         _this7.activateTab(+tabEl.dataset.tabId);
+      }, {
+        passive: false
       });
       this.tabs.splice(index, 0, {
         tabEl: tabEl,
@@ -1170,10 +1222,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             _this8.manager.onTabDragStart(_this8.id);
           }
         }
+      }, {
+        passive: true
       });
       tabEl.addEventListener("dragend", function () {
         tabEl.classList.remove("".concat(_types.LIBRARY_NAME, "-dragging"));
         _this8.manager.onTabDragEnd();
+      }, {
+        passive: true
       });
       tabEl.addEventListener("dragover", function (e) {
         var _this8$manager$draggi;
@@ -1225,10 +1281,16 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "activateTab",
     value: function activateTab(index) {
+      if (index < 0 || index >= this.tabs.length) return;
       this.tabs.forEach(function (tab, i) {
-        tab.tabEl.classList.toggle("".concat(_types.LIBRARY_NAME, "-active"), i === index);
-        tab.contentEl.classList.toggle("".concat(_types.LIBRARY_NAME, "-active"), i === index);
+        var isActive = i === index;
+        tab.tabEl.classList.toggle("".concat(_types.LIBRARY_NAME, "-active"), isActive);
+        tab.tabEl.setAttribute("aria-selected", String(isActive));
+        tab.contentEl.classList.toggle("".concat(_types.LIBRARY_NAME, "-active"), isActive);
       });
+      if (this.searchBarEl) {
+        this._performSearch();
+      }
     }
   }, {
     key: "addTab",
@@ -1271,21 +1333,95 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       });
     }
   }, {
+    key: "createSplitView",
+    value: function createSplitView(container, options) {
+      var _this9 = this;
+      container.innerHTML = "";
+      var splitViewEl = document.createElement("div");
+      splitViewEl.className = "".concat(_types.LIBRARY_NAME, "-split-view ").concat(_types.LIBRARY_NAME, "-split-view-").concat(options.direction);
+      container.appendChild(splitViewEl);
+      options.panes.forEach(function (paneOptions, index) {
+        var paneEl = document.createElement("div");
+        paneEl.className = "".concat(_types.LIBRARY_NAME, "-split-pane");
+        paneEl.id = paneOptions.id;
+        if (paneOptions.size) {
+          paneEl.style.flex = "0 0 ".concat(paneOptions.size);
+        } else {
+          paneEl.style.flex = "1 1 0";
+        }
+        if (paneOptions.minSize) {
+          if (options.direction === "horizontal") {
+            paneEl.style.minWidth = paneOptions.minSize;
+          } else {
+            paneEl.style.minHeight = paneOptions.minSize;
+          }
+        }
+        _this9.renderContent(paneEl, paneOptions.content);
+        splitViewEl.appendChild(paneEl);
+        if (index < options.panes.length - 1) {
+          var resizerEl = document.createElement("div");
+          resizerEl.className = "".concat(_types.LIBRARY_NAME, "-split-resizer");
+          if (paneOptions.resizable !== false) {
+            _this9.makePaneResizable(resizerEl, paneEl, options.direction);
+          } else {
+            resizerEl.style.pointerEvents = "none";
+          }
+          splitViewEl.appendChild(resizerEl);
+        }
+      });
+    }
+  }, {
+    key: "makePaneResizable",
+    value: function makePaneResizable(resizer, prevPane, direction) {
+      resizer.addEventListener("pointerdown", function (e) {
+        e.preventDefault();
+        var startX = e.clientX;
+        var startY = e.clientY;
+        var startWidth = prevPane.offsetWidth;
+        var startHeight = prevPane.offsetHeight;
+        var onPointerMove = function onPointerMove(moveE) {
+          if (direction === "horizontal") {
+            var newWidth = startWidth + (moveE.clientX - startX);
+            prevPane.style.flexBasis = "".concat(newWidth, "px");
+          } else {
+            var newHeight = startHeight + (moveE.clientY - startY);
+            prevPane.style.flexBasis = "".concat(newHeight, "px");
+          }
+        };
+        var _onPointerUp = function onPointerUp() {
+          document.removeEventListener("pointermove", onPointerMove);
+          document.removeEventListener("pointerup", _onPointerUp);
+        };
+        document.addEventListener("pointermove", onPointerMove, {
+          passive: true
+        });
+        document.addEventListener("pointerup", _onPointerUp, {
+          passive: true
+        });
+      }, {
+        passive: false
+      });
+    }
+  }, {
     key: "setupEventListeners",
     value: function setupEventListeners() {
-      var _this9 = this;
+      var _this0 = this;
       this.el.addEventListener("click", function () {
-        return _this9.focus();
+        return _this0.focus();
       }, true);
       this.el.addEventListener("focusin", function () {
-        return _this9.focus();
+        return _this0.focus();
+      }, {
+        passive: true
       });
       this.boundGlobalClickHandler = function () {
-        if (_this9.isMenuOpen) {
-          _this9.closeAllMenus();
+        if (_this0.isMenuOpen) {
+          _this0.closeAllMenus();
         }
       };
-      document.addEventListener("click", this.boundGlobalClickHandler);
+      document.addEventListener("click", this.boundGlobalClickHandler, {
+        passive: true
+      });
       var controlsEl = this.el.querySelector(".".concat(_types.LIBRARY_NAME, "-controls"));
       controlsEl === null || controlsEl === void 0 || controlsEl.addEventListener("click", function (e) {
         var target = e.target;
@@ -1293,57 +1429,79 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         if (!button) return;
         if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-close-btn"))) {
           e.stopPropagation();
-          if (_this9.options._isPopup) {
-            var _this9$popupCloseCall;
-            (_this9$popupCloseCall = _this9.popupCloseCallback) === null || _this9$popupCloseCall === void 0 || _this9$popupCloseCall.call(_this9, _types.CLOSE_BUTTON_RESULT);
+          if (_this0.options._isPopup) {
+            var _this0$popupCloseCall;
+            (_this0$popupCloseCall = _this0.popupCloseCallback) === null || _this0$popupCloseCall === void 0 || _this0$popupCloseCall.call(_this0, _types.CLOSE_BUTTON_RESULT);
           }
-          _this9.close();
+          _this0.close();
         } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-maximize-btn"))) {
           e.stopPropagation();
-          _this9.toggleMaximize();
+          _this0.toggleMaximize();
         } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-minimize-btn"))) {
           e.stopPropagation();
-          _this9.minimize();
+          _this0.minimize();
         } else if (button.classList.contains("".concat(_types.LIBRARY_NAME, "-custom-control-btn"))) {
           e.stopPropagation();
           var name = button.dataset.name;
-          var control = _this9.options.customControls.find(function (c) {
+          var control = _this0.options.customControls.find(function (c) {
             return c.name === name;
           });
-          control === null || control === void 0 || control.action(_this9);
+          control === null || control === void 0 || control.action(_this0);
         }
+      }, {
+        passive: false
       });
       if (this.options.windowOptions.movable) this.makeMovable();
       if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
       if (this.options.contextMenu.length > 0) {
         this.el.addEventListener("contextmenu", function (e) {
           e.preventDefault();
-          _this9.manager.showContextMenu(e.clientX, e.clientY, _this9.options.contextMenu, _this9);
+          _this0.manager.showContextMenu(e.clientX, e.clientY, _this0.options.contextMenu, _this0);
         }, {
           passive: false
         });
         this.el.addEventListener("pointerdown", function (e) {
           if (e.pointerType !== "touch") return;
-          _this9.contextMenuTimer = window.setTimeout(function () {
-            _this9.contextMenuTimer = null;
-            _this9.manager.showContextMenu(e.clientX, e.clientY, _this9.options.contextMenu, _this9);
-          }, _this9.MOBILE_CONTEXT_MENU_TIMEOUT);
+          _this0.contextMenuTimer = window.setTimeout(function () {
+            _this0.contextMenuTimer = null;
+            _this0.manager.showContextMenu(e.clientX, e.clientY, _this0.options.contextMenu, _this0);
+          }, _this0.MOBILE_CONTEXT_MENU_TIMEOUT);
+        }, {
+          passive: true
         });
         var clearContextMenuTimer = function clearContextMenuTimer() {
-          if (_this9.contextMenuTimer) {
-            clearTimeout(_this9.contextMenuTimer);
-            _this9.contextMenuTimer = null;
+          if (_this0.contextMenuTimer) {
+            clearTimeout(_this0.contextMenuTimer);
+            _this0.contextMenuTimer = null;
           }
         };
-        this.el.addEventListener("pointermove", clearContextMenuTimer);
-        this.el.addEventListener("pointerup", clearContextMenuTimer);
-        this.el.addEventListener("pointercancel", clearContextMenuTimer);
+        this.el.addEventListener("pointermove", clearContextMenuTimer, {
+          passive: true
+        });
+        this.el.addEventListener("pointerup", clearContextMenuTimer, {
+          passive: true
+        });
+        this.el.addEventListener("pointercancel", clearContextMenuTimer, {
+          passive: true
+        });
       }
+      document.addEventListener("keydown", function (e) {
+        if (!_this0.focused) return;
+        if (_this0.options.search.enabled && e.ctrlKey && e.key === "f") {
+          e.preventDefault();
+          _this0.openSearch();
+        }
+        if (e.key === "Escape" && _this0.searchBarEl) {
+          _this0.closeSearch();
+        }
+      }, {
+        passive: false
+      });
     }
   }, {
     key: "makeMovable",
     value: function makeMovable() {
-      var _this0 = this;
+      var _this1 = this;
       var onPointerDown = function onPointerDown(e) {
         var target = e.target;
         if (target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-resize-handle, .").concat(_types.LIBRARY_NAME, "-menu-item, .").concat(_types.LIBRARY_NAME, "-tab, .").concat(_types.LIBRARY_NAME, "-tab-add-btn"))) {
@@ -1351,46 +1509,46 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         }
         if (e.button !== 0) return;
         e.preventDefault();
-        _this0.focus();
+        _this1.focus();
         var startX = e.clientX,
           startY = e.clientY;
         var isDragging = false;
         var initialLeft;
         var initialTop;
         var ghostEl = null;
-        if (_this0.options.windowOptions.useGhostWindow) {
-          var _this0$manager$contai;
+        if (_this1.options.windowOptions.useGhostWindow) {
+          var _this1$manager$contai;
           ghostEl = document.createElement("div");
           ghostEl.className = "".concat(_types.LIBRARY_NAME, "-ghost-window");
-          (_this0$manager$contai = _this0.manager.container) === null || _this0$manager$contai === void 0 || _this0$manager$contai.appendChild(ghostEl);
-          ghostEl.style.left = "".concat(_this0.el.offsetLeft, "px");
-          ghostEl.style.top = "".concat(_this0.el.offsetTop, "px");
-          ghostEl.style.width = "".concat(_this0.el.offsetWidth, "px");
-          ghostEl.style.height = "".concat(_this0.el.offsetHeight, "px");
+          (_this1$manager$contai = _this1.manager.container) === null || _this1$manager$contai === void 0 || _this1$manager$contai.appendChild(ghostEl);
+          ghostEl.style.left = "".concat(_this1.el.offsetLeft, "px");
+          ghostEl.style.top = "".concat(_this1.el.offsetTop, "px");
+          ghostEl.style.width = "".concat(_this1.el.offsetWidth, "px");
+          ghostEl.style.height = "".concat(_this1.el.offsetHeight, "px");
         }
-        _this0.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-dragging"));
+        _this1.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-dragging"));
         var onPointerMove = function onPointerMove(moveE) {
-          var _this0$el;
-          if (!((_this0$el = _this0.el) !== null && _this0$el !== void 0 && _this0$el.isConnected)) return;
+          var _this1$el;
+          if (!((_this1$el = _this1.el) !== null && _this1$el !== void 0 && _this1$el.isConnected)) return;
           if (!isDragging) {
             var deltaX = Math.abs(moveE.clientX - startX);
             var deltaY = Math.abs(moveE.clientY - startY);
-            if (deltaX > _this0.DRAG_THRESHOLD || deltaY > _this0.DRAG_THRESHOLD) {
+            if (deltaX > _this1.DRAG_THRESHOLD || deltaY > _this1.DRAG_THRESHOLD) {
               isDragging = true;
-              _this0.el.setPointerCapture(e.pointerId);
-              _this0.contentEl.style.pointerEvents = "none";
-              if (_this0.state === "maximized") {
-                var restoredWidth = _this0.lastState.width;
-                var clickRatio = e.clientX / _this0.el.offsetWidth;
-                var titleBarRect = _this0.titleBarEl.getBoundingClientRect();
+              _this1.el.setPointerCapture(e.pointerId);
+              _this1.contentEl.style.pointerEvents = "none";
+              if (_this1.state === "maximized") {
+                var restoredWidth = _this1.lastState.width;
+                var clickRatio = e.clientX / _this1.el.offsetWidth;
+                var titleBarRect = _this1.titleBarEl.getBoundingClientRect();
                 var offsetY = e.clientY - titleBarRect.top;
                 var posX = e.clientX - restoredWidth * clickRatio;
                 var posY = e.clientY - offsetY;
-                _this0.restore();
-                _this0.setPosition(posX, posY);
+                _this1.restore();
+                _this1.setPosition(posX, posY);
               }
-              initialLeft = _this0.el.offsetLeft;
-              initialTop = _this0.el.offsetTop;
+              initialLeft = _this1.el.offsetLeft;
+              initialTop = _this1.el.offsetTop;
             } else {
               return;
             }
@@ -1401,38 +1559,42 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             ghostEl.style.left = "".concat(newLeft, "px");
             ghostEl.style.top = "".concat(newTop, "px");
           } else {
-            _this0.setPosition(newLeft, newTop);
+            _this1.setPosition(newLeft, newTop);
           }
         };
-        var _onPointerUp = function onPointerUp() {
+        var _onPointerUp2 = function onPointerUp() {
           document.removeEventListener("pointermove", onPointerMove);
-          document.removeEventListener("pointerup", _onPointerUp);
+          document.removeEventListener("pointerup", _onPointerUp2);
           if (ghostEl) {
-            _this0.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
+            _this1.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
             ghostEl.remove();
           }
           if (isDragging) {
-            _this0.el.releasePointerCapture(e.pointerId);
-            _this0.contentEl.style.pointerEvents = "auto";
-            _this0.options.onMove(_this0);
-            _this0.manager.updateVirtualization();
+            _this1.el.releasePointerCapture(e.pointerId);
+            _this1.contentEl.style.pointerEvents = "auto";
+            _this1.options.onMove(_this1);
+            _this1.manager.updateVirtualization();
           }
-          _this0.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-dragging"));
+          _this1.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-dragging"));
         };
-        document.addEventListener("pointermove", onPointerMove);
-        document.addEventListener("pointerup", _onPointerUp);
+        document.addEventListener("pointermove", onPointerMove, {
+          passive: true
+        });
+        document.addEventListener("pointerup", _onPointerUp2, {
+          passive: true
+        });
       };
       this.titleBarEl.addEventListener("pointerdown", onPointerDown, {
         passive: false
       });
       if (this.options.windowOptions.maximizable) {
         this.titleBarEl.addEventListener("dblclick", function (e) {
-          if (_this0.options.windowOptions.maximizableOnDblClick) {
+          if (_this1.options.windowOptions.maximizableOnDblClick) {
             var target = e.target;
             if (target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-menu-item, .").concat(_types.LIBRARY_NAME, "-tab"))) {
               return;
             }
-            _this0.toggleMaximize();
+            _this1.toggleMaximize();
           }
         });
       }
@@ -1440,34 +1602,34 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "makeResizable",
     value: function makeResizable() {
-      var _this1 = this;
+      var _this10 = this;
       this.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-resize-handle")).forEach(function (handle) {
         handle.addEventListener("pointerdown", function (e) {
           if (e.button !== 0 || !(handle !== null && handle !== void 0 && handle.isConnected)) return;
           e.preventDefault();
           e.stopPropagation();
-          _this1.focus();
-          _this1.contentEl.style.pointerEvents = "none";
+          _this10.focus();
+          _this10.contentEl.style.pointerEvents = "none";
           handle.setPointerCapture(e.pointerId);
-          _this1.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-resizing"));
+          _this10.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-resizing"));
           var ghostEl = null;
-          if (_this1.options.windowOptions.useGhostWindow) {
-            var _this1$manager$contai;
+          if (_this10.options.windowOptions.useGhostWindow) {
+            var _this10$manager$conta;
             ghostEl = document.createElement("div");
             ghostEl.className = "".concat(_types.LIBRARY_NAME, "-ghost-window");
-            (_this1$manager$contai = _this1.manager.container) === null || _this1$manager$contai === void 0 || _this1$manager$contai.appendChild(ghostEl);
+            (_this10$manager$conta = _this10.manager.container) === null || _this10$manager$conta === void 0 || _this10$manager$conta.appendChild(ghostEl);
           }
           var direction = handle.className.replace("".concat(_types.LIBRARY_NAME, "-resize-handle "), "");
           var startX = e.clientX,
             startY = e.clientY;
-          var _this1$el = _this1.el,
-            startWidth = _this1$el.offsetWidth,
-            startHeight = _this1$el.offsetHeight,
-            startLeft = _this1$el.offsetLeft,
-            startTop = _this1$el.offsetTop;
-          var _this1$options = _this1.options,
-            minWidth = _this1$options.minWidth,
-            minHeight = _this1$options.minHeight;
+          var _this10$el = _this10.el,
+            startWidth = _this10$el.offsetWidth,
+            startHeight = _this10$el.offsetHeight,
+            startLeft = _this10$el.offsetLeft,
+            startTop = _this10$el.offsetTop;
+          var _this10$options = _this10.options,
+            minWidth = _this10$options.minWidth,
+            minHeight = _this10$options.minHeight;
           var onPointerMove = function onPointerMove(moveE) {
             var newWidth = startWidth,
               newHeight = startHeight,
@@ -1491,27 +1653,31 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               ghostEl.style.width = "".concat(newWidth, "px");
               ghostEl.style.height = "".concat(newHeight, "px");
             } else {
-              _this1.setSize(newWidth, newHeight);
-              _this1.setPosition(newLeft, newTop);
+              _this10.setSize(newWidth, newHeight);
+              _this10.setPosition(newLeft, newTop);
             }
           };
-          var _onPointerUp2 = function onPointerUp() {
+          var _onPointerUp3 = function onPointerUp() {
             handle.releasePointerCapture(e.pointerId);
-            _this1.contentEl.style.pointerEvents = "auto";
+            _this10.contentEl.style.pointerEvents = "auto";
             if (ghostEl) {
-              _this1.setSize(ghostEl.offsetWidth, ghostEl.offsetHeight);
-              _this1.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
+              _this10.setSize(ghostEl.offsetWidth, ghostEl.offsetHeight);
+              _this10.setPosition(ghostEl.offsetLeft, ghostEl.offsetTop);
               ghostEl.remove();
             }
             document.removeEventListener("pointermove", onPointerMove);
-            document.removeEventListener("pointerup", _onPointerUp2);
-            _this1.options.onResize(_this1);
-            _this1.updateDebugOverlay();
-            _this1.manager.updateVirtualization();
-            _this1.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"));
+            document.removeEventListener("pointerup", _onPointerUp3);
+            _this10.options.onResize(_this10);
+            _this10.updateDebugOverlay();
+            _this10.manager.updateVirtualization();
+            _this10.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"));
           };
-          document.addEventListener("pointermove", onPointerMove);
-          document.addEventListener("pointerup", _onPointerUp2);
+          document.addEventListener("pointermove", onPointerMove, {
+            passive: true
+          });
+          document.addEventListener("pointerup", _onPointerUp3, {
+            passive: true
+          });
         }, {
           passive: false
         });
@@ -1591,7 +1757,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "unvirtualize",
     value: function unvirtualize() {
-      var _this10 = this;
+      var _this11 = this;
       if (this.virtualizationLevel === "none") return;
       this.manager.updateTaskbarItem(this, "unvirtualized");
       var previousLevel = this.virtualizationLevel;
@@ -1599,17 +1765,17 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       this.cleanupVirtualizationStyles();
       if (previousLevel === "unloaded") {
         this.loaderEl.style.display = "flex";
-        setTimeout(function () {
-          if (_this10.options.tabs.length > 0) {
-            _this10.tabs.forEach(function (tab) {
+        requestAnimationFrame(function () {
+          if (_this11.options.tabs.length > 0) {
+            _this11.tabs.forEach(function (tab) {
               var tabIndex = parseInt(tab.tabEl.dataset.tabId, 10);
-              _this10.renderContent(tab.contentEl, _this10.options.tabs[tabIndex].content);
+              _this11.renderContent(tab.contentEl, _this11.options.tabs[tabIndex].content);
             });
           } else {
-            _this10.renderContent(_this10.contentEl, _this10.options.content);
+            _this11.renderContent(_this11.contentEl, _this11.options.content);
           }
-          _this10.loaderEl.style.display = "none";
-        }, 0);
+          _this11.loaderEl.style.display = "none";
+        });
       }
       this.updateDebugOverlay();
     }
@@ -1631,35 +1797,36 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "minimize",
     value: function minimize() {
-      var _this11 = this;
+      var _this12 = this;
       if (this.state !== "minimized") {
         if (this.state !== "normal") this.restore();
         var doMinimize = function doMinimize() {
-          _this11.state = "minimized";
-          _this11.el.setAttribute("aria-hidden", "true");
-          _this11.el.classList.add("".concat(_types.LIBRARY_NAME, "-minimized"));
-          _this11.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-minimizing"));
-          _this11.manager.updateTaskbarItem(_this11, "minimized");
-          _this11.blur();
-          var globalConfig = _this11.manager.getGlobalConfig();
-          if (globalConfig.enableVirtualization && _this11.options.virtualizable) {
+          _this12.state = "minimized";
+          _this12.el.setAttribute("aria-hidden", "true");
+          _this12.el.classList.add("".concat(_types.LIBRARY_NAME, "-minimized"));
+          _this12.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-minimizing"));
+          _this12.manager.updateTaskbarItem(_this12, "minimized");
+          _this12.blur();
+          var globalConfig = _this12.manager.getGlobalConfig();
+          if (globalConfig.enableVirtualization && _this12.options.virtualizable) {
             var _globalConfig$virtual;
-            if (_this11.minimizeVirtualizeTimer) {
-              clearTimeout(_this11.minimizeVirtualizeTimer);
+            if (_this12.minimizeVirtualizeTimer) {
+              clearTimeout(_this12.minimizeVirtualizeTimer);
             }
-            _this11.minimizeVirtualizeTimer = window.setTimeout(function () {
-              _this11.virtualize("auto");
+            _this12.minimizeVirtualizeTimer = window.setTimeout(function () {
+              _this12.virtualize("auto");
             }, (_globalConfig$virtual = globalConfig.virtualizationDelay) !== null && _globalConfig$virtual !== void 0 ? _globalConfig$virtual : 5000);
           }
-          _this11.updateDebugOverlay();
-          _this11.manager.updateVirtualization();
+          _this12.updateDebugOverlay();
+          _this12.manager.updateVirtualization();
         };
         this.el.setAttribute("inert", "");
         if (this.manager.getGlobalConfig().enableAnimations) {
           this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-minimizing"));
           this.el.setAttribute("inert", "");
           this.el.addEventListener("transitionend", doMinimize, {
-            once: true
+            once: true,
+            passive: true
           });
         } else {
           doMinimize();
@@ -1674,7 +1841,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "maximize",
     value: function maximize() {
-      var _this12 = this;
+      var _this13 = this;
       if (this.state !== "maximized") {
         if (this.state !== "normal") this.restore();
         this.lastState = {
@@ -1686,10 +1853,10 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         this.state = "maximized";
         this.el.classList.add("".concat(_types.LIBRARY_NAME, "-maximized"));
         var doMaximize = function doMaximize() {
-          _this12.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
-          _this12.setPosition(0, 0);
-          _this12.setSize("100%", "100%");
-          _this12.updateDebugOverlay();
+          _this13.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
+          _this13.setPosition(0, 0);
+          _this13.setSize("100%", "100%");
+          _this13.updateDebugOverlay();
         };
         if (this.manager.getGlobalConfig().enableAnimations) {
           this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-maximizing"));
@@ -1698,7 +1865,8 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           this.el.style.width = "100%";
           this.el.style.height = "100%";
           this.el.addEventListener("transitionend", doMaximize, {
-            once: true
+            once: true,
+            passive: true
           });
         } else {
           doMaximize();
@@ -1714,7 +1882,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "restore",
     value: function restore() {
-      var _this13 = this;
+      var _this14 = this;
       if (this.minimizeVirtualizeTimer) {
         clearTimeout(this.minimizeVirtualizeTimer);
         this.minimizeVirtualizeTimer = null;
@@ -1732,22 +1900,23 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         this.focus();
       } else if (this.state === "maximized") {
         var doRestore = function doRestore() {
-          _this13.state = "normal";
-          _this13.el.classList.remove("".concat(_types.LIBRARY_NAME, "-maximized"), "".concat(_types.LIBRARY_NAME, "-is-restoring"));
-          var maxBtn = _this13.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
+          _this14.state = "normal";
+          _this14.el.classList.remove("".concat(_types.LIBRARY_NAME, "-maximized"), "".concat(_types.LIBRARY_NAME, "-is-restoring"));
+          var maxBtn = _this14.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
           if (maxBtn) {
             maxBtn.title = "Maximize";
             maxBtn.value = "\u25A1";
             maxBtn.setAttribute("aria-label", "Maximize");
           }
-          _this13.updateDebugOverlay();
+          _this14.updateDebugOverlay();
         };
         if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
           this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-restoring"));
           this.setSize(this.lastState.width, this.lastState.height);
           this.setPosition(this.lastState.x, this.lastState.y);
           this.el.addEventListener("transitionend", doRestore, {
-            once: true
+            once: true,
+            passive: true
           });
         } else {
           this.setSize(this.lastState.width, this.lastState.height);
@@ -1783,22 +1952,23 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "shake",
     value: function shake() {
-      var _this14 = this;
+      var _this15 = this;
       var className = "".concat(_types.LIBRARY_NAME, "-is-shaking");
       if (this.el.classList.contains(className)) {
         return;
       }
       this.el.classList.add(className);
       this.el.addEventListener("animationend", function () {
-        _this14.el.classList.remove(className);
+        _this15.el.classList.remove(className);
       }, {
-        once: true
+        once: true,
+        passive: true
       });
     }
   }, {
     key: "reload",
     value: function reload() {
-      var _this15 = this;
+      var _this16 = this;
       if (this.options.onReload(this) === false) {
         return;
       }
@@ -1811,13 +1981,13 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               (_iframe$contentWindow = iframe.contentWindow) === null || _iframe$contentWindow === void 0 || _iframe$contentWindow.location.reload();
             } catch (e) {
               console.warn("WinLet: Cross-origin iframe could not be reloaded directly. Recreating iframe element.", e);
-              _this15.renderContent(container, content);
+              _this16.renderContent(container, content);
             }
           } else {
-            _this15.renderContent(container, content);
+            _this16.renderContent(container, content);
           }
         } else {
-          _this15.renderContent(container, content);
+          _this16.renderContent(container, content);
         }
       };
       if (this.options.tabs.length > 0) {
@@ -1862,6 +2032,249 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       return this.childManager;
     }
   }, {
+    key: "setStatusBarText",
+    value: function setStatusBarText(text) {
+      if (this.statusBarEl) {
+        if (this.options.statusBar.allowHTML) {
+          this.statusBarEl.innerHTML = text;
+        } else {
+          this.statusBarEl.textContent = text;
+        }
+      }
+    }
+  }, {
+    key: "openSearch",
+    value: function openSearch() {
+      var _this17 = this;
+      if (this.searchBarEl) {
+        var _input = this.searchBarEl.querySelector(".".concat(_types.LIBRARY_NAME, "-search-input"));
+        _input === null || _input === void 0 || _input.focus();
+        _input === null || _input === void 0 || _input.select();
+        return;
+      }
+      this.searchBarEl = document.createElement("div");
+      this.searchBarEl.className = "".concat(_types.LIBRARY_NAME, "-search-bar");
+      var s = this.options.search;
+      var caseBtn = s.showCaseSensitiveButton ? "<button class=\"".concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"case-sensitive\" title=\"Case Sensitive\">Aa</button>") : "";
+      var regexBtn = s.showRegexButton ? "<button class=\"".concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"regex\" title=\"Use Regular Expression\">.*</button>") : "";
+      var wordBtn = s.showWholeWordButton ? "<button class=\"".concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"whole-word\" title=\"Match Whole Word\">ab</button>") : "";
+      this.searchBarEl.innerHTML = "\n\t\t\t<input type=\"text\" class=\"".concat(_types.LIBRARY_NAME, "-search-input\" placeholder=\"Search...\">\n\t\t\t<span class=\"").concat(_types.LIBRARY_NAME, "-search-results\">0/0</span>\n\t\t\t").concat(caseBtn, "\n\t\t\t").concat(regexBtn, "\n\t\t\t").concat(wordBtn, "\n\t\t\t<button class=\"").concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"prev\" title=\"Previous Match\">&uarr;</button>\n\t\t\t<button class=\"").concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"next\" title=\"Next Match\">&darr;</button>\n\t\t\t<button class=\"").concat(_types.LIBRARY_NAME, "-search-btn\" data-action=\"close\" title=\"Close\">&times;</button>\n\t\t");
+      this.mainContentEl.insertBefore(this.searchBarEl, this.mainContentEl.firstChild);
+      this.updateSearchButtonState();
+      var input = this.searchBarEl.querySelector(".".concat(_types.LIBRARY_NAME, "-search-input"));
+      input.focus();
+      input.addEventListener("input", function () {
+        return _this17._performSearch();
+      }, {
+        passive: true
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            _this17.navigateSearch("prev");
+          } else {
+            _this17.navigateSearch("next");
+          }
+        }
+      }, {
+        passive: false
+      });
+      this.searchBarEl.addEventListener("click", function (e) {
+        var target = e.target;
+        var button = target.closest("[data-action]");
+        if (!button) return;
+        var action = button.dataset.action;
+        switch (action) {
+          case "close":
+            _this17.closeSearch();
+            break;
+          case "prev":
+            _this17.navigateSearch("prev");
+            break;
+          case "next":
+            _this17.navigateSearch("next");
+            break;
+          case "case-sensitive":
+            _this17.searchOptionsState.caseSensitive = !_this17.searchOptionsState.caseSensitive;
+            _this17.updateSearchButtonState(button, _this17.searchOptionsState.caseSensitive);
+            _this17._performSearch();
+            break;
+          case "regex":
+            _this17.searchOptionsState.regex = !_this17.searchOptionsState.regex;
+            _this17.updateSearchButtonState(button, _this17.searchOptionsState.regex);
+            _this17._performSearch();
+            break;
+          case "whole-word":
+            _this17.searchOptionsState.wholeWord = !_this17.searchOptionsState.wholeWord;
+            _this17.updateSearchButtonState(button, _this17.searchOptionsState.wholeWord);
+            _this17._performSearch();
+            break;
+        }
+      }, {
+        passive: true
+      });
+    }
+  }, {
+    key: "closeSearch",
+    value: function closeSearch() {
+      if (this.searchBarEl) {
+        this.clearSearchHighlights();
+        this.searchBarEl.remove();
+        this.searchBarEl = null;
+      }
+    }
+  }, {
+    key: "navigateSearch",
+    value: function navigateSearch(direction) {
+      if (this.searchResults.length === 0) return;
+      if (direction === "next") {
+        this.currentSearchIndex = (this.currentSearchIndex + 1) % this.searchResults.length;
+      } else {
+        this.currentSearchIndex = (this.currentSearchIndex - 1 + this.searchResults.length) % this.searchResults.length;
+      }
+      this.updateSearchResults(this.currentSearchIndex + 1, this.searchResults.length);
+      this.highlightCurrentResult();
+    }
+  }, {
+    key: "highlightCurrentResult",
+    value: function highlightCurrentResult() {
+      var _this18 = this;
+      this.searchResults.forEach(function (el, index) {
+        el.classList.toggle("".concat(_types.LIBRARY_NAME, "-search-highlight-active"), index === _this18.currentSearchIndex);
+      });
+      if (this.currentSearchIndex > -1) {
+        this.searchResults[this.currentSearchIndex].scrollIntoView({
+          behavior: "instant",
+          block: "nearest"
+        });
+      }
+    }
+  }, {
+    key: "clearSearchHighlights",
+    value: function clearSearchHighlights() {
+      var allContentAreas = this.el.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-content, .").concat(_types.LIBRARY_NAME, "-split-pane"));
+      allContentAreas.forEach(function (area) {
+        var highlights = area.querySelectorAll(".".concat(_types.LIBRARY_NAME, "-search-highlight"));
+        highlights.forEach(function (el) {
+          var parent = el.parentNode;
+          if (parent) {
+            parent.replaceChild(document.createTextNode(el.textContent || ""), el);
+            parent.normalize();
+          }
+        });
+      });
+      this.searchResults = [];
+      this.currentSearchIndex = -1;
+    }
+  }, {
+    key: "updateSearchResults",
+    value: function updateSearchResults(current, total) {
+      if (this.searchBarEl) {
+        var resultsEl = this.searchBarEl.querySelector(".".concat(_types.LIBRARY_NAME, "-search-results"));
+        resultsEl.textContent = "".concat(total > 0 ? current : 0, "/").concat(total);
+      }
+    }
+  }, {
+    key: "_performSearch",
+    value: function _performSearch() {
+      if (!this.searchBarEl) return;
+      this.clearSearchHighlights();
+      var input = this.searchBarEl.querySelector(".".concat(_types.LIBRARY_NAME, "-search-input"));
+      var query = input.value;
+      if (query.length < 1) {
+        this.updateSearchResults(0, 0);
+        return;
+      }
+      var searchRoot = this.contentEl;
+      var activeTabIndex = this.tabs.findIndex(function (tab) {
+        return tab.tabEl.classList.contains("".concat(_types.LIBRARY_NAME, "-active"));
+      });
+      if (this.options.tabs.length > 0 && activeTabIndex !== -1 && this.tabs[activeTabIndex]) {
+        searchRoot = this.tabs[activeTabIndex].contentEl;
+      }
+      if (!searchRoot) return;
+      var contentArea = this.options.search.targetSelector ? searchRoot.querySelector(this.options.search.targetSelector) : searchRoot;
+      if (!contentArea) return;
+      if (!this.searchOptionsState.regex) {
+        query = _utils["default"].escapeRegex(query);
+      }
+      if (this.searchOptionsState.wholeWord) {
+        query = "\\b".concat(query, "\\b");
+      }
+      var regex;
+      try {
+        regex = new RegExp(query, this.searchOptionsState.caseSensitive ? "g" : "gi");
+        input.style.borderColor = "";
+      } catch (e) {
+        input.style.borderColor = "red";
+        return;
+      }
+      var newHighlights = [];
+      var nodesToModify = [];
+      var walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, function (node) {
+        var _node$parentElement, _node$parentElement2, _node$parentElement3;
+        return ((_node$parentElement = node.parentElement) === null || _node$parentElement === void 0 ? void 0 : _node$parentElement.tagName) === "SCRIPT" || ((_node$parentElement2 = node.parentElement) === null || _node$parentElement2 === void 0 ? void 0 : _node$parentElement2.tagName) === "STYLE" || (_node$parentElement3 = node.parentElement) !== null && _node$parentElement3 !== void 0 && _node$parentElement3.classList.contains("".concat(_types.LIBRARY_NAME, "-search-highlight")) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      });
+      var currentNode;
+      while (currentNode = walker.nextNode()) {
+        var _textNode$textContent;
+        var textNode = currentNode;
+        if (!((_textNode$textContent = textNode.textContent) !== null && _textNode$textContent !== void 0 && _textNode$textContent.trim())) continue;
+        var matches = textNode.textContent.match(regex);
+        if (matches) {
+          nodesToModify.push({
+            node: textNode,
+            matches: matches
+          });
+        }
+      }
+      var _loop = function _loop() {
+        var _nodesToModify$_i = _nodesToModify[_i],
+          node = _nodesToModify$_i.node,
+          matches = _nodesToModify$_i.matches;
+        var parent = node.parentNode;
+        if (!parent) return 1;
+        var parts = node.textContent.split(regex);
+        parts.forEach(function (part, i) {
+          if (part) {
+            parent.insertBefore(document.createTextNode(part), node);
+          }
+          if (i < matches.length) {
+            var highlight = document.createElement("span");
+            highlight.className = "".concat(_types.LIBRARY_NAME, "-search-highlight");
+            highlight.textContent = matches[i];
+            parent.insertBefore(highlight, node);
+            newHighlights.push(highlight);
+          }
+        });
+        parent.removeChild(node);
+      };
+      for (var _i = 0, _nodesToModify = nodesToModify; _i < _nodesToModify.length; _i++) {
+        if (_loop()) continue;
+      }
+      this.searchResults = newHighlights;
+      this.currentSearchIndex = this.searchResults.length > 0 ? 0 : -1;
+      this.updateSearchResults(this.currentSearchIndex + 1, this.searchResults.length);
+      this.highlightCurrentResult();
+    }
+  }, {
+    key: "updateSearchButtonState",
+    value: function updateSearchButtonState(button, isActive) {
+      if (!this.searchBarEl) return;
+      if (button && typeof isActive === "boolean") {
+        button.classList.toggle("".concat(_types.LIBRARY_NAME, "-search-btn-active"), isActive);
+      } else {
+        var s = this.searchOptionsState;
+        var caseBtn = this.searchBarEl.querySelector("[data-action=\"case-sensitive\"]");
+        var regexBtn = this.searchBarEl.querySelector("[data-action=\"regex\"]");
+        var wordBtn = this.searchBarEl.querySelector("[data-action=\"whole-word\"]");
+        caseBtn === null || caseBtn === void 0 || caseBtn.classList.toggle("".concat(_types.LIBRARY_NAME, "-search-btn-active"), s.caseSensitive);
+        regexBtn === null || regexBtn === void 0 || regexBtn.classList.toggle("".concat(_types.LIBRARY_NAME, "-search-btn-active"), s.regex);
+        wordBtn === null || wordBtn === void 0 || wordBtn.classList.toggle("".concat(_types.LIBRARY_NAME, "-search-btn-active"), s.wholeWord);
+      }
+    }
+  }, {
     key: "createWindow",
     value: function createWindow() {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
@@ -1901,7 +2314,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
     key: "capture",
     value: function () {
       var _capture = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee() {
-        var _this16 = this;
+        var _this19 = this;
         var e, canvas, _e, _t;
         return _regenerator["default"].wrap(function (_context) {
           while (1) switch (_context.prev = _context.next) {
@@ -1922,7 +2335,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
                 logging: false,
                 onclone: function onclone(clonedDoc) {
                   var _clonedDoc$querySelec;
-                  (_clonedDoc$querySelec = clonedDoc.querySelector("#".concat(_this16.id))) === null || _clonedDoc$querySelec === void 0 || _clonedDoc$querySelec.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"), "".concat(_types.LIBRARY_NAME, "-is-dragging"));
+                  (_clonedDoc$querySelec = clonedDoc.querySelector("#".concat(_this19.id))) === null || _clonedDoc$querySelec === void 0 || _clonedDoc$querySelec.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"), "".concat(_types.LIBRARY_NAME, "-is-dragging"));
                 }
               });
             case 2:
@@ -3597,6 +4010,11 @@ var Utils = exports["default"] = function (_WinLetBaseClass) {
       temp.textContent = str;
       return temp.innerHTML;
     }
+  }, {
+    key: "escapeRegex",
+    value: function escapeRegex(string) {
+      return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    }
   }]);
 }(_baseclass["default"]);
 
@@ -3607,7 +4025,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
-var styleData = "\n/* ========================================================================\n    1. \u57FA\u672C\u8A2D\u5B9A\u30FB\u5909\u6570\n   ======================================================================== */\n:root {\n    /* \u57FA\u672C\u8272\u30FB\u30B7\u30E3\u30C9\u30A6 */\n    --$[prefix]-text-color: #000;\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-shadow-color-light: rgba(0,0,0,0.15);\n    --$[prefix]-shadow-color-strong: rgba(0,0,0,0.3);\n    --$[prefix]-shadow-color-active: rgba(0,0,0,0.45);\n\n    /* \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC */\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n\n    /* \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 */\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n\n    /* \u30E1\u30CB\u30E5\u30FC */\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-shortcut-text-color: #666;\n\n    /* \u30BF\u30D6 */\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-tab-bar-bg: #e1e1e1;\n    --$[prefix]-tab-close-btn-hover-bg: #ccc;\n    --$[prefix]-tab-active-close-btn-hover-bg: #ddd;\n\n    /* \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30DC\u30BF\u30F3 */\n    --$[prefix]-popup-button-hover-bg: #e9e9e9;\n    --$[prefix]-popup-button-hover-border-color: #bbb;\n\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB */\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n\n    /* \u30BF\u30B9\u30AF\u30D0\u30FC */\n    --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);\n    --$[prefix]-taskbar-border: #a0a0a0;\n    --$[prefix]-taskbar-item-bg: #d0d0d0;\n    --$[prefix]-taskbar-item-active-bg: #0078d7;\n    --$[prefix]-taskbar-item-active-color: #fff;\n    --$[prefix]-taskbar-height: 40px;\n    --$[prefix]-taskbar-width: 40px;\n\n    /* \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC */\n    --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);\n    --$[prefix]-loader-color: var(--$[prefix]-title-bar-active-bg);\n\n    /* \u305D\u306E\u4ED6 */\n    --$[prefix]-scrollbar-thumb-bg: rgba(100, 100, 100, 0.5);\n}\n\n/* ========================================================================\n    2. \u30E6\u30FC\u30C6\u30A3\u30EA\u30C6\u30A3\u30AF\u30E9\u30B9\n   ========================================================================= */\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u7121\u52B9\u5316\n */\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u6709\u52B9\u5316\n */\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n/* ========================================================================\n    3. \u30B3\u30F3\u30C6\u30CA\n   ========================================================================= */\n/**\n * \u5168\u3066\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5185\u5305\u3059\u308B\u6700\u4E0A\u4F4D\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    box-sizing: border-box;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n    display: flex;\n    pointer-events: none;\n}\n.$[prefix]-container > * {\n    pointer-events: all; /* \u5B50\u8981\u7D20(workspace, taskbar)\u306E\u30A4\u30D9\u30F3\u30C8\u306F\u6709\u52B9\u5316 */\n}\n/**\n * \u7279\u5B9A\u306E\u8981\u7D20\u5185\u306B\u30CD\u30B9\u30C8\u3055\u308C\u305F\u5834\u5408\u306E\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container.$[prefix]-is-nested {\n    position: absolute;\n}\n\n.$[prefix]-workspace {\n    position: relative;\n    flex-grow: 1; /* \u6B8B\u308A\u306E\u30B9\u30DA\u30FC\u30B9\u3092\u3059\u3079\u3066\u5360\u6709 */\n    overflow: hidden; /* \u30A6\u30A3\u30F3\u30C9\u30A6\u304C\u306F\u307F\u51FA\u3055\u306A\u3044\u3088\u3046\u306B */\n    min-width: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    min-height: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    pointer-events: none;\n}\n/**\n * \u30BF\u30D6\u306E\u30C9\u30E9\u30C3\u30B0\u4E2D\u306B\u30DD\u30A4\u30F3\u30BF\u30FC\u30A4\u30D9\u30F3\u30C8\u3092\u6709\u52B9\u5316\u3057\u3001\u30C9\u30ED\u30C3\u30D7\u3092\u53D7\u3051\u4ED8\u3051\u308B\n */\n.$[prefix]-workspace.$[prefix]-is-tab-dragging {\n    pointer-events: auto;\n}\n\n/* ========================================================================\n    4. \u4EEE\u60F3\u5316\u6280\u8853\n   ======================================================================== */\n/**\n * \u4EEE\u60F3\u5316(\u30A2\u30F3\u30ED\u30FC\u30C9)\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-virtualized > .$[prefix]-main-content {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-is-virtualized::after {\n    content: \"Unloaded\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n}\n\n/**\n * \u4E2D\u65AD\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-suspended > .$[prefix]-main-content {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-is-suspended::after {\n    content: \"Suspended\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n    z-index: 15;\n}\n\n/**\n * \u30D5\u30EA\u30FC\u30BA\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content {\n    pointer-events: none; /* \u30B3\u30F3\u30C6\u30F3\u30C4\u306E\u64CD\u4F5C\u3092\u7121\u52B9\u5316 */\n}\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content iframe {\n    visibility: hidden;\n}\n.$[prefix]-window.$[prefix]-is-frozen::after {\n    content: \"Frozen\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    background: rgba(128, 128, 128, 0.1);\n    width: 100%;\n    height: 100%;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n    z-index: 15; /* \u30ED\u30FC\u30C0\u30FC\u3088\u308A\u624B\u524D */\n}\n/* ========================================================================\n    5. \u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);\n    box-sizing: border-box;\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n    touch-action: none;\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u72B6\u614B\u5225\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u6700\u5C0F\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-minimizing,\n.$[prefix]-window.$[prefix]-minimized {\n    transform: scale(0);\n    opacity: 0;\n    transition: opacity 0.25s, transform 0.25s;\n    pointer-events: none;\n}\n.$[prefix]-window.$[prefix]-minimized {\n    display: none;\n}\n/**\n * \u6700\u5927\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-maximized {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n/**\n * \u6700\u5927\u5316\u72B6\u614B\u3067\u306F\u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3092\u975E\u8868\u793A\n */\n.$[prefix]-window.$[prefix]-maximized > .$[prefix]-resize-handle {\n    display: none;\n}\n/**\n * \u5FA9\u5143\u4E2D\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-restoring {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u30FB\u30EA\u30B5\u30A4\u30BA\u4E2D\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u77ED\u7E2E\u3057\u3001\u64CD\u4F5C\u6027\u3092\u5411\u4E0A\n */\n.$[prefix]-window.$[prefix]-is-dragging,\n.$[prefix]-window.$[prefix]-is-resizing {\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-active {\n    box-shadow: 0 8px 25px var(--$[prefix]-shadow-color-active); /* \u30A2\u30AF\u30C6\u30A3\u30D6\u6642\u306E\u30B7\u30E3\u30C9\u30A6 */\n}\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u7279\u6B8A\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u300C\u5E38\u306B\u624B\u524D\u306B\u8868\u793A\u300D\u304C\u6709\u52B9\u306A\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-always-on-top .$[prefix]-title-bar {\n    background-image: repeating-linear-gradient(\n        -45deg,\n        transparent,\n        transparent 4px,\n        rgba(255, 255, 255, 0.05) 4px,\n        rgba(255, 255, 255, 0.05) 8px\n    );\n}\n\n/**\n * \u30A6\u30A3\u30F3\u30C9\u30A6\u30B7\u30A7\u30A4\u30AF\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n@keyframes $[prefix]-shake {\n    10%, 90% { transform: translate3d(-1px, 0, 0); }\n    20%, 80% { transform: translate3d(2px, 0, 0); }\n    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }\n    40%, 60% { transform: translate3d(4px, 0, 0); }\n}\n.$[prefix]-window.$[prefix]-is-shaking {\n    animation: $[prefix]-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;\n}\n\n/* ========================================================================\n    6. \u30B4\u30FC\u30B9\u30C8\u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/**\n * \u30C9\u30E9\u30C3\u30B0\u30FB\u30EA\u30B5\u30A4\u30BA\u6642\u306B\u8868\u793A\u3055\u308C\u308B\u8F2A\u90ED\n */\n.$[prefix]-ghost-window {\n    position: absolute;\n    box-sizing: border-box;\n    border: 2px dashed var(--$[prefix]-title-bar-active-bg);\n    background-color: rgba(0, 120, 215, 0.1);\n    z-index: 99999;\n    pointer-events: none;\n}\n\n/* ========================================================================\n    7. \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n   ======================================================================== */\n/* --- \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n/**\n * \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u304C\u5DE6\u5074\u306B\u3042\u308B\u5834\u5408\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-title-bar.$[prefix]-controls-left {\n    flex-direction: row-reverse;\n}\n\n/* --- \u30A2\u30A4\u30B3\u30F3\u30FB\u30BF\u30A4\u30C8\u30EB --- */\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon:empty {\n    display: none;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n/* --- \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    display: inline-flex;\n    justify-content: center;\n    align-items: center;\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    border-radius: 0;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n    padding: 0;\n    margin: 0;\n    color: inherit;\n}\n\n.$[prefix]-custom-control-btn > * {\n    pointer-events: none;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n/* ========================================================================\n    8. \u30E1\u30A4\u30F3\u30B3\u30F3\u30C6\u30F3\u30C4\u30A8\u30EA\u30A2\n   ======================================================================== */\n.$[prefix]-main-content {\n    all: initial;\n    position: relative;\n    display:flex;\n    color: var(--$[prefix]-text-color);\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-content {\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n/* --- \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC --- */\n.$[prefix]-loader-overlay {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background-color: var(--$[prefix]-loader-bg);\n    display: none;\n    justify-content: center;\n    align-items: center;\n    z-index: 20;\n}\n@keyframes $[prefix]-spinner-rotation {\n    0% { transform: rotate(0deg); }\n    100% { transform: rotate(360deg); }\n}\n.$[prefix]-loader-spinner {\n    width: 48px;\n    height: 48px;\n    border-radius: 50%;\n    border: 5px solid #fff;\n    border-bottom-color: var(--$[prefix]-loader-color);\n    animation: $[prefix]-spinner-rotation 1s linear infinite;\n}\n\n/* ========================================================================\n    9. \u30E1\u30CB\u30E5\u30FC\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: clamp(0px , calc(var(--winlet-title-bar-height) * 0.6), 14px);\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n/* --- \u30C9\u30ED\u30C3\u30D7\u30C0\u30A6\u30F3\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    line-height: 1.6em;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: calc(var(--winlet-title-bar-height) * -0.5);\n    font-size: 0.8em;\n    color: inherit;\n}\n/**\n * \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n/**\n * \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* --- \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30C6\u30AD\u30B9\u30C8 --- */\n.$[prefix]-shortcut-text {\n    color: var(--$[prefix]-shortcut-text-color);\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: var(--$[prefix]-tab-bar-bg);\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: var(--$[prefix]-scrollbar-thumb-bg);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active .$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-active-close-btn-hover-bg);\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB\n */\n.$[prefix]-tab.$[prefix]-dragging {\n    opacity: 0.5;\n}\n\n/* --- \u30BF\u30D6\u95A2\u9023\u30DC\u30BF\u30F3 --- */\n/**\n * \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-close-btn-hover-bg);\n}\n\n/**\n * \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n/* --- \u30BF\u30D6\u30B3\u30F3\u30C6\u30F3\u30C4 --- */\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.$[prefix]-active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n\n/* ========================================================================\n    10. \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\n   ======================================================================== */\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n/* ========================================================================\n    11. \u30B3\u30F3\u30C6\u30AD\u30B9\u30C8\u30E1\u30CB\u30E5\u30FC\n   ======================================================================== */\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* ========================================================================\n    12. \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\n   ======================================================================== */\n.$[prefix]-popup-window .$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    padding: 20px;\n    box-sizing: border-box;\n}\n.$[prefix]-popup-message {\n    font-family: sans-serif;\n    font-size: 14px;\n    line-height: 1.5;\n    flex-grow: 1;\n    word-wrap: break-word;\n}\n.$[prefix]-popup-buttons {\n    display: flex;\n    justify-content: flex-end;\n    gap: 10px;\n    margin-top: 20px;\n    flex-shrink: 0;\n    touch-action: auto;\n}\n.$[prefix]-popup-button {\n    color: var(--$[prefix]-menu-item-color);\n    min-width: 80px;\n    padding: 8px 12px;\n    margin: 0;\n    border: 1px solid var(--$[prefix]-menu-border);\n    border-radius: 3px;\n    background-color: var(--$[prefix]-bg);\n    cursor: pointer;\n    font-size: 14px;\n    box-shadow: 0 1px 1px var(--$[prefix]-shadow-color-light);\n}\n.$[prefix]-popup-button:hover {\n    border-color: var(--$[prefix]-popup-button-hover-border-color);\n    background-color: var(--$[prefix]-popup-button-hover-bg);\n}\n.$[prefix]-popup-button:active {\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n/* ========================================================================\n    13. \u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Merged Styles)\n   ======================================================================== */\n/* --- \u30E1\u30CB\u30E5\u30FC/\u30BF\u30D6\u7D71\u5408\u6642\u306E\u57FA\u672C\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC\u7D71\u5408\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n/* \u30A2\u30AF\u30C6\u30A3\u30D6\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u7D71\u5408\u30E1\u30CB\u30E5\u30FC\u306E\u6587\u5B57\u8272 */\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n/* --- \u30BF\u30D6\u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Chrome\u98A8) --- */\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    display: none;\n}\n.$[prefix]-window.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n\n/* --- \u7D71\u5408\u6642\u306E\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* ========================================================================\n    14. \u30BF\u30B9\u30AF\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-taskbar {\n    position: absolute;\n    background-color: var(--$[prefix]-taskbar-bg);\n    box-sizing: border-box;\n    display: flex;\n    align-items: center;\n    padding: 0 5px;\n    z-index: 50000;\n    flex-shrink: 0;\n    display: flex;\n    gap: 5px;\n    overflow: auto;\n    scrollbar-width: none;\n    -ms-overflow-style: none;\n    backdrop-filter: blur(5px);\n    pointer-events: all;\n}\n.$[prefix]-taskbar::-webkit-scrollbar{\n    display: none;\n}\n\n/* --- \u4F4D\u7F6E --- */\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom {\n    bottom: 0;\n    left: 0;\n    border-top: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    top: 0;\n    left: 0;\n    border-bottom: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left {\n    top: 0;\n    left: 0;\n    border-right: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    top: 0;\n    right: 0;\n    border-left: 1px solid var(--$[prefix]-taskbar-border);\n}\n\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom,\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);\n    width: 100%;\n    height: var(--$[prefix]-taskbar-height);\n    flex-direction: row;\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left,\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);\n    width: var(--$[prefix]-taskbar-width);\n    height: 100%;\n    flex-direction: column;\n}\n\n\n.$[prefix]-taskbar-item {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    width: auto;\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 0 10px;\n    border-radius: 3px;\n    background-color: var(--$[prefix]-taskbar-item-bg);\n    cursor: pointer;\n    flex-shrink: 0;\n    max-width: 150px;\n    transition: background-color 0.2s;\n    font-family: sans-serif;\n    font-size: 14px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    box-sizing: border-box;\n}\n/* \u7E26\u5411\u304D\u30BF\u30B9\u30AF\u30D0\u30FC\u306E\u30A2\u30A4\u30C6\u30E0 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: auto;\n    min-height: 40px;\n    max-width: none;\n    padding: 10px 0;\n    writing-mode: vertical-rl;\n}\n\n.$[prefix]-taskbar-item-icon {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n.$[prefix]-taskbar-item-icon img {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item-icon i {\n    font-size: calc((var(--winlet-taskbar-icon-size) - 12px) * 0.8);\n    line-height: calc(var(--winlet-taskbar-icon-size) - 18px);\n    text-align: center;\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 6px;\n}\n/* \u7E26\u5411\u304D\u30A2\u30A4\u30B3\u30F3\u30E2\u30FC\u30C9 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item.$[prefix]-icon-only,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n}\n\n.$[prefix]-taskbar-item.$[prefix]-active {\n    background-color: var(--$[prefix]-taskbar-item-active-bg);\n    color: var(--$[prefix]-taskbar-item-active-color);\n}\n.$[prefix]-taskbar-item.$[prefix]-minimized {\n    opacity: 0.7;\n}\n\n/**\n * \u4EEE\u60F3\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u793A\u3059\u30BF\u30B9\u30AF\u30D0\u30FC\u30A2\u30A4\u30C6\u30E0\n */\n.$[prefix]-taskbar-item.$[prefix]-virtualized {\n    filter: grayscale(80%);\n    opacity: 0.7;\n    font-style: italic;\n}\n\n/* ========================================================================\n    15. \u30E2\u30D0\u30A4\u30EB\u30FB\u30BF\u30C3\u30C1\u30C7\u30D0\u30A4\u30B9\u5BFE\u5FDC\n   ======================================================================== */\n@media (pointer: coarse), (max-width: 768px) {\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3068\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3\u3092\u5927\u304D\u304F\u3057\u3066\u64CD\u4F5C\u3057\u3084\u3059\u304F\u3059\u308B */\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n\n/* ========================================================================\n    16. \u30CF\u30A4\u30B3\u30F3\u30C8\u30E9\u30B9\u30C8\u30E2\u30FC\u30C9\u5BFE\u5FDC\n   ======================================================================== */\n/* high-contrast.ts\u3068\u5408\u308F\u305B\u308B */\n@media (prefers-contrast: more) {\n    .$[prefix]-window,\n    .$[prefix]-window.$[prefix]-active {\n        box-shadow: none;\n    }\n    .$[prefix]-window.$[prefix]-active {\n        border: 2px solid var(--$[prefix]-title-bar-active-bg);\n    }\n}\n\n/* ========================================================================\n    17. \u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\u7121\u52B9\u5316\n   ======================================================================== */\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {\n    transition: none;\n}\n\n/* ========================================================================\n    18. \u30C7\u30D0\u30C3\u30B0\u30E2\u30FC\u30C9\n   ======================================================================== */\n.$[prefix]-debug-overlay {\n    display: none;\n    position: absolute;\n    top: calc(var(--$[prefix]-title-bar-height) + 5px);\n    left: 5px;\n    background: rgba(0,0,0,0.5);\n    color: #fff;\n    padding: 5px;\n    border-radius: 3px;\n    font-family: monospace;\n    font-size: 12px;\n    line-height: 1.4;\n    pointer-events: none;\n    z-index: 100;\n    white-space: pre;\n}\n\n.$[prefix]-container.$[prefix]-debug-mode-enabled .$[prefix]-debug-overlay {\n    display: block;\n}\n";
+var styleData = "\n/* ========================================================================\n    1. \u57FA\u672C\u8A2D\u5B9A\u30FB\u5909\u6570\n   ======================================================================== */\n:root {\n    /* \u57FA\u672C\u8272\u30FB\u30B7\u30E3\u30C9\u30A6 */\n    --$[prefix]-text-color: #000;\n    --$[prefix]-bg: #f0f0f0;\n    --$[prefix]-border: #a0a0a0;\n    --$[prefix]-shadow-color-light: rgba(0,0,0,0.15);\n    --$[prefix]-shadow-color-strong: rgba(0,0,0,0.3);\n    --$[prefix]-shadow-color-active: rgba(0,0,0,0.45);\n\n    /* \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC */\n    --$[prefix]-title-bar-height: 32px;\n    --$[prefix]-title-bar-bg: #e0e0e0;\n    --$[prefix]-title-bar-active-bg: #0078d7;\n    --$[prefix]-title-text-color: #000;\n    --$[prefix]-title-text-active-color: #fff;\n\n    /* \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 */\n    --$[prefix]-control-bg: #d0d0d0;\n    --$[prefix]-control-hover-bg: #e5e5e5;\n    --$[prefix]-control-close-hover-bg: #e81123;\n    --$[prefix]-control-close-hover-color: #fff;\n\n    /* \u30E1\u30CB\u30E5\u30FC */\n    --$[prefix]-menu-bg: #fff;\n    --$[prefix]-menu-border: #ccc;\n    --$[prefix]-menu-item-color: #000;\n    --$[prefix]-menu-item-hover-bg: #0078d7;\n    --$[prefix]-menu-item-hover-color: #fff;\n    --$[prefix]-shortcut-text-color: #666;\n\n    /* \u30BF\u30D6 */\n    --$[prefix]-tab-bg: #dcdcdc;\n    --$[prefix]-tab-active-bg: #f0f0f0;\n    --$[prefix]-tab-border: #b0b0b0;\n    --$[prefix]-tab-bar-bg: #e1e1e1;\n    --$[prefix]-tab-close-btn-hover-bg: #ccc;\n    --$[prefix]-tab-active-close-btn-hover-bg: #ddd;\n\n    /* \u691C\u7D22\u30CF\u30A4\u30E9\u30A4\u30C8 */\n    --$[prefix]-search-highlight-bg: yellow;\n    --$[prefix]-search-highlight-active-bg: orange;\n\n    /* \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30DC\u30BF\u30F3 */\n    --$[prefix]-popup-button-hover-bg: #e9e9e9;\n    --$[prefix]-popup-button-hover-border-color: #bbb;\n\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB */\n    --$[prefix]-resize-handle-size: 8px;\n    --$[prefix]-resize-handle-offset: -4px;\n\n    /* \u30BF\u30B9\u30AF\u30D0\u30FC */\n    --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);\n    --$[prefix]-taskbar-border: #a0a0a0;\n    --$[prefix]-taskbar-item-bg: #d0d0d0;\n    --$[prefix]-taskbar-item-active-bg: #0078d7;\n    --$[prefix]-taskbar-item-active-color: #fff;\n    --$[prefix]-taskbar-height: 40px;\n    --$[prefix]-taskbar-width: 40px;\n\n    /* \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC */\n    --$[prefix]-loader-bg: rgba(255, 255, 255, 0.7);\n    --$[prefix]-loader-color: var(--$[prefix]-title-bar-active-bg);\n\n    /* \u305D\u306E\u4ED6 */\n    --$[prefix]-scrollbar-thumb-bg: rgba(100, 100, 100, 0.5);\n}\n\n/* ========================================================================\n    2. \u30E6\u30FC\u30C6\u30A3\u30EA\u30C6\u30A3\u30AF\u30E9\u30B9\n   ========================================================================= */\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u7121\u52B9\u5316\n */\n.$[prefix]-us-none {\n    user-select: none;\n    -webkit-user-select: none;\n    -ms-user-select: none;\n}\n/**\n * \u30C6\u30AD\u30B9\u30C8\u9078\u629E\u3092\u6709\u52B9\u5316\n */\n.$[prefix]-us-auto {\n    user-select: auto;\n    -webkit-user-select: auto;\n    -ms-user-select: auto;\n}\n\n/* ========================================================================\n    3. \u30B3\u30F3\u30C6\u30CA\n   ========================================================================= */\n/**\n * \u5168\u3066\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u5185\u5305\u3059\u308B\u6700\u4E0A\u4F4D\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container {\n    position: fixed;\n    top: 0;\n    right: 0;\n    bottom: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    box-sizing: border-box;\n    pointer-events: none;\n    overflow: hidden;\n    z-index: 999;\n    display: flex;\n    pointer-events: none;\n}\n.$[prefix]-container > * {\n    pointer-events: all; /* \u5B50\u8981\u7D20(workspace, taskbar)\u306E\u30A4\u30D9\u30F3\u30C8\u306F\u6709\u52B9\u5316 */\n}\n/**\n * \u7279\u5B9A\u306E\u8981\u7D20\u5185\u306B\u30CD\u30B9\u30C8\u3055\u308C\u305F\u5834\u5408\u306E\u30B3\u30F3\u30C6\u30CA\n */\n.$[prefix]-container.$[prefix]-is-nested {\n    position: absolute;\n}\n\n.$[prefix]-workspace {\n    position: relative;\n    flex-grow: 1; /* \u6B8B\u308A\u306E\u30B9\u30DA\u30FC\u30B9\u3092\u3059\u3079\u3066\u5360\u6709 */\n    overflow: hidden; /* \u30A6\u30A3\u30F3\u30C9\u30A6\u304C\u306F\u307F\u51FA\u3055\u306A\u3044\u3088\u3046\u306B */\n    min-width: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    min-height: 0; /* flex\u30A2\u30A4\u30C6\u30E0\u306E\u7E2E\u5C0F\u554F\u984C\u3092\u56DE\u907F */\n    pointer-events: none;\n}\n/**\n * \u30BF\u30D6\u306E\u30C9\u30E9\u30C3\u30B0\u4E2D\u306B\u30DD\u30A4\u30F3\u30BF\u30FC\u30A4\u30D9\u30F3\u30C8\u3092\u6709\u52B9\u5316\u3057\u3001\u30C9\u30ED\u30C3\u30D7\u3092\u53D7\u3051\u4ED8\u3051\u308B\n */\n.$[prefix]-workspace.$[prefix]-is-tab-dragging {\n    pointer-events: auto;\n}\n\n/* ========================================================================\n    4. \u4EEE\u60F3\u5316\u6280\u8853\n   ======================================================================== */\n/**\n * \u4EEE\u60F3\u5316(\u30A2\u30F3\u30ED\u30FC\u30C9)\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-virtualized > .$[prefix]-main-content {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-is-virtualized::after {\n    content: \"Unloaded\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n}\n\n/**\n * \u4E2D\u65AD\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-suspended > .$[prefix]-main-content {\n    display: none;\n}\n.$[prefix]-window.$[prefix]-is-suspended::after {\n    content: \"Suspended\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n    z-index: 15;\n}\n\n/**\n * \u30D5\u30EA\u30FC\u30BA\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content {\n    pointer-events: none; /* \u30B3\u30F3\u30C6\u30F3\u30C4\u306E\u64CD\u4F5C\u3092\u7121\u52B9\u5316 */\n}\n.$[prefix]-window.$[prefix]-is-frozen > .$[prefix]-main-content iframe {\n    visibility: hidden;\n}\n.$[prefix]-window.$[prefix]-is-frozen::after {\n    content: \"Frozen\";\n    position: absolute;\n    top: 50%;\n    left: 50%;\n    transform: translate(-50%, -50%);\n    color: var(--$[prefix]-border);\n    background: rgba(128, 128, 128, 0.1);\n    width: 100%;\n    height: 100%;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    font-size: 1.5em;\n    font-weight: bold;\n    pointer-events: none;\n    z-index: 15; /* \u30ED\u30FC\u30C0\u30FC\u3088\u308A\u624B\u524D */\n}\n/* ========================================================================\n    5. \u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window {\n    position: absolute;\n    display: flex;\n    flex-direction: column;\n    min-width: 200px;\n    min-height: 150px;\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    box-shadow: 0 5px 15px var(--$[prefix]-shadow-color-strong);\n    box-sizing: border-box;\n    border-radius: 5px;\n    overflow: hidden;\n    pointer-events: all;\n    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n    touch-action: none;\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u72B6\u614B\u5225\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u6700\u5C0F\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-minimizing,\n.$[prefix]-window.$[prefix]-minimized {\n    transform: scale(0);\n    opacity: 0;\n    transition: opacity 0.25s, transform 0.25s;\n    pointer-events: none;\n}\n.$[prefix]-window.$[prefix]-minimized {\n    display: none;\n}\n/**\n * \u6700\u5927\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-maximized {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n/**\n * \u6700\u5927\u5316\u72B6\u614B\u3067\u306F\u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3092\u975E\u8868\u793A\n */\n.$[prefix]-window.$[prefix]-maximized > .$[prefix]-resize-handle {\n    display: none;\n}\n/**\n * \u5FA9\u5143\u4E2D\u306E\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n.$[prefix]-window.$[prefix]-is-restoring {\n    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u30FB\u30EA\u30B5\u30A4\u30BA\u4E2D\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u77ED\u7E2E\u3057\u3001\u64CD\u4F5C\u6027\u3092\u5411\u4E0A\n */\n.$[prefix]-window.$[prefix]-is-dragging,\n.$[prefix]-window.$[prefix]-is-resizing {\n    transition: opacity 0.1s, transform 0.1s;\n}\n\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-active {\n    box-shadow: 0 8px 25px var(--$[prefix]-shadow-color-active); /* \u30A2\u30AF\u30C6\u30A3\u30D6\u6642\u306E\u30B7\u30E3\u30C9\u30A6 */\n}\n/**\n * \u30A2\u30AF\u30C6\u30A3\u30D6\uFF08\u30D5\u30A9\u30FC\u30AB\u30B9\u3055\u308C\u3066\u3044\u308B\uFF09\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-text-active-color);\n}\n.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar .$[prefix]-title {\n    color: var(--$[prefix]-title-text-active-color);\n}\n\n/* --- \u30A6\u30A3\u30F3\u30C9\u30A6\u7279\u6B8A\u30B9\u30BF\u30A4\u30EB --- */\n/**\n * \u300C\u5E38\u306B\u624B\u524D\u306B\u8868\u793A\u300D\u304C\u6709\u52B9\u306A\u30A6\u30A3\u30F3\u30C9\u30A6\n */\n.$[prefix]-window.$[prefix]-always-on-top .$[prefix]-title-bar {\n    background-image: repeating-linear-gradient(\n        -45deg,\n        transparent,\n        transparent 4px,\n        rgba(255, 255, 255, 0.05) 4px,\n        rgba(255, 255, 255, 0.05) 8px\n    );\n}\n\n/**\n * \u30A6\u30A3\u30F3\u30C9\u30A6\u30B7\u30A7\u30A4\u30AF\u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\n */\n@keyframes $[prefix]-shake {\n    10%, 90% { transform: translate3d(-1px, 0, 0); }\n    20%, 80% { transform: translate3d(2px, 0, 0); }\n    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }\n    40%, 60% { transform: translate3d(4px, 0, 0); }\n}\n.$[prefix]-window.$[prefix]-is-shaking {\n    animation: $[prefix]-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;\n}\n\n/* ========================================================================\n    6. \u30B4\u30FC\u30B9\u30C8\u30A6\u30A3\u30F3\u30C9\u30A6\n   ======================================================================== */\n/**\n * \u30C9\u30E9\u30C3\u30B0\u30FB\u30EA\u30B5\u30A4\u30BA\u6642\u306B\u8868\u793A\u3055\u308C\u308B\u8F2A\u90ED\n */\n.$[prefix]-ghost-window {\n    position: absolute;\n    box-sizing: border-box;\n    border: 2px dashed var(--$[prefix]-title-bar-active-bg);\n    background-color: rgba(0, 120, 215, 0.1);\n    z-index: 99999;\n    pointer-events: none;\n}\n\n/* ========================================================================\n    7. \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n   ======================================================================== */\n/* --- \u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\u57FA\u672C\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-title-bar {\n    display: flex;\n    align-items: center;\n    height: var(--$[prefix]-title-bar-height);\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-title-text-color);\n    cursor: move;\n    flex-shrink: 0;\n    touch-action: none;\n}\n/**\n * \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u304C\u5DE6\u5074\u306B\u3042\u308B\u5834\u5408\u306E\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC\n */\n.$[prefix]-title-bar.$[prefix]-controls-left {\n    flex-direction: row-reverse;\n}\n\n/* --- \u30A2\u30A4\u30B3\u30F3\u30FB\u30BF\u30A4\u30C8\u30EB --- */\n.$[prefix]-icon {\n    min-width: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    margin: 0 4px;\n    pointer-events: none;\n    flex-shrink: 0;\n}\n\n.$[prefix]-icon:empty {\n    display: none;\n}\n\n.$[prefix]-icon i {\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    line-height: calc(var(--$[prefix]-title-bar-height) * 0.75);\n    text-align: center;\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-icon img {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n.$[prefix]-title {\n    flex-grow: 1;\n    padding: 0 8px;\n    font-family: sans-serif;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.44);\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    pointer-events: none;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-title {\n    text-align: right;\n}\n\n/* --- \u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-controls {\n    display: flex;\n    height: 100%;\n    margin-left: auto;\n    flex-shrink: 0;\n}\n\n.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-controls {\n    margin-left: 0;\n    margin-right: auto;\n    flex-direction: row-reverse;\n}\n\n.$[prefix]-control-btn {\n    display: inline-flex;\n    justify-content: center;\n    align-items: center;\n    width: calc(var(--$[prefix]-title-bar-height) * 1.3);\n    height: 100%;\n    border: none;\n    border-radius: 0;\n    box-sizing: border-box;\n    background-color: transparent;\n    font-size: calc(var(--$[prefix]-title-bar-height) * 0.5);\n    cursor: pointer;\n    text-align: center;\n    vertical-align: middle;\n    font-family: sans-serif;\n    transition: background-color 0.2s;\n    touch-action: auto;\n    padding: 0;\n    margin: 0;\n    color: inherit;\n}\n\n.$[prefix]-custom-control-btn > * {\n    pointer-events: none;\n}\n\n.$[prefix]-control-btn:hover {\n    background-color: var(--$[prefix]-control-hover-bg);\n}\n\n.$[prefix]-control-btn.$[prefix]-close-btn:hover {\n    background-color: var(--$[prefix]-control-close-hover-bg);\n    color: var(--$[prefix]-control-close-hover-color);\n}\n\n/* ========================================================================\n    8. \u30E1\u30A4\u30F3\u30B3\u30F3\u30C6\u30F3\u30C4\u30A8\u30EA\u30A2\n   ======================================================================== */\n.$[prefix]-main-content {\n    all: initial;\n    position: relative;\n    display:flex;\n    color: var(--$[prefix]-text-color);\n    flex-direction:column;\n    flex-grow:1;\n    overflow:hidden;\n}\n\n.$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    flex-grow: 1;\n    position: relative;\n    overflow: auto;\n    touch-action: auto;\n}\n\n.$[prefix]-content iframe {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    border: none;\n}\n\n/* --- \u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u30A4\u30F3\u30B8\u30B1\u30FC\u30BF\u30FC --- */\n.$[prefix]-loader-overlay {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background-color: var(--$[prefix]-loader-bg);\n    display: none;\n    justify-content: center;\n    align-items: center;\n    z-index: 20;\n}\n@keyframes $[prefix]-spinner-rotation {\n    0% { transform: rotate(0deg); }\n    100% { transform: rotate(360deg); }\n}\n.$[prefix]-loader-spinner {\n    width: 48px;\n    height: 48px;\n    border-radius: 50%;\n    border: 5px solid #fff;\n    border-bottom-color: var(--$[prefix]-loader-color);\n    animation: $[prefix]-spinner-rotation 1s linear infinite;\n}\n\n/* ========================================================================\n    9. \u30E1\u30CB\u30E5\u30FC\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-menu-bar {\n    color: var(--$[prefix]-menu-item-color);\n    display: flex;\n    background-color: var(--$[prefix]-bg);\n    padding: 2px;\n    flex-shrink: 0;\n    border-bottom: 1px solid var(--$[prefix]-border);\n    touch-action: auto;\n}\n\n.$[prefix]-menu-item {\n    font-family: sans-serif;\n    font-size: clamp(0px , calc(var(--winlet-title-bar-height) * 0.6), 14px);\n    padding: 4px 8px;\n    cursor: default;\n    position: relative;\n}\n\n.$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n/* --- \u30C9\u30ED\u30C3\u30D7\u30C0\u30A6\u30F3\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown {\n    color: var(--$[prefix]-menu-item-color);\n    display: none;\n    position: absolute;\n    top: 100%;\n    left: 0;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 150px;\n    z-index: 10;\n    touch-action: auto;\n}\n\n.$[prefix]-menu-dropdown li {\n    padding: 0 20px;\n    font-size: 14px;\n    cursor: pointer;\n}\n\n.$[prefix]-menu-dropdown li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n\n.$[prefix]-menu-dropdown li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n.$[prefix]-menu-dropdown-item {\n    display: flex;\n    line-height: 1.6em;\n    flex-wrap: nowrap;\n    justify-content: space-between;\n    width: 100%;\n    white-space: nowrap;\n}\n\n/* --- \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC --- */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu {\n    position: relative;\n}\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu::after {\n    content: '\u25B6';\n    position: absolute;\n    top: 50%;\n    right: 10px;\n    margin-top: calc(var(--winlet-title-bar-height) * -0.5);\n    font-size: 0.8em;\n    color: inherit;\n}\n/**\n * \u30CD\u30B9\u30C8\u3055\u308C\u305F\u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306E\u8868\u793A\u4F4D\u7F6E\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu > .$[prefix]-menu-dropdown {\n    top: -5px; /* li\u306Epadding\u3092\u8003\u616E */\n    left: 100%;\n}\n/**\n * \u30B5\u30D6\u30E1\u30CB\u30E5\u30FC\u306F\u30DB\u30D0\u30FC\u3067\u958B\u304F\n */\n.$[prefix]-menu-dropdown li.$[prefix]-has-submenu:hover > .$[prefix]-menu-dropdown {\n    display: block;\n}\n\n/* --- \u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u30C6\u30AD\u30B9\u30C8 --- */\n.$[prefix]-shortcut-text {\n    color: var(--$[prefix]-shortcut-text-color);\n    margin-left: 1em;\n}\n.$[prefix]-menu-dropdown li:hover .$[prefix]-shortcut-text {\n    color: inherit;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab-bar {\n    color: var(--$[prefix]-menu-item-color);\n    overflow-x: auto;\n    overflow-y: hidden;\n    -ms-overflow-style: -ms-autohiding-scrollbar;\n    scrollbar-width: thin;\n    display: flex;\n    background-color: var(--$[prefix]-tab-bar-bg);\n    flex-shrink: 0;\n    align-items: flex-end;\n    touch-action: auto;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar{\n    width: 6px;\n    height: 6px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-thumb {\n    background-color: var(--$[prefix]-scrollbar-thumb-bg);\n    border-radius: 3px;\n}\n\n.$[prefix]-tab-bar::-webkit-scrollbar-track {\n    background-color: transparent;\n}\n\n/* --- \u30BF\u30D6 --- */\n.$[prefix]-tab {\n    white-space: nowrap;\n    padding: 8px 16px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n    border-right: 1px solid var(--$[prefix]-tab-border);\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-tab-active-bg);\n    border-bottom: 2px solid var(--$[prefix]-title-bar-active-bg);\n}\n\n.$[prefix]-tab.$[prefix]-active .$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-active-close-btn-hover-bg);\n}\n\n/**\n * \u30C9\u30E9\u30C3\u30B0\u4E2D\u306E\u30BF\u30D6\u306E\u30B9\u30BF\u30A4\u30EB\n */\n.$[prefix]-tab.$[prefix]-dragging {\n    opacity: 0.5;\n}\n\n/* --- \u30BF\u30D6\u95A2\u9023\u30DC\u30BF\u30F3 --- */\n/**\n * \u30BF\u30D6\u306E\u9589\u3058\u308B\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-close-btn {\n    margin-left: 8px;\n    padding: 0 4px;\n    border-radius: 50%;\n    cursor: pointer;\n    font-weight: bold;\n    font-size: 14px;\n    line-height: 1;\n}\n.$[prefix]-tab-close-btn:hover {\n    background-color: var(--$[prefix]-tab-close-btn-hover-bg);\n}\n\n/**\n * \u30BF\u30D6\u8FFD\u52A0\u30DC\u30BF\u30F3\n */\n.$[prefix]-tab-add-btn {\n    padding: 8px;\n    font-size: 14px;\n    cursor: pointer;\n    border-bottom: 1px solid var(--$[prefix]-tab-border);\n}\n.$[prefix]-tab-add-btn:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n\n/* --- \u30BF\u30D6\u30B3\u30F3\u30C6\u30F3\u30C4 --- */\n.$[prefix]-tab-content {\n    display: none;\n}\n\n.$[prefix]-tab-content.$[prefix]-active {\n    display: block;\n    width: 100%;\n    height: 100%;\n}\n\n/* ========================================================================\n    10. \u5206\u5272\u30D3\u30E5\u30FC (Split View)\n   ======================================================================== */\n.$[prefix]-split-view {\n    display: flex;\n    width: 100%;\n    height: 100%;\n    overflow: hidden;\n}\n.$[prefix]-split-view-horizontal {\n    flex-direction: row;\n}\n.$[prefix]-split-view-vertical {\n    flex-direction: column;\n}\n.$[prefix]-split-pane {\n    position: relative;\n    overflow: auto;\n}\n.$[prefix]-split-resizer {\n    background-color: var(--$[prefix]-border);\n    flex-shrink: 0;\n    z-index: 1;\n    transition: background-color 0.2s;\n}\n.$[prefix]-split-resizer:hover {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n}\n.$[prefix]-split-view-horizontal > .$[prefix]-split-resizer {\n    width: 4px;\n    cursor: col-resize;\n}\n.$[prefix]-split-view-vertical > .$[prefix]-split-resizer {\n    height: 4px;\n    cursor: row-resize;\n}\n\n/* ========================================================================\n    11. \u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30FC (Status Bar)\n   ======================================================================== */\n.$[prefix]-statusbar {\n    flex-shrink: 0;\n    height: 24px;\n    line-height: 24px;\n    padding: 0 8px;\n    background-color: var(--$[prefix]-title-bar-bg);\n    border-top: 1px solid var(--$[prefix]-border);\n    font-size: 12px;\n    overflow: hidden;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n    user-select: none;\n}\n\n/* ========================================================================\n    12. \u30A6\u30A3\u30F3\u30C9\u30A6\u5185\u691C\u7D22 (In-window Search)\n   ======================================================================== */\n.$[prefix]-search-bar {\n    position: absolute;\n    top: 0;\n    right: 0;\n    background-color: var(--$[prefix]-bg);\n    border: 1px solid var(--$[prefix]-border);\n    box-shadow: var(--$[prefix]-shadow-color-light) -2px 2px 5px;\n    padding: 4px;\n    display: flex;\n    align-items: center;\n    gap: 4px;\n    border-radius: 3px;\n    z-index: 100;\n}\n.$[prefix]-search-input {\n    border: 1px solid var(--$[prefix]-border);\n    padding: 2px 4px;\n    width: 150px;\n}\n.$[prefix]-search-results {\n    font-size: 12px;\n    padding: 0 4px;\n}\n.$[prefix]-search-btn {\n    border: 1px solid var(--$[prefix]-border);\n    background-color: var(--$[prefix]-bg);\n    cursor: pointer;\n    padding: 2px 4px;\n    font-size: 12px;\n    min-width: 22px;\n}\n.$[prefix]-search-btn:hover {\n    background-color: var(--$[prefix]-popup-button-hover-bg);\n}\n.$[prefix]-search-btn-active {\n    background-color: var(--$[prefix]-title-bar-active-bg);\n    color: var(--$[prefix]-title-bar-active-color);\n}\n.$[prefix]-search-highlight {\n    background-color: var(--$[prefix]-search-highlight-bg);\n    color: black;\n}\n.$[prefix]-search-highlight-active {\n    background-color: var(--$[prefix]-search-highlight-active-bg);\n}\n\n/* ========================================================================\n    13. \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\n   ======================================================================== */\n.$[prefix]-resize-handle {\n    position: absolute;\n    z-index: 5;\n    touch-action: none;\n}\n\n.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }\n.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }\n.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }\n.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }\n.$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }\n.$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }\n.$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }\n.$[prefix]-resize-handle.$[prefix]-se { bottom: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: se-resize; }\n\n/* ========================================================================\n    14. \u30B3\u30F3\u30C6\u30AD\u30B9\u30C8\u30E1\u30CB\u30E5\u30FC\n   ======================================================================== */\n.$[prefix]-context-menu {\n    color: var(--$[prefix]-menu-item-color);\n    pointer-events: all;\n    position: fixed;\n    z-index: 10000;\n    background-color: var(--$[prefix]-menu-bg);\n    border: 1px solid var(--$[prefix]-menu-border);\n    box-shadow: 0 2px 8px var(--$[prefix]-shadow-color-light);\n    list-style: none;\n    margin: 0;\n    padding: 4px 0;\n    min-width: 160px;\n}\n.$[prefix]-context-menu li {\n    padding: 6px 24px;\n    font-family: sans-serif;\n    font-size: 14px;\n    cursor: pointer;\n}\n.$[prefix]-context-menu li:hover {\n    background-color: var(--$[prefix]-menu-item-hover-bg);\n    color: var(--$[prefix]-menu-item-hover-color);\n}\n.$[prefix]-context-menu li.$[prefix]-separator {\n    height: 1px;\n    background-color: var(--$[prefix]-menu-border);\n    margin: 4px 0;\n    padding: 0;\n}\n\n/* ========================================================================\n    15. \u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\n   ======================================================================== */\n.$[prefix]-popup-window .$[prefix]-content {\n    display: flex;\n    flex-direction: column;\n    justify-content: space-between;\n    padding: 20px;\n    box-sizing: border-box;\n}\n.$[prefix]-popup-message {\n    font-family: sans-serif;\n    font-size: 14px;\n    line-height: 1.5;\n    flex-grow: 1;\n    word-wrap: break-word;\n}\n.$[prefix]-popup-buttons {\n    display: flex;\n    justify-content: flex-end;\n    gap: 10px;\n    margin-top: 20px;\n    flex-shrink: 0;\n    touch-action: auto;\n}\n.$[prefix]-popup-button {\n    color: var(--$[prefix]-menu-item-color);\n    min-width: 80px;\n    padding: 8px 12px;\n    margin: 0;\n    border: 1px solid var(--$[prefix]-menu-border);\n    border-radius: 3px;\n    background-color: var(--$[prefix]-bg);\n    cursor: pointer;\n    font-size: 14px;\n    box-shadow: 0 1px 1px var(--$[prefix]-shadow-color-light);\n}\n.$[prefix]-popup-button:hover {\n    border-color: var(--$[prefix]-popup-button-hover-border-color);\n    background-color: var(--$[prefix]-popup-button-hover-bg);\n}\n.$[prefix]-popup-button:active {\n    background-color: var(--$[prefix]-tab-bg);\n}\n\n/* ========================================================================\n    16. \u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Merged Styles)\n   ======================================================================== */\n/* --- \u30E1\u30CB\u30E5\u30FC/\u30BF\u30D6\u7D71\u5408\u6642\u306E\u57FA\u672C\u30BF\u30A4\u30C8\u30EB\u30D0\u30FC --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title-bar,\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title-bar {\n    height: auto;\n    align-items: flex-end;\n    padding: 0;\n}\n\n/* --- \u30E1\u30CB\u30E5\u30FC\u7D71\u5408\u30B9\u30BF\u30A4\u30EB --- */\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-icon {\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-title {\n    flex-grow: 1;\n    margin-block: auto;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-bar {\n    border-bottom: none;\n    background: transparent;\n    padding: 0 6px;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-menu-item {\n    line-height: var(--$[prefix]-title-bar-height);\n    padding-top: 0;\n    padding-bottom: 0;\n}\n/* \u30A2\u30AF\u30C6\u30A3\u30D6\u30A6\u30A3\u30F3\u30C9\u30A6\u306E\u7D71\u5408\u30E1\u30CB\u30E5\u30FC\u306E\u6587\u5B57\u8272 */\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item {\n    color: var(--winlet-menu-item-hover-color);\n}\n.$[prefix]-window.$[prefix]-menu-style-merged.$[prefix]-active:not(.$[prefix]-tab-style-merged) .$[prefix]-menu-item:hover {\n    background-color: var(--$[prefix]-title-bar-bg);\n    color: var(--$[prefix]-menu-item-color);\n}\n\n/* --- \u30BF\u30D6\u7D71\u5408\u30B9\u30BF\u30A4\u30EB (Chrome\u98A8) --- */\n.$[prefix]-window.$[prefix]-tab-style-merged.$[prefix]-window.$[prefix]-active .$[prefix]-title-bar {\n    background-color: var(--$[prefix]-title-bar-bg);\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-title {\n    display: none;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar {\n    background-color: transparent;\n    flex-grow: 1;\n    flex-shrink: 1;\n    min-width: 0;\n    align-items: flex-end;\n    height: calc(var(--$[prefix]-title-bar-height) + 4px);\n    margin: 0;\n    order: 1; /* controls\u3088\u308A\u524D\u306B\u914D\u7F6E */\n    -ms-overflow-style: none;\n    scrollbar-width: none;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-bar::-webkit-scrollbar{\n    display: none;\n}\n.$[prefix]-window.$[prefix]-title-bar.$[prefix]-controls-left .$[prefix]-tab-bar {\n    order: -1;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab {\n    border: 1px solid var(--$[prefix]-border);\n    border-bottom: none;\n    border-radius: 6px 6px 0 0;\n    margin-top: 4px;\n    margin-left: -1px;\n    position: relative;\n    bottom: -1px;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab.$[prefix]-active {\n    background-color: var(--$[prefix]-bg);\n    border-color: var(--$[prefix]-border);\n    border-bottom: 1px solid var(--$[prefix]-bg);\n    z-index: 2;\n}\n\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-tab-add-btn {\n    border: none;\n    align-self: center;\n}\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-main-content {\n    border-top: none;\n}\n\n/* --- \u7D71\u5408\u6642\u306E\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3 --- */\n.$[prefix]-window.$[prefix]-tab-style-merged .$[prefix]-controls,\n.$[prefix]-window.$[prefix]-menu-style-merged .$[prefix]-controls {\n    align-self: flex-start;\n    order: 2;\n}\n\n/* ========================================================================\n    17. \u30BF\u30B9\u30AF\u30D0\u30FC\n   ======================================================================== */\n.$[prefix]-taskbar {\n    position: absolute;\n    background-color: var(--$[prefix]-taskbar-bg);\n    box-sizing: border-box;\n    display: flex;\n    align-items: center;\n    padding: 0 5px;\n    z-index: 50000;\n    flex-shrink: 0;\n    display: flex;\n    gap: 5px;\n    overflow: auto;\n    scrollbar-width: none;\n    -ms-overflow-style: none;\n    backdrop-filter: blur(5px);\n    pointer-events: all;\n}\n.$[prefix]-taskbar::-webkit-scrollbar{\n    display: none;\n}\n\n/* --- \u4F4D\u7F6E --- */\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom {\n    bottom: 0;\n    left: 0;\n    border-top: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    top: 0;\n    left: 0;\n    border-bottom: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left {\n    top: 0;\n    left: 0;\n    border-right: 1px solid var(--$[prefix]-taskbar-border);\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    top: 0;\n    right: 0;\n    border-left: 1px solid var(--$[prefix]-taskbar-border);\n}\n\n.$[prefix]-taskbar.$[prefix]-taskbar-bottom,\n.$[prefix]-taskbar.$[prefix]-taskbar-top {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-height);\n    width: 100%;\n    height: var(--$[prefix]-taskbar-height);\n    flex-direction: row;\n}\n.$[prefix]-taskbar.$[prefix]-taskbar-left,\n.$[prefix]-taskbar.$[prefix]-taskbar-right {\n    --$[prefix]-taskbar-icon-size: var(--$[prefix]-taskbar-width);\n    width: var(--$[prefix]-taskbar-width);\n    height: 100%;\n    flex-direction: column;\n}\n\n\n.$[prefix]-taskbar-item {\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    width: auto;\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 0 10px;\n    border-radius: 3px;\n    background-color: var(--$[prefix]-taskbar-item-bg);\n    cursor: pointer;\n    flex-shrink: 0;\n    max-width: 150px;\n    transition: background-color 0.2s;\n    font-family: sans-serif;\n    font-size: 14px;\n    white-space: nowrap;\n    overflow: hidden;\n    text-overflow: ellipsis;\n    box-sizing: border-box;\n}\n/* \u7E26\u5411\u304D\u30BF\u30B9\u30AF\u30D0\u30FC\u306E\u30A2\u30A4\u30C6\u30E0 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: auto;\n    min-height: 40px;\n    max-width: none;\n    padding: 10px 0;\n    writing-mode: vertical-rl;\n}\n\n.$[prefix]-taskbar-item-icon {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n}\n.$[prefix]-taskbar-item-icon img {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item-icon i {\n    font-size: calc((var(--winlet-taskbar-icon-size) - 12px) * 0.8);\n    line-height: calc(var(--winlet-taskbar-icon-size) - 18px);\n    text-align: center;\n    object-fit: contain;\n}\n.$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n    padding: 6px;\n}\n/* \u7E26\u5411\u304D\u30A2\u30A4\u30B3\u30F3\u30E2\u30FC\u30C9 */\n.$[prefix]-taskbar.$[prefix]-taskbar-left .$[prefix]-taskbar-item.$[prefix]-icon-only,\n.$[prefix]-taskbar.$[prefix]-taskbar-right .$[prefix]-taskbar-item.$[prefix]-icon-only {\n    width: calc(var(--winlet-taskbar-icon-size) - 6px);\n    height: calc(var(--winlet-taskbar-icon-size) - 6px);\n}\n\n.$[prefix]-taskbar-item.$[prefix]-active {\n    background-color: var(--$[prefix]-taskbar-item-active-bg);\n    color: var(--$[prefix]-taskbar-item-active-color);\n}\n.$[prefix]-taskbar-item.$[prefix]-minimized {\n    opacity: 0.7;\n}\n\n/**\n * \u4EEE\u60F3\u5316\u3055\u308C\u305F\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u793A\u3059\u30BF\u30B9\u30AF\u30D0\u30FC\u30A2\u30A4\u30C6\u30E0\n */\n.$[prefix]-taskbar-item.$[prefix]-virtualized {\n    filter: grayscale(80%);\n    opacity: 0.7;\n    font-style: italic;\n}\n\n/* ========================================================================\n    18. \u30E2\u30D0\u30A4\u30EB\u30FB\u30BF\u30C3\u30C1\u30C7\u30D0\u30A4\u30B9\u5BFE\u5FDC\n   ======================================================================== */\n@media (pointer: coarse), (max-width: 768px) {\n    /* \u30EA\u30B5\u30A4\u30BA\u30CF\u30F3\u30C9\u30EB\u3068\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u30DC\u30BF\u30F3\u3092\u5927\u304D\u304F\u3057\u3066\u64CD\u4F5C\u3057\u3084\u3059\u304F\u3059\u308B */\n    :root {\n        --$[prefix]-resize-handle-size: 16px;\n        --$[prefix]-resize-handle-offset: -8px;\n    }\n    .$[prefix]-control-btn {\n        width: calc(var(--$[prefix]-title-bar-height) * 1.5);\n    }\n}\n\n/* ========================================================================\n    19. \u30CF\u30A4\u30B3\u30F3\u30C8\u30E9\u30B9\u30C8\u30E2\u30FC\u30C9\u5BFE\u5FDC\n   ======================================================================== */\n/* high-contrast.ts\u3068\u5408\u308F\u305B\u308B */\n@media (prefers-contrast: more) {\n    .$[prefix]-window,\n    .$[prefix]-window.$[prefix]-active {\n        box-shadow: none;\n    }\n    .$[prefix]-window.$[prefix]-active {\n        border: 2px solid var(--$[prefix]-title-bar-active-bg);\n    }\n}\n\n/* ========================================================================\n    20. \u30A2\u30CB\u30E1\u30FC\u30B7\u30E7\u30F3\u7121\u52B9\u5316\n   ======================================================================== */\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-minimized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-maximized,\n.$[prefix]-container.$[prefix]-animations-disabled .$[prefix]-window.$[prefix]-is-restoring {\n    transition: none;\n}\n\n/* ========================================================================\n    21. \u30C7\u30D0\u30C3\u30B0\u30E2\u30FC\u30C9\n   ======================================================================== */\n.$[prefix]-debug-overlay {\n    display: none;\n    position: absolute;\n    top: calc(var(--$[prefix]-title-bar-height) + 5px);\n    left: 5px;\n    background: rgba(0,0,0,0.5);\n    color: #fff;\n    padding: 5px;\n    border-radius: 3px;\n    font-family: monospace;\n    font-size: 12px;\n    line-height: 1.4;\n    pointer-events: none;\n    z-index: 100;\n    white-space: pre;\n}\n\n.$[prefix]-container.$[prefix]-debug-mode-enabled .$[prefix]-debug-overlay {\n    display: block;\n}\n";
 var _default = exports["default"] = styleData;
 
 },{}],47:[function(require,module,exports){
@@ -3686,6 +4104,8 @@ var defaultTheme = exports.defaultTheme = {
     "--$[prefix]-tab-bar-bg": "#e1e1e1",
     "--$[prefix]-tab-close-btn-hover-bg": "#ccc",
     "--$[prefix]-tab-active-close-btn-hover-bg": "#ddd",
+    "--$[prefix]-search-highlight-bg": "yellow",
+    "--$[prefix]-search-highlight-active-bg": "orange",
     "--$[prefix]-popup-button-hover-bg": "#e9e9e9",
     "--$[prefix]-popup-button-hover-border-color": "#bbb",
     "--$[prefix]-taskbar-bg": "rgba(240, 240, 240, 0.9)",
@@ -3746,7 +4166,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.1";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.2";
 
 },{}]},{},[43])
 //# sourceMappingURL=winlet.js.map

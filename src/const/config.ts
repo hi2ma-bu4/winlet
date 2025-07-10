@@ -40,6 +40,23 @@ export const defaultConfig: Required<WindowOptions> = {
 		},
 		template: "",
 	},
+	splitView: {
+		direction: "horizontal",
+		panes: [],
+	},
+	statusBar: {
+		enabled: false,
+		text: "",
+		allowHTML: false,
+	},
+	search: {
+		enabled: false,
+		caseSensitive: false,
+		showCaseSensitiveButton: true,
+		showRegexButton: true,
+		showWholeWordButton: true,
+		targetSelector: "",
+	},
 	menu: [],
 	menuStyle: "default",
 	tabs: [],
