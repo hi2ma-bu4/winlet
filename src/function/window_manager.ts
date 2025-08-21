@@ -2,7 +2,7 @@
 
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { ContextMenuItem, GlobalConfigOptions, IWindow, LIBRARY_NAME, MenuItem, PopupButton, PopupButtonPreset, PopupOptions, PopupResult, TabItem, Theme, TIMEOUT_RESULT, WindowOptions } from "../const/types";
+import { ContextMenuItem, GlobalConfigOptions, GlobalEventMap, IWindow, LIBRARY_NAME, MenuItem, PopupButton, PopupButtonPreset, PopupOptions, PopupResult, TabItem, Theme, TIMEOUT_RESULT, WindowOptions } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import styleData from "../style/styles";
@@ -11,7 +11,7 @@ import { defaultTheme } from "../style/themes/default";
 import { highContrastTheme } from "../style/themes/high-contrast";
 import WinLetWindow from "./window";
 
-export default class WindowManager extends WinLetBaseClass {
+export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 	public container: HTMLElement | null = null;
 	private workspaceEl: HTMLElement | null = null;
 	private static allWindows = new Map<string, WinLetWindow>();
@@ -473,6 +473,8 @@ export default class WindowManager extends WinLetBaseClass {
 		WindowManager.allWindows.set(win.id, win);
 		this.workspaceEl!.appendChild(win.el);
 
+		this.emit("window-created", win);
+
 		if (this.taskbarEl) {
 			this.createTaskbarItem(win);
 		}
@@ -635,6 +637,7 @@ export default class WindowManager extends WinLetBaseClass {
 				this.deactivateFocusTrap();
 			}
 
+			this.emit("window-destroyed", win);
 			win.el.remove();
 			this.windows.delete(id);
 			WindowManager.allWindows.delete(id);

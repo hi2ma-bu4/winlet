@@ -1,7 +1,7 @@
 // src/index.ts
 
 import { defaultConfig } from "./const/config";
-import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, IWindow, PopupOptions, PopupResult, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
+import { CLOSE_BUTTON_RESULT, GlobalConfigOptions, GlobalEventMap, IWindow, ListenerOptions, PopupOptions, PopupResult, Theme, TIMEOUT_RESULT, WindowOptions, WinLetApi } from "./const/types";
 import WinLetWindow from "./function/window";
 import WindowManager from "./function/window_manager";
 import Utils from "./libs/utils";
@@ -46,6 +46,18 @@ const api: WinLetApi = {
 	 */
 	createWindow: (options: WindowOptions = {}): IWindow => {
 		return manager.createWindow(options);
+	},
+
+	on<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K], options?: ListenerOptions) {
+		manager.on(eventName, listener, options);
+	},
+
+	off<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K]) {
+		manager.off(eventName, listener);
+	},
+
+	emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>) {
+		manager.emit(eventName, ...args);
 	},
 
 	/**

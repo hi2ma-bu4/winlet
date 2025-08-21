@@ -246,4 +246,63 @@ class Main {
 			},
 		});
 	}
+
+	static createEventTestWindow() {
+		const id = "event-test-window";
+		const win = WinLet.createWindow({
+			id: id,
+			title: "イベントテスト",
+			width: 500,
+			height: 400,
+			content: {
+				html: `
+                <div style="padding: 20px;">
+                    <h2>イベントテスト</h2>
+                    <p>このウィンドウを移動、リサイズ、閉じるなどして、コンソールの出力を確認してください。</p>
+                    <button onclick="WinLet.emit('custom-event', 'Hello from the event test window!')">カスタムイベントを発行</button>
+                </div>
+            `,
+			},
+		});
+
+		win.on("before-close", (win) => {
+			console.log("before-close", win);
+			return confirm("本当に閉じますか？");
+		});
+		win.on("close", (win) => {
+			console.log("close", win);
+		});
+		win.on("move-start", (win) => {
+			console.log("move-start", win);
+		});
+		win.on("move-end", (win) => {
+			console.log("move-end", win);
+		});
+		win.on("resize-start", (win) => {
+			console.log("resize-start", win);
+		});
+		win.on("resize-end", (win) => {
+			console.log("resize-end", win);
+		});
+		win.on(
+			"focus",
+			(win) => {
+				console.log("focus (once)", win);
+			},
+			{ once: true }
+		);
+	}
 }
+
+WinLet.on("window-created", (win) => {
+	console.log("Global event: window-created", win);
+});
+
+WinLet.on("window-destroyed", (win) => {
+	console.log("Global event: window-destroyed", win);
+});
+
+WinLet.on("custom-event", (message) => {
+	console.log("Global event: custom-event", message);
+	alert(`カスタムイベントを受信: ${message}`);
+});

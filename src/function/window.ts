@@ -1,11 +1,11 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowOptions, WindowState } from "../const/types";
+import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, ListenerOptions, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowEventMap, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";
 
-export default class WinLetWindow extends WinLetBaseClass implements IWindow {
+export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implements IWindow {
 	public readonly id: string;
 	public options: Required<WindowOptions>;
 	public el: HTMLElement;
@@ -105,7 +105,21 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		this.setupEventListeners();
 		this.updateDebugOverlay();
 
-		this.options.onOpen(this);
+		// Register onXX handlers
+		if (this.options.onOpen) this.on("open", this.options.onOpen);
+		if (this.options.onClose) this.on("close", this.options.onClose);
+		if (this.options.onBeforeClose) this.on("before-close", this.options.onBeforeClose);
+		if (this.options.onFocus) this.on("focus", this.options.onFocus);
+		if (this.options.onBlur) this.on("blur", this.options.onBlur);
+		if (this.options.onMove) this.on("move", this.options.onMove);
+		if (this.options.onMoveStart) this.on("move-start", this.options.onMoveStart);
+		if (this.options.onMoveEnd) this.on("move-end", this.options.onMoveEnd);
+		if (this.options.onResize) this.on("resize", this.options.onResize);
+		if (this.options.onResizeStart) this.on("resize-start", this.options.onResizeStart);
+		if (this.options.onResizeEnd) this.on("resize-end", this.options.onResizeEnd);
+		if (this.options.onReload) this.on("reload", this.options.onReload);
+
+		this.emit("open", this);
 	}
 
 	private createDOM(): HTMLElement {
@@ -803,7 +817,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 		if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
 		if (this.options.contextMenu.length > 0) {
 			// PC用: 右クリック
-			this.el.addEventListener(
+			this.titleBarEl.addEventListener(
 				"contextmenu",
 				(e) => {
 					e.preventDefault();
@@ -812,7 +826,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				{ passive: false }
 			);
 			// モバイル用: 長押し
-			this.el.addEventListener(
+			this.titleBarEl.addEventListener(
 				"pointerdown",
 				(e) => {
 					if (e.pointerType !== "touch") return;
@@ -829,9 +843,9 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					this.contextMenuTimer = null;
 				}
 			};
-			this.el.addEventListener("pointermove", clearContextMenuTimer, { passive: true });
-			this.el.addEventListener("pointerup", clearContextMenuTimer, { passive: true });
-			this.el.addEventListener("pointercancel", clearContextMenuTimer, { passive: true });
+			this.titleBarEl.addEventListener("pointermove", clearContextMenuTimer, { passive: true });
+			this.titleBarEl.addEventListener("pointerup", clearContextMenuTimer, { passive: true });
+			this.titleBarEl.addEventListener("pointercancel", clearContextMenuTimer, { passive: true });
 		}
 
 		// 検索ショートカット (Ctrl+F)
@@ -898,6 +912,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 						this.el.setPointerCapture(e.pointerId);
 						this.contentEl.style.pointerEvents = "none";
 
+						this.emit("move-start", this);
+
 						// 最大化状態からのドラッグ開始の場合、ウィンドウを復元
 						if (this.state === "maximized") {
 							const restoredWidth = this.lastState.width;
@@ -943,7 +959,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 				if (isDragging) {
 					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
-					this.options.onMove(this);
+					this.emit("move", this);
+					this.emit("move-end", this);
 					this.manager.updateVirtualization();
 				}
 
@@ -983,6 +1000,7 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 					handle.setPointerCapture(e.pointerId);
 
 					this.el.classList.add(`${LIBRARY_NAME}-is-resizing`);
+					this.emit("resize-start", this);
 
 					// --- ゴーストウィンドウ処理 ---
 					let ghostEl: HTMLElement | null = null;
@@ -1037,7 +1055,8 @@ export default class WinLetWindow extends WinLetBaseClass implements IWindow {
 
 						document.removeEventListener("pointermove", onPointerMove);
 						document.removeEventListener("pointerup", onPointerUp);
-						this.options.onResize(this);
+						this.emit("resize", this);
+						this.emit("resize-end", this);
 						this.updateDebugOverlay();
 						this.manager.updateVirtualization();
 
@@ -1183,11 +1202,16 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	// --- Public API ---
 
 	public close(): void {
+		// onBeforeCloseでfalseが返された場合は処理を中断
+		if (this.emit("before-close", this) === false) {
+			return;
+		}
+
 		// Clean up global event listeners
 		if (this.boundGlobalClickHandler) {
 			document.removeEventListener("click", this.boundGlobalClickHandler);
 		}
-		this.options.onClose(this);
+		this.emit("close", this);
 		this.manager.destroyWindow(this.id);
 	}
 
@@ -1326,7 +1350,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		this.focused = true;
 		this.el.classList.add(`${LIBRARY_NAME}-active`);
 		this.updateDebugOverlay();
-		this.options.onFocus(this);
+		this.emit("focus", this);
 	}
 
 	public blur(): void {
@@ -1334,7 +1358,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		this.focused = false;
 		this.el.classList.remove(`${LIBRARY_NAME}-active`);
 		this.updateDebugOverlay();
-		this.options.onBlur(this);
+		this.emit("blur", this);
 	}
 
 	public shake(): void {
@@ -1354,7 +1378,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 	public reload(): void {
 		// onReloadがfalseを返した場合、デフォルトのリロード処理を中断
-		if (this.options.onReload(this) === false) {
+		if (this.emit("reload", this) === false) {
 			return;
 		}
 
