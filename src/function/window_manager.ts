@@ -200,17 +200,25 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 
 		// ウィンドウ外クリックでblurさせる処理を追加
 		document.addEventListener("pointerdown", (e: PointerEvent) => {
-			// e.targetがHTMLElementでない場合や、アクティブなウィンドウがない場合は何もしない
-			if (!(e.target instanceof HTMLElement) || !this.activeWindow || this.activeWindow.options.windowOptions.modal) {
+			if (!(e.target instanceof HTMLElement)) return;
+
+			const clickedContextMenu = e.target.closest(`.${LIBRARY_NAME}-context-menu`);
+
+			// コンテキストメニュー以外の場所がクリックされた場合、メニューを閉じる
+			if (!clickedContextMenu) {
+				this.hideContextMenu();
+			}
+
+			// アクティブなウィンドウがない、またはモーダルウィンドウの場合は何もしない
+			if (!this.activeWindow || this.activeWindow.options.windowOptions.modal) {
 				return;
 			}
 
-			// クリックされた場所がウィンドウまたはコンテキストメニューの内側かどうかを判定
+			// クリックされた場所がウィンドウまたはタスクバーの内側かどうかを判定
 			const clickedWindow = e.target.closest(`.${LIBRARY_NAME}-window`);
-			const clickedContextMenu = e.target.closest(`.${LIBRARY_NAME}-context-menu`);
 			const clickedTaskbar = e.target.closest(`.${LIBRARY_NAME}-taskbar`);
 
-			// ウィンドウやコンテキストメニューの外側がクリックされた場合
+			// ウィンドウ、コンテキストメニュー、タスクバーの外側がクリックされた場合
 			if (!clickedWindow && !clickedContextMenu && !clickedTaskbar) {
 				// アクティブなウィンドウのフォーカスを外す
 				const active = this.activeWindow;
@@ -218,8 +226,6 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 				active.blur();
 			}
 		});
-
-		document.addEventListener("click", () => this.hideContextMenu());
 
 		window.addEventListener("message", (event) => {
 			// メッセージの形式を検証

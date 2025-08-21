@@ -820,6 +820,11 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 			this.titleBarEl.addEventListener(
 				"contextmenu",
 				(e) => {
+					const target = e.target as HTMLElement;
+					// 操作UI（コントロールボタン、メニュー、タブ）の上では発火しないようにする
+					if (target.closest(`.${LIBRARY_NAME}-control-btn, .${LIBRARY_NAME}-menu-item, .${LIBRARY_NAME}-tab`)) {
+						return;
+					}
 					e.preventDefault();
 					this.manager.showContextMenu(e.clientX, e.clientY, this.options.contextMenu, this);
 				},

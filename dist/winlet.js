@@ -1472,6 +1472,10 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       if (this.options.windowOptions.resizableX || this.options.windowOptions.resizableY) this.makeResizable();
       if (this.options.contextMenu.length > 0) {
         this.titleBarEl.addEventListener("contextmenu", function (e) {
+          var target = e.target;
+          if (target.closest(".".concat(_types.LIBRARY_NAME, "-control-btn, .").concat(_types.LIBRARY_NAME, "-menu-item, .").concat(_types.LIBRARY_NAME, "-tab"))) {
+            return;
+          }
           e.preventDefault();
           _this0.manager.showContextMenu(e.clientX, e.clientY, _this0.options.contextMenu, _this0);
         }, {
@@ -2848,20 +2852,21 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         });
       }, true);
       document.addEventListener("pointerdown", function (e) {
-        if (!(e.target instanceof HTMLElement) || !_this2.activeWindow || _this2.activeWindow.options.windowOptions.modal) {
+        if (!(e.target instanceof HTMLElement)) return;
+        var clickedContextMenu = e.target.closest(".".concat(_types.LIBRARY_NAME, "-context-menu"));
+        if (!clickedContextMenu) {
+          _this2.hideContextMenu();
+        }
+        if (!_this2.activeWindow || _this2.activeWindow.options.windowOptions.modal) {
           return;
         }
         var clickedWindow = e.target.closest(".".concat(_types.LIBRARY_NAME, "-window"));
-        var clickedContextMenu = e.target.closest(".".concat(_types.LIBRARY_NAME, "-context-menu"));
         var clickedTaskbar = e.target.closest(".".concat(_types.LIBRARY_NAME, "-taskbar"));
         if (!clickedWindow && !clickedContextMenu && !clickedTaskbar) {
           var active = _this2.activeWindow;
           _this2.activeWindow = null;
           active.blur();
         }
-      });
-      document.addEventListener("click", function () {
-        return _this2.hideContextMenu();
       });
       window.addEventListener("message", function (event) {
         if (event.data && event.data.type === "winlet:createWindow" && (0, _typeof2["default"])(event.data.options) === "object") {
