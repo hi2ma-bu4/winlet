@@ -1,6 +1,4 @@
-import WinLetBaseClass from "./baseclass";
-
-export default class Utils extends WinLetBaseClass {
+export default class Utils {
 	/**
 	 * ユニークなIDを生成します。
 	 * @param prefix - IDのプレフィックス

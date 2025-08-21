@@ -86,6 +86,11 @@ export const defaultConfig: Required<WindowOptions> = {
 	onResize: () => {},
 	onMove: () => {},
 	onReload: () => {},
+	onBeforeClose: () => {},
+	onMoveStart: () => {},
+	onMoveEnd: () => {},
+	onResizeStart: () => {},
+	onResizeEnd: () => {},
 
 	_isPopup: false,
 	_parent: null,
