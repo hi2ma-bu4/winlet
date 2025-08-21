@@ -1203,7 +1203,8 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 	public close(): void {
 		// onBeforeCloseでfalseが返された場合は処理を中断
-		if (this.emit("before-close", this) === false) {
+		const results = this.emit("before-close", this);
+		if (results?.includes(false)) {
 			return;
 		}
 
@@ -1378,7 +1379,8 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 	public reload(): void {
 		// onReloadがfalseを返した場合、デフォルトのリロード処理を中断
-		if (this.emit("reload", this) === false) {
+		const results = this.emit("reload", this);
+		if (results?.includes(false)) {
 			return;
 		}
 

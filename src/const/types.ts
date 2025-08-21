@@ -147,7 +147,7 @@ export interface IWindow {
 
 	on<K extends keyof WindowEventMap>(eventName: K, listener: WindowEventMap[K], options?: ListenerOptions): void;
 	off<K extends keyof WindowEventMap>(eventName: K, listener: WindowEventMap[K]): void;
-	emit<K extends keyof WindowEventMap>(eventName: K, ...args: Parameters<WindowEventMap[K]>): void;
+	emit<K extends keyof WindowEventMap>(eventName: K, ...args: Parameters<WindowEventMap[K]>): (ReturnType<WindowEventMap[K]>)[] | undefined;
 
 	// --- Public API ---
 	/**
@@ -705,7 +705,7 @@ export interface WinLetApi {
 	init: (options?: GlobalConfigOptions) => void;
 	on<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K], options?: ListenerOptions): void;
 	off<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K]): void;
-	emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>): void;
+	emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>): (ReturnType<GlobalEventMap[K]>)[] | undefined;
 	/**
 	 * ウィンドウを作成します。
 	 * @param options - 新しいウィンドウのオプション

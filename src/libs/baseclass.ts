@@ -42,16 +42,18 @@ export default class WinLetBaseClass<EventMap extends Record<string, (...args: a
 		}
 	}
 
-	public emit<K extends keyof EventMap>(eventName: K, ...args: Parameters<EventMap[K]>): void {
+	public emit<K extends keyof EventMap>(eventName: K, ...args: Parameters<EventMap[K]>): (ReturnType<EventMap[K]>)[] | undefined {
 		const handlers = this.events.get(eventName);
 		if (handlers) {
+			const results: (ReturnType<EventMap[K]>)[] = [];
 			[...handlers].forEach((handlerObj) => {
 				try {
-					handlerObj.handler(...args);
+					results.push(handlerObj.handler(...args));
 				} catch (e) {
 					console.error(`Error in event handler for "${String(eventName)}":`, e);
 				}
 			});
+			return results;
 		}
 	}
 }
