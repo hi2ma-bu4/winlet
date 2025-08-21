@@ -1,6 +1,6 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, ListenerOptions, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowEventMap, WindowOptions, WindowState } from "../const/types";
+import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowEventMap, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";

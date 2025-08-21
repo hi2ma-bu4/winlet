@@ -42,10 +42,10 @@ export default class WinLetBaseClass<EventMap extends Record<string, (...args: a
 		}
 	}
 
-	public emit<K extends keyof EventMap>(eventName: K, ...args: Parameters<EventMap[K]>): (ReturnType<EventMap[K]>)[] | undefined {
+	public emit<K extends keyof EventMap>(eventName: K, ...args: Parameters<EventMap[K]>): ReturnType<EventMap[K]>[] | undefined {
 		const handlers = this.events.get(eventName);
 		if (handlers) {
-			const results: (ReturnType<EventMap[K]>)[] = [];
+			const results: ReturnType<EventMap[K]>[] = [];
 			[...handlers].forEach((handlerObj) => {
 				try {
 					results.push(handlerObj.handler(...args));
