@@ -48,16 +48,16 @@ const api: WinLetApi = {
 		return manager.createWindow(options);
 	},
 
-	on<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K], options?: ListenerOptions) {
+	on<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K], options?: ListenerOptions): void {
 		manager.on(eventName, listener, options);
 	},
 
-	off<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K]) {
+	off<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K]): void {
 		manager.off(eventName, listener);
 	},
 
-	emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>) {
-		manager.emit(eventName, ...args);
+	emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>): ReturnType<GlobalEventMap[K]>[] | undefined {
+		return manager.emit(eventName, ...args);
 	},
 
 	/**

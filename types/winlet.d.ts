@@ -96,11 +96,37 @@ interface SearchOptions {
      */
     targetSelector?: string;
 }
+interface ListenerOptions {
+    once?: boolean;
+}
+interface WindowEventMap {
+    open: (win: IWindow) => void;
+    close: (win: IWindow) => void;
+    "before-close": (win: IWindow) => boolean | void;
+    focus: (win: IWindow) => void;
+    blur: (win: IWindow) => void;
+    "move-start": (win: IWindow) => void;
+    "move-end": (win: IWindow) => void;
+    move: (win: IWindow) => void;
+    "resize-start": (win: IWindow) => void;
+    "resize-end": (win: IWindow) => void;
+    resize: (win: IWindow) => void;
+    reload: (win: IWindow) => boolean | void;
+    [key: string]: (...args: any[]) => any;
+}
+interface GlobalEventMap {
+    "window-created": (win: IWindow) => void;
+    "window-destroyed": (win: IWindow) => void;
+    [key: string]: (...args: any[]) => any;
+}
 interface IWindow {
     readonly id: string;
     options: Required<WindowOptions>;
     el: HTMLElement;
     state: WindowState;
+    on<K extends keyof WindowEventMap>(eventName: K, listener: WindowEventMap[K], options?: ListenerOptions): void;
+    off<K extends keyof WindowEventMap>(eventName: K, listener: WindowEventMap[K]): void;
+    emit<K extends keyof WindowEventMap>(eventName: K, ...args: Parameters<WindowEventMap[K]>): (ReturnType<WindowEventMap[K]>)[] | undefined;
     /**
      * ウィンドウを閉じます。
      */
@@ -464,6 +490,10 @@ interface WindowOptions {
      */
     onClose?: (win: IWindow) => void;
     /**
+     * ウィンドウが閉じる前に呼び出され、falseを返すとクローズをキャンセルします。
+     */
+    onBeforeClose?: (win: IWindow) => boolean | void;
+    /**
      * ウィンドウフォーカス時
      */
     onFocus?: (win: IWindow) => void;
@@ -475,6 +505,22 @@ interface WindowOptions {
      * ウィンドウリサイズ時
      */
     onResize?: (win: IWindow) => void;
+    /**
+     * ウィンドウの移動開始時
+     */
+    onMoveStart?: (win: IWindow) => void;
+    /**
+     * ウィンドウの移動終了時
+     */
+    onMoveEnd?: (win: IWindow) => void;
+    /**
+     * ウィンドウのリサイズ開始時
+     */
+    onResizeStart?: (win: IWindow) => void;
+    /**
+     * ウィンドウのリサイズ終了時
+     */
+    onResizeEnd?: (win: IWindow) => void;
     /**
      * ウィンドウ移動時
      */
@@ -614,6 +660,9 @@ interface Theme {
 }
 interface WinLetApi {
     init: (options?: GlobalConfigOptions) => void;
+    on<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K], options?: ListenerOptions): void;
+    off<K extends keyof GlobalEventMap>(eventName: K, listener: GlobalEventMap[K]): void;
+    emit<K extends keyof GlobalEventMap>(eventName: K, ...args: Parameters<GlobalEventMap[K]>): (ReturnType<GlobalEventMap[K]>)[] | undefined;
     /**
      * ウィンドウを作成します。
      * @param options - 新しいウィンドウのオプション

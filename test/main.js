@@ -25,9 +25,7 @@ jasc.on("DOMContentLoaded", () => {
 // TODO: ウィンドウのグルーピング: 複数のウィンドウを一つのグループとして扱い、一括で移動や最小化・復元ができる機能
 // TODO: カスケード表示API: WinLet.cascadeWindows() のように、現在開いている全てのウィンドウを階段状に整列させるAPI
 // イベント・通信
-// TODO: グローバルイベントバス: WinLet.on('event', ...)やWinLet.emit('event', ...)のように、特定のウィンドウに依存しないグローバルなイベントを発行・購読できる仕組み
 // TODO: ブロードキャスト機能: あるウィンドウから、他の全てのウィンドウ（または特定の条件を満たすウィンドウ）へ一斉にメッセージを送信するwin.broadcast('message', data)機能
-// TODO: 詳細なライフサイクルイベント: onBeforeClose（閉じる前に確認ダイアログを挟むなど）、onMoveStart/onMoveEnd、onResizeStart/onResizeEndなど、よりきめ細かいイベントフックを提供します
 // 開発者体験・パフォーマンス
 // TODO: プラグインアーキテクチャ: テーマやスナップ機能などを、コアライブラリを直接変更せずに機能追加できるプラグインシステムを導入
 // TODO: 設定の動的変更: win.setOptions({ resizableX: false, title: 'New Title' })のように、インスタンス生成後にもオプションを動的に変更できるAPIを整備
