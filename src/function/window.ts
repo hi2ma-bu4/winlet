@@ -1,6 +1,6 @@
 import { defaultConfig } from "../const/config";
 import { WinLetError } from "../const/errors";
-import { CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowEventMap, WindowOptions, WindowState } from "../const/types";
+import { AnimationOptions, AnimationOrigin, CLOSE_BUTTON_RESULT, IWindow, LIBRARY_NAME, MenuItem, PopupOptions, PopupResult, SplitViewOptions, TabItem, VirtualizationLevel, WindowContentOptions, WindowEventMap, WindowOptions, WindowState } from "../const/types";
 import WinLetBaseClass from "../libs/baseclass";
 import Utils from "../libs/utils";
 import WindowManager from "./window_manager";
@@ -50,6 +50,11 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 	private parentWindow: IWindow | null;
 
 	private debugOverlayEl: HTMLElement | null = null;
+	private isContentLoaded = false;
+	private throttledEmitMove: (() => void) | null = null;
+	private throttledEmitResize: (() => void) | null = null;
+	private canvasSnapshot: string | null = null;
+	private canvasOverlayEl: HTMLElement | null = null;
 	public virtualizationLevel: VirtualizationLevel = "none";
 	private minimizeVirtualizeTimer: number | null = null;
 	private readonly virtualizationHierarchy: readonly VirtualizationLevel[] = ["none", "frozen", "suspended", "unloaded"];
@@ -69,6 +74,19 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 
 		// 検索オプションの初期状態を設定
 		this.searchOptionsState.caseSensitive = !!this.options.search.caseSensitive;
+
+		// イベントスロットリングのセットアップ
+		const throttlingOptions = this.manager.getGlobalConfig().eventThrottling;
+		if (!this.options.disableMoveEvent) {
+			const delay = throttlingOptions?.moveDelay;
+			const emitMove = () => this.emit("move", this);
+			this.throttledEmitMove = delay && delay > 0 ? Utils.throttle(emitMove, delay) : emitMove;
+		}
+		if (!this.options.disableResizeEvent) {
+			const delay = throttlingOptions?.resizeDelay;
+			const emitResize = () => this.emit("resize", this);
+			this.throttledEmitResize = delay && delay > 0 ? Utils.throttle(emitResize, delay) : emitResize;
+		}
 
 		this.el = this.createDOM();
 
@@ -98,6 +116,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 		this.mainContentEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-main-content`)!;
 		this.contentEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
 		this.loaderEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-loader-overlay`)!;
+		this.canvasOverlayEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-canvas-overlay`)!;
 		this.debugOverlayEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-debug-overlay`);
 		this.statusBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-statusbar`);
 
@@ -120,6 +139,46 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 		if (this.options.onReload) this.on("reload", this.options.onReload);
 
 		this.emit("open", this);
+	}
+
+	private _calculateTransformOrigin(origin?: AnimationOrigin | null): string {
+		let originX = 0;
+		let originY = 0;
+
+		const winRect = this.el.getBoundingClientRect();
+
+		// No origin, default to taskbar item if available and enabled
+		if (!origin && this.manager.getGlobalConfig().animateFromTaskbar && this.options._taskbarItem) {
+			origin = this.options._taskbarItem;
+		}
+
+		if (origin instanceof HTMLElement) {
+			const rect = origin.getBoundingClientRect();
+			originX = rect.left + rect.width / 2;
+			originY = rect.top + rect.height / 2;
+		} else if (typeof origin === "string") {
+			const el = document.querySelector(origin);
+			if (el) {
+				const rect = el.getBoundingClientRect();
+				originX = rect.left + rect.width / 2;
+				originY = rect.top + rect.height / 2;
+			}
+		} else if (origin instanceof MouseEvent) {
+			originX = origin.clientX;
+			originY = origin.clientY;
+		} else if (origin && typeof origin === "object" && "x" in origin && "y" in origin) {
+			originX = origin.x;
+			originY = origin.y;
+		} else {
+			// Default to window center if no valid origin is provided
+			return `50% 50%`;
+		}
+
+		// ウィンドウの左上からの相対座標を計算
+		const relativeX = originX - winRect.left;
+		const relativeY = originY - winRect.top;
+
+		return `${relativeX}px ${relativeY}px`;
 	}
 
 	private createDOM(): HTMLElement {
@@ -154,9 +213,11 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 
 		const customControlsHTML = (this.options.customControls ?? []).map((c) => `<button class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-custom-control-btn" data-name="${c.name}" title="${c.title || ""}" aria-label="${c.title || c.name}">${c.html}</button>`).join("");
 
+		const refreshBtnHTML = `<button class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-refresh-btn" title="Refresh Content" aria-label="Refresh Content"><i class="fas fa-sync-alt"></i></button>`;
 		const controlsHTML = `
             <div class="${LIBRARY_NAME}-controls">
 				${customControlsHTML}
+				${refreshBtnHTML}
                 ${this.options.windowOptions.minimizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-minimize-btn" type="button" value="\uff3f" title="Minimize" aria-label="Minimize"/>` : ""}
                 ${this.options.windowOptions.maximizable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-maximize-btn" type="button" value="\u25a1" title="Maximize" aria-label="Maximize"/>` : ""}
                 ${this.options.windowOptions.closable ? `<input class="${LIBRARY_NAME}-control-btn ${LIBRARY_NAME}-close-btn" type="button" value="\u2573" title="Close" aria-label="Close"/>` : ""}
@@ -178,6 +239,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 
 		const statusBarHTML = this.options.statusBar.enabled ? `<div class="${LIBRARY_NAME}-statusbar"></div>` : "";
 		const debugHTML = `<div class="${LIBRARY_NAME}-debug-overlay"></div>`;
+		const canvasOverlayHTML = `<div class="${LIBRARY_NAME}-canvas-overlay"></div>`;
 
 		windowEl.innerHTML = `
 			${debugHTML}
@@ -189,11 +251,26 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
                 ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar" role="tablist"></div>` : ""}
                 <div class="${LIBRARY_NAME}-content"></div>
 				${loaderHTML}
+				${canvasOverlayHTML}
             </div>
 			${statusBarHTML}
             ${resizableHandlesHTML}
         `;
 		return windowEl;
+	}
+
+	private _renderInitialContent(): void {
+		if (this.isContentLoaded) return;
+
+		// 分割ビューが定義されていれば、そちらを優先
+		if (this.options.splitView && this.options.splitView.panes.length > 0) {
+			this.createSplitView(this.contentEl, this.options.splitView);
+		} else if (this.options.tabs.length > 0) {
+			this.createTabs();
+		} else {
+			this.renderContent(this.contentEl, this.options.content);
+		}
+		this.isContentLoaded = true;
 	}
 
 	private applyOptions(): void {
@@ -207,13 +284,10 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 			this.titleBarEl.classList.add(`${LIBRARY_NAME}-controls-left`);
 		}
 
-		// 分割ビューが定義されていれば、そちらを優先
-		if (this.options.splitView && this.options.splitView.panes.length > 0) {
-			this.createSplitView(this.contentEl, this.options.splitView);
-		} else if (this.options.tabs.length > 0) {
-			this.createTabs();
+		if (!this.options.lazyLoad) {
+			this._renderInitialContent();
 		} else {
-			this.renderContent(this.contentEl, this.options.content);
+			this.showLoader();
 		}
 
 		if (this.options.menu.length > 0) {
@@ -801,6 +875,9 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 				} else if (button.classList.contains(`${LIBRARY_NAME}-minimize-btn`)) {
 					e.stopPropagation();
 					this.minimize();
+				} else if (button.classList.contains(`${LIBRARY_NAME}-refresh-btn`)) {
+					e.stopPropagation();
+					this.unvirtualize();
 				}
 				// カスタムボタン
 				else if (button.classList.contains(`${LIBRARY_NAME}-custom-control-btn`)) {
@@ -950,6 +1027,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 				} else {
 					this.setPosition(newLeft, newTop);
 				}
+				this.throttledEmitMove?.();
 			};
 
 			const onPointerUp = () => {
@@ -964,7 +1042,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 				if (isDragging) {
 					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
-					this.emit("move", this);
 					this.emit("move-end", this);
 					this.manager.updateVirtualization();
 				}
@@ -1047,6 +1124,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 							this.setSize(newWidth, newHeight);
 							this.setPosition(newLeft, newTop);
 						}
+						this.throttledEmitResize?.();
 					};
 					const onPointerUp = () => {
 						handle.releasePointerCapture(e.pointerId);
@@ -1060,7 +1138,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 
 						document.removeEventListener("pointermove", onPointerMove);
 						document.removeEventListener("pointerup", onPointerUp);
-						this.emit("resize", this);
 						this.emit("resize-end", this);
 						this.updateDebugOverlay();
 						this.manager.updateVirtualization();
@@ -1113,7 +1190,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	 * ウィンドウを指定されたレベルまで仮想化する
 	 * @param level - 仮想化の目標レベル
 	 */
-	public virtualize(level: "none" | "frozen" | "suspended" | "unloaded" | "auto"): void {
+	public async virtualize(level: "none" | "frozen" | "suspended" | "unloaded" | "auto"): Promise<void> {
 		if (level === "auto") {
 			level = this.getUnsafeContentLevel();
 		}
@@ -1124,34 +1201,56 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		const currentIndex = this.virtualizationHierarchy.indexOf(this.virtualizationLevel);
 		const targetIndex = this.virtualizationHierarchy.indexOf(level);
 
-		// 下位レベルへの変更は、一度unvirtualize()を呼び出してリセットする必要がある
 		if (targetIndex <= currentIndex) {
 			return;
 		}
 
-		// 現在の仮想化状態に関連するスタイルなどをクリーンアップ
 		this.cleanupVirtualizationStyles();
 
-		// 新しいレベルを設定し、その効果を適用
+		// Add lock class to disable controls during any virtualization
+		this.el.classList.add(`${LIBRARY_NAME}-virtualization-lock`);
+
+		const restoreMode = this.options.virtualizationRestoreMode || this.manager.getGlobalConfig().virtualizationRestoreMode || "auto";
+		if (restoreMode === "manual" && this.options.showVirtualizationRefreshButton) {
+			this.el.classList.add(`${LIBRARY_NAME}-is-virtualized-manual`);
+		}
+
+		const strategy = this.options.virtualizationStrategy || this.manager.getGlobalConfig().virtualizationStrategy;
+
+		if (strategy === "canvas" && level === "unloaded") {
+			this.showLoader();
+			try {
+				this.canvasSnapshot = await this.capture();
+				if (this.canvasOverlayEl && this.canvasSnapshot) {
+					const img = document.createElement("img");
+					img.src = this.canvasSnapshot;
+					this.canvasOverlayEl.innerHTML = "";
+					this.canvasOverlayEl.appendChild(img);
+					this.canvasOverlayEl.style.display = "block";
+				}
+			} catch (e) {
+				console.error("WinLet: Canvas virtualization failed, falling back to standard.", e);
+				this.canvasSnapshot = null; // Ensure fallback works
+			} finally {
+				this.hideLoader();
+			}
+		}
+
 		this.virtualizationLevel = level;
 
-		// 以前が非仮想化状態だった場合にのみ通知
 		if (currentIndex === 0 && targetIndex > 0) {
 			this.manager.updateTaskbarItem(this, "virtualized");
 		}
 
 		switch (level) {
 			case "frozen":
-				// cssでvisibility: hiddenを適用
 				this.el.classList.add(`${LIBRARY_NAME}-is-frozen`);
 				break;
 			case "suspended":
-				// cssでdisplay: noneを適用
 				this.el.classList.add(`${LIBRARY_NAME}-is-suspended`);
 				break;
 			case "unloaded":
 				this.el.classList.add(`${LIBRARY_NAME}-is-virtualized`);
-				// コンテンツをメモリから解放
 				if (this.tabs.length > 0) {
 					this.tabs.forEach((tab) => {
 						tab.contentEl.innerHTML = "";
@@ -1169,28 +1268,27 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	 */
 	public unvirtualize(): void {
 		if (this.virtualizationLevel === "none") return;
+
+		this.el.classList.remove(`${LIBRARY_NAME}-virtualization-lock`, `${LIBRARY_NAME}-is-virtualized-manual`);
+
+		if (this.canvasSnapshot && this.canvasOverlayEl) {
+			this.canvasOverlayEl.style.display = "none";
+			this.canvasOverlayEl.innerHTML = "";
+			this.canvasSnapshot = null;
+		}
+
 		this.manager.updateTaskbarItem(this, "unvirtualized");
 
 		const previousLevel = this.virtualizationLevel;
 		this.virtualizationLevel = "none";
-		// すべての仮想化関連クラスを削除
 		this.cleanupVirtualizationStyles();
 
-		// 前のレベルに応じてコンテンツを復元
 		if (previousLevel === "unloaded") {
-			// コンテンツを再描画
-			this.loaderEl.style.display = "flex"; // ローディング表示
-			// 非同期でコンテンツを再読み込み・再描画
+			this.showLoader();
 			requestAnimationFrame(() => {
-				if (this.options.tabs.length > 0) {
-					this.tabs.forEach((tab) => {
-						const tabIndex = parseInt(tab.tabEl.dataset.tabId!, 10);
-						this.renderContent(tab.contentEl, this.options.tabs[tabIndex].content);
-					});
-				} else {
-					this.renderContent(this.contentEl, this.options.content);
-				}
-				this.loaderEl.style.display = "none";
+				this.isContentLoaded = false; // Allow re-rendering
+				this._renderInitialContent();
+				this.hideLoader();
 			});
 		}
 		this.updateDebugOverlay();
@@ -1221,40 +1319,48 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		this.manager.destroyWindow(this.id);
 	}
 
-	public minimize(): void {
-		if (this.state !== "minimized") {
-			if (this.state !== "normal") this.restore();
+	public minimize(options?: AnimationOptions): void {
+		if (this.virtualizationLevel !== "none") {
+			this.unvirtualize();
+		}
+		if (this.state === "minimized") return;
 
-			const doMinimize = () => {
-				this.state = "minimized";
-				this.el.setAttribute("aria-hidden", "true");
-				this.el.classList.add(`${LIBRARY_NAME}-minimized`);
-				this.el.classList.remove(`${LIBRARY_NAME}-is-minimizing`);
-				this.manager.updateTaskbarItem(this, "minimized");
-				this.blur();
+		if (this.state !== "normal") {
+			this.restore();
+		}
 
-				// 最小化時の仮想化タイマーを開始
-				const globalConfig = this.manager.getGlobalConfig();
-				if (globalConfig.enableVirtualization && this.options.virtualizable) {
-					if (this.minimizeVirtualizeTimer) {
-						clearTimeout(this.minimizeVirtualizeTimer);
-					}
-					this.minimizeVirtualizeTimer = window.setTimeout(() => {
-						this.virtualize("auto");
-					}, globalConfig.virtualizationDelay ?? 5000);
+		const doMinimize = () => {
+			this.state = "minimized";
+			this.el.classList.add(`${LIBRARY_NAME}-minimized`);
+			this.el.classList.remove(`${LIBRARY_NAME}-is-minimizing`);
+			this.el.setAttribute("aria-hidden", "true");
+			this.manager.updateTaskbarItem(this, "minimized");
+			this.blur();
+
+			// 最小化時の仮想化タイマーを開始
+			const globalConfig = this.manager.getGlobalConfig();
+			if (globalConfig.enableVirtualization && this.options.virtualizable) {
+				if (this.minimizeVirtualizeTimer) {
+					clearTimeout(this.minimizeVirtualizeTimer);
 				}
-				this.updateDebugOverlay();
-				this.manager.updateVirtualization();
-			};
-
-			this.el.setAttribute("inert", "");
-			if (this.manager.getGlobalConfig().enableAnimations) {
-				this.el.classList.add(`${LIBRARY_NAME}-is-minimizing`);
-				this.el.setAttribute("inert", "");
-				this.el.addEventListener("transitionend", doMinimize, { once: true, passive: true });
-			} else {
-				doMinimize();
+				this.minimizeVirtualizeTimer = window.setTimeout(() => {
+					this.virtualize("auto");
+				}, globalConfig.virtualizationDelay ?? 5000);
 			}
+			this.updateDebugOverlay();
+			this.manager.updateVirtualization();
+		};
+
+		this.el.setAttribute("inert", "");
+		if (this.manager.getGlobalConfig().enableAnimations) {
+			const originPriority = [options?.origin, this.options.animationOrigin, this.manager.getGlobalConfig().animateFromTaskbar ? this.options._taskbarItem : null];
+			const origin = originPriority.find((o) => o != null);
+			this.el.style.transformOrigin = this._calculateTransformOrigin(origin);
+
+			this.el.classList.add(`${LIBRARY_NAME}-is-minimizing`);
+			this.el.addEventListener("transitionend", doMinimize, { once: true });
+		} else {
+			doMinimize();
 		}
 	}
 
@@ -1263,6 +1369,9 @@ Virt:  ${this.virtualizationLevel}`.trim();
 	}
 
 	public maximize(): void {
+		if (this.virtualizationLevel !== "none") {
+			this.unvirtualize();
+		}
 		if (this.state !== "maximized") {
 			if (this.state !== "normal") this.restore();
 			this.lastState = { x: this.el.offsetLeft, y: this.el.offsetTop, width: this.el.offsetWidth, height: this.el.offsetHeight };
@@ -1297,7 +1406,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		}
 	}
 
-	public restore(): void {
+	public restore(options?: AnimationOptions): void {
 		// 仮想化解除タイマーをクリア
 		if (this.minimizeVirtualizeTimer) {
 			clearTimeout(this.minimizeVirtualizeTimer);
@@ -1308,12 +1417,33 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			this.unvirtualize();
 		}
 
-		const wasMinimized = this.state === "minimized";
 		if (this.state === "minimized") {
-			this.state = "normal";
+			const doRestore = () => {
+				this.state = "normal";
+				this.el.classList.remove(`${LIBRARY_NAME}-is-restoring-from-minimized`);
+				// アニメーション後に不要なスタイルをクリーンアップ
+				this.el.style.transformOrigin = "";
+				this.updateDebugOverlay();
+				this.manager.updateVirtualization();
+			};
+
 			this.el.removeAttribute("aria-hidden");
 			this.el.removeAttribute("inert");
-			this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
+
+			if (this.manager.getGlobalConfig().enableAnimations) {
+				const originPriority = [options?.origin, this.options.animationOrigin, this.manager.getGlobalConfig().animateFromTaskbar ? this.options._taskbarItem : null];
+				const origin = originPriority.find((o) => o != null);
+				this.el.style.transformOrigin = this._calculateTransformOrigin(origin);
+
+				// `minimized`クラスを削除して表示状態にし、アニメーションを開始
+				this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
+				this.el.classList.add(`${LIBRARY_NAME}-is-restoring-from-minimized`);
+				this.el.addEventListener("transitionend", doRestore, { once: true });
+			} else {
+				this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
+				doRestore();
+			}
+
 			this.manager.updateTaskbarItem(this, "restored");
 			this.focus();
 		} else if (this.state === "maximized") {
@@ -1329,16 +1459,21 @@ Virt:  ${this.virtualizationLevel}`.trim();
 				this.updateDebugOverlay();
 			};
 
-			if (this.manager.getGlobalConfig().enableAnimations && !wasMinimized) {
-				this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
-				this.setSize(this.lastState.width, this.lastState.height);
-				this.setPosition(this.lastState.x, this.lastState.y);
-				this.el.addEventListener("transitionend", doRestore, { once: true, passive: true });
-			} else {
-				this.setSize(this.lastState.width, this.lastState.height);
-				this.setPosition(this.lastState.x, this.lastState.y);
-				doRestore();
-			}
+			// Temporarily add transition for layout properties
+			this.el.style.transition = "top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out";
+
+			this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
+			this.setSize(this.lastState.width, this.lastState.height);
+			this.setPosition(this.lastState.x, this.lastState.y);
+
+			this.el.addEventListener(
+				"transitionend",
+				() => {
+					this.el.style.transition = ""; // remove temporary transition
+					doRestore();
+				},
+				{ once: true }
+			);
 		}
 		this.updateDebugOverlay();
 		this.manager.updateVirtualization();
@@ -1346,6 +1481,15 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 	public focus(): void {
 		if (this.focused) return;
+
+		const restoreMode = this.options.virtualizationRestoreMode || this.manager.getGlobalConfig().virtualizationRestoreMode || "auto";
+		if (this.virtualizationLevel !== "none" && restoreMode === "manual") {
+			this.unvirtualize();
+		}
+
+		if (this.options.lazyLoad && !this.isContentLoaded) {
+			this._renderInitialContent();
+		}
 
 		// 階層を遡ってすべての親ウィンドウをフォーカスする
 		if (this.parentWindow) {

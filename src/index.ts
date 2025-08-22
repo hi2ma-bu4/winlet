@@ -13,6 +13,7 @@ const globalConfig: GlobalConfigOptions = {
 	windowSwitchShortcut: "Ctrl+`", // デフォルトショートカット（バッククォート）
 	libraryPath: selfUrl,
 	enableAnimations: true,
+	animateFromTaskbar: true,
 	enableFocusTrapping: true,
 	enableVirtualization: true,
 	indicateVirtualizationInTaskbar: true,

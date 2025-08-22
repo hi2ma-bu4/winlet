@@ -1,4 +1,21 @@
 type WindowState = "normal" | "minimized" | "maximized";
+/**
+ * アニメーションの基点
+ * - string: DOMセレクタ
+ * - HTMLElement: DOM要素
+ * - MouseEvent: マウスイベント
+ * - object: 座標 { x: number; y: number }
+ */
+type AnimationOrigin = string | HTMLElement | MouseEvent | {
+    x: number;
+    y: number;
+};
+/**
+ * アニメーションのオプション
+ */
+interface AnimationOptions {
+    origin?: AnimationOrigin;
+}
 interface WindowContentOptions {
     /**
      * 直接埋め込むHTML
@@ -133,8 +150,9 @@ interface IWindow {
     close(): void;
     /**
      * ウィンドウを最小化します。
+     * @param options - アニメーションのオプション
      */
-    minimize(): void;
+    minimize(options?: AnimationOptions): void;
     /**
      * ウィンドウを最大化/元に戻します。
      */
@@ -145,8 +163,9 @@ interface IWindow {
     maximize(): void;
     /**
      * ウィンドウを元に戻します。
+     * @param options - アニメーションのオプション
      */
-    restore(): void;
+    restore(options?: AnimationOptions): void;
     /**
      * ウィンドウをフォーカスします。
      */
@@ -324,6 +343,14 @@ interface WindowOptions {
      */
     virtualizable?: boolean;
     /**
+     * 拡大・縮小アニメーションの基点を指定します。
+     * - セレクタ文字列 (e.g., '#my-button')
+     * - HTMLElement
+     * - MouseEvent
+     * - 座標オブジェクト {x: number, y: number}
+     */
+    animationOrigin?: AnimationOrigin | null;
+    /**
      * ウィンドウのオプション
      */
     windowOptions?: {
@@ -482,6 +509,38 @@ interface WindowOptions {
      */
     showLoadingIndicator?: boolean;
     /**
+     * コンテンツの読み込みを初回フォーカス時まで遅延させるか
+     * @default false
+     */
+    lazyLoad?: boolean;
+    /**
+     * moveイベントの発火を無効にするか
+     * @default false
+     */
+    disableMoveEvent?: boolean;
+    /**
+     * resizeイベントの発火を無効にするか
+     * @default false
+     */
+    disableResizeEvent?: boolean;
+    /**
+     * このウィンドウに適用する仮想化戦略
+     * 'standard': DOMを非表示/解放 (デフォルト)
+     * 'canvas': コンテンツをCanvasに描き出してDOMを解放
+     */
+    virtualizationStrategy?: "standard" | "canvas";
+    /**
+     * 仮想化からの復帰モード
+     * 'auto': ウィンドウが可視になった際に自動で復帰 (デフォルト)
+     * 'manual': ユーザーのアクション（クリック、フォーカス、更新ボタン）で復帰
+     */
+    virtualizationRestoreMode?: "auto" | "manual";
+    /**
+     * 手動復帰モードの際に更新ボタンを表示するか
+     * @default true
+     */
+    showVirtualizationRefreshButton?: boolean;
+    /**
      * ウィンドウオープン時
      */
     onOpen?: (win: IWindow) => void;
@@ -597,6 +656,11 @@ interface GlobalConfigOptions {
      */
     enableAnimations?: boolean;
     /**
+     * 最小化・復元時にタスクバーのアイコンからアニメーションさせるか
+     * @default true
+     */
+    animateFromTaskbar?: boolean;
+    /**
      * タスクバーを表示するか
      * @default false
      */
@@ -622,6 +686,18 @@ interface GlobalConfigOptions {
      */
     indicateVirtualizationInTaskbar?: boolean;
     /**
+     * グローバルな仮想化戦略
+     * 'standard': DOMを非表示/解放 (デフォルト)
+     * 'canvas': コンテンツをCanvasに描き出してDOMを解放
+     */
+    virtualizationStrategy?: "standard" | "canvas";
+    /**
+     * グローバルな仮想化からの復帰モード
+     * 'auto': ウィンドウが可視になった際に自動で復帰 (デフォルト)
+     * 'manual': ユーザーのアクション（クリック、フォーカス、更新ボタン）で復帰
+     */
+    virtualizationRestoreMode?: "auto" | "manual";
+    /**
      * 仮想化がアクティブになる最小ウィンドウ数。
      * この数を超えると、非表示のウィンドウの仮想化が開始されます。
      * @default 5
@@ -633,6 +709,13 @@ interface GlobalConfigOptions {
      * @default 10000
      */
     virtualizationDelay?: number;
+    /**
+     * イベントのスロットリング設定 (ミリ秒)
+     */
+    eventThrottling?: {
+        moveDelay?: number;
+        resizeDelay?: number;
+    };
     /**
      * 初期テーマ
      * 'dark'などの登録済みテーマ名、またはThemeオブジェクトを指定
