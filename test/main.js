@@ -8,11 +8,16 @@ jasc.on("DOMContentLoaded", () => {
 		windowSwitchShortcut: "Ctrl+@",
 		enableAnimations: true,
 		enableTaskbar: true,
-		virtualizationDelay: 10000,
+		virtualizationDelay: 3000,
 		taskbar: {
 			position: "bottom",
 		},
 		enableDebugMode: true,
+		eventThrottling: {
+			moveDelay: 100,
+			resizeDelay: 100,
+		},
+		virtualizationStrategy: "canvas",
 	});
 });
 
@@ -34,12 +39,13 @@ jasc.on("DOMContentLoaded", () => {
 // TODO: メニューとタブのキーボード操作: メニューバーやタブバー内を矢印キーで移動し、Enterキーで選択や切り替えができるように
 
 class Main {
-	static createBasicWindow() {
+	static createBasicWindow(event) {
 		WinLet.createWindow({
 			title: "基本的なウィンドウ",
 			icon: "https://img.icons8.com/color/48/000000/html-5.png",
 			width: 400,
 			height: 250,
+			animationOrigin: event, // クリックイベントを基点にする
 			content: {
 				html: `
                 <div style="padding: 20px;">
@@ -59,6 +65,7 @@ class Main {
 			icon: "fab fa-wikipedia-w", // Font Awesome icon
 			width: 800,
 			height: 600,
+			animationOrigin: "#iframe-win-btn", // ボタンのIDを基点にする
 			content: {
 				iframe: {
 					src: "https://www.wikipedia.org/",
@@ -289,6 +296,33 @@ class Main {
 			},
 			{ once: true }
 		);
+	}
+
+	static createLazyWindow() {
+		WinLet.createWindow({
+			title: "Lazy Load Test",
+			lazyLoad: true,
+			content: { html: '<div style="padding:1em;"><h2>このコンテンツは遅延読み込みされました</h2><p>最初のフォーカスで表示されます。</p></div>' },
+		});
+	}
+
+	static createThrottledWindow() {
+		const win = WinLet.createWindow({
+			title: "Throttling Test",
+			content: { html: '<div style="padding:1em;"><p>ウィンドウを移動・リサイズしてコンソールを確認してください。</p></div>' },
+			// disableMoveEvent: true, // このオプションでイベントを無効化できます
+		});
+		win.on("move", () => console.log("Move event throttled"));
+		win.on("resize", () => console.log("Resize event throttled"));
+	}
+
+	static createManualRestoreWindow() {
+		WinLet.createWindow({
+			title: "Manual Restore Test",
+			virtualizationRestoreMode: "manual",
+			// showVirtualizationRefreshButton: false, // このオプションで更新ボタンを非表示にできます
+			content: { html: '<div style="padding:1em;"><h2>このウィンドウは手動復帰が必要です</h2><p>他のウィンドウの裏に隠して仮想化させ、フォーカスすると復帰します。</p></div>' },
+		});
 	}
 }
 

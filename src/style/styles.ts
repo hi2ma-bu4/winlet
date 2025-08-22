@@ -202,6 +202,16 @@ const styleData: string = `
     pointer-events: none;
     z-index: 15; /* ローダーより手前 */
 }
+
+/**
+ * 仮想化時の操作制限
+ */
+.$[prefix]-window.$[prefix]-virtualization-lock .$[prefix]-menu-bar,
+.$[prefix]-window.$[prefix]-virtualization-lock .$[prefix]-tab-bar,
+.$[prefix]-window.$[prefix]-virtualization-lock .$[prefix]-custom-control-btn {
+    pointer-events: none;
+    opacity: 0.5;
+}
 /* ========================================================================
     5. ウィンドウ
    ======================================================================== */
@@ -219,29 +229,36 @@ const styleData: string = `
     border-radius: 5px;
     overflow: hidden;
     pointer-events: all;
-    transition: opacity 0.2s, transform 0.2s, top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
+    transition: opacity 0.25s, transform 0.25s;
     touch-action: none;
 }
 
 /* --- ウィンドウ状態別スタイル --- */
 /**
- * 最小化されたウィンドウのアニメーション
+ * 最小化中のウィンドウ
  */
-.$[prefix]-window.$[prefix]-is-minimizing,
-.$[prefix]-window.$[prefix]-minimized {
+.$[prefix]-window.$[prefix]-is-minimizing {
     transform: scale(0);
     opacity: 0;
-    transition: opacity 0.25s, transform 0.25s;
     pointer-events: none;
 }
+
+/**
+ * 最小化完了状態のウィンドウ
+ */
 .$[prefix]-window.$[prefix]-minimized {
+    /* アニメーションの最終状態を維持 */
+    transform: scale(0);
+    opacity: 0;
+    /* 表示と操作を無効化 */
     display: none;
+    pointer-events: none;
 }
 /**
- * 最大化されたウィンドウのアニメーション
+ * 最大化されたウィンドウ
  */
 .$[prefix]-window.$[prefix]-maximized {
-    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
+    border-radius: 0;
 }
 /**
  * 最大化状態ではリサイズハンドルを非表示
@@ -250,10 +267,10 @@ const styleData: string = `
     display: none;
 }
 /**
- * 復元中のアニメーション
+ * 復元中のアニメーション（現在は状態を示すマーカーとしてのみ利用）
  */
 .$[prefix]-window.$[prefix]-is-restoring {
-    transition: top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out;
+    /* The transition is now handled by the base .winlet-window class */
 }
 
 /**
@@ -436,6 +453,14 @@ const styleData: string = `
     color: var(--$[prefix]-control-close-hover-color);
 }
 
+.$[prefix]-refresh-btn {
+    display: none;
+}
+
+.$[prefix]-window.$[prefix]-is-virtualized-manual .$[prefix]-refresh-btn {
+    display: inline-flex;
+}
+
 /* ========================================================================
     8. メインコンテンツエリア
    ======================================================================== */
@@ -491,6 +516,21 @@ const styleData: string = `
     border: 5px solid #fff;
     border-bottom-color: var(--$[prefix]-loader-color);
     animation: $[prefix]-spinner-rotation 1s linear infinite;
+}
+
+.$[prefix]-canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    z-index: 10;
+}
+.$[prefix]-canvas-overlay img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* ========================================================================

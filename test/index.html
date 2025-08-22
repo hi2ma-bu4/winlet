@@ -19,12 +19,15 @@
 		<h1>WinLet - JavaScript Window Library Demo</h1>
 		<p class="description">以下のボタンでさまざまな機能のウィンドウを作成できます。</p>
 
-		<button onclick="Main.createBasicWindow()">基本ウィンドウ</button>
-		<button onclick="Main.createIframeWindow()">Iframeウィンドウ</button>
+		<button id="basic-win-btn" onclick="Main.createBasicWindow(event)">基本ウィンドウ (クリック位置から)</button>
+		<button id="iframe-win-btn" onclick="Main.createIframeWindow()">Iframeウィンドウ (ボタンから)</button>
 		<button onclick="Main.createTemplateWindow()">Templateウィンドウ</button>
 		<button onclick="Main.createFullFeatureWindow()">全機能ウィンドウ</button>
 		<button onclick="Main.createAlwaysOnTopWindow()">最前面ウィンドウ</button>
 		<button onclick="Main.createEventTestWindow()">イベントテスト</button>
+		<button onclick="Main.createLazyWindow()">Lazy Loadウィンドウ</button>
+		<button onclick="Main.createThrottledWindow()">スロットリングテスト</button>
+		<button onclick="Main.createManualRestoreWindow()">手動復帰ウィンドウ</button>
 	</div>
 
 	<template id="my-template">
