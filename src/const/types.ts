@@ -556,7 +556,7 @@ export interface WindowOptions {
 	 * 'standard': DOMを非表示/解放 (デフォルト)
 	 * 'canvas': コンテンツをCanvasに描き出してDOMを解放
 	 */
-	virtualizationStrategy?: "standard" | "canvas";
+	virtualizationStrategy?: "standard" | "canvas" | null;
 	/**
 	 * 仮想化からの復帰モード
 	 * 'auto': ウィンドウが可視になった際に自動で復帰 (デフォルト)

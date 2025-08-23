@@ -671,7 +671,7 @@ var defaultConfig = exports.defaultConfig = {
   lazyLoad: false,
   disableMoveEvent: false,
   disableResizeEvent: false,
-  virtualizationStrategy: "standard",
+  virtualizationStrategy: null,
   virtualizationRestoreMode: "auto",
   showVirtualizationRefreshButton: true,
   onOpen: function onOpen() {},
