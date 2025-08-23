@@ -160,7 +160,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 			this.setTheme("default");
 		}
 
-		this.updateVirtualization();
+		(async () => await this.updateVirtualization())();
 
 		window.addEventListener("blur", () =>
 			// 次のイベントサイクルでアクティブな要素を取得
@@ -291,7 +291,15 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 					content: tabData.content,
 				};
 
-				const mergedWindowOptions = Utils.deepMerge(Utils.deepCopy(sourceWindow.options), {
+				// Create a clean copy of the source options, removing non-serializable parts.
+				const cleanSourceOptions: Partial<WindowOptions> = Utils.deepCopy(sourceWindow.options);
+				delete cleanSourceOptions.id; // New window should get a new ID
+				delete cleanSourceOptions.animationOrigin; // This is often a non-serializable DOM element or event
+				delete cleanSourceOptions.content; // Will be replaced by the new tab content
+				delete cleanSourceOptions.tabs; // Will be replaced by the new tab
+				delete cleanSourceOptions.splitView; // A detached tab shouldn't inherit a split view
+
+				const mergedWindowOptions = Utils.deepMerge(cleanSourceOptions, {
 					tabs: [newTab],
 					x: e.clientX,
 					y: e.clientY,
@@ -445,33 +453,54 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 			const winWidth = creationOptions.width;
 			const winHeight = creationOptions.height;
 			const containerRect = this.workspaceEl!.getBoundingClientRect();
+			const centerPos = {
+				x: (containerRect.width - winWidth) / 2,
+				y: (containerRect.height - winHeight) / 2,
+			};
 
-			let nextX: number;
-			let nextY: number;
+			// カスケードを中央からリセットすべきか判断
+			let resetCascade = true;
+			if (this.lastAutoPosition) {
+				let lastPosWindowFound = false;
+				for (const win of this.windows.values()) {
+					if (win.state === "normal" && !win.options._isPopup) {
+						const pos = win.getPosition();
+						// 前回のカスケード位置にウィンドウが存在するかチェック
+						if (Math.abs(pos.x - this.lastAutoPosition.x) < 5 && Math.abs(pos.y - this.lastAutoPosition.y) < 5) {
+							lastPosWindowFound = true;
+							break;
+						}
+					}
+				}
+				if (lastPosWindowFound) {
+					resetCascade = false;
+				}
+			}
 
-			if (this.lastAutoPosition === null) {
-				nextX = 0;
-				nextY = 0;
+			let nextPos: { x: number; y: number };
+
+			if (resetCascade) {
+				nextPos = centerPos;
 			} else {
-				// 右下へカスケード
-				nextX = this.lastAutoPosition.x + this.CASCADE_OFFSET;
-				nextY = this.lastAutoPosition.y + this.CASCADE_OFFSET;
+				nextPos = {
+					x: this.lastAutoPosition!.x + this.CASCADE_OFFSET,
+					y: this.lastAutoPosition!.y + this.CASCADE_OFFSET,
+				};
 			}
 
-			// はみ出しチェックとリセット
-			if (nextX + winWidth > containerRect.width) {
-				nextX = 0;
-			}
-			if (nextY + winHeight > containerRect.height) {
-				nextY = 0;
+			// 画面外にはみ出す場合は中央に戻す
+			if (nextPos.x + winWidth > containerRect.width || nextPos.y + winHeight > containerRect.height) {
+				nextPos = centerPos;
 			}
 
 			// 計算結果をオプションに反映
-			creationOptions.x = nextX;
-			creationOptions.y = nextY;
+			creationOptions.x = nextPos.x;
+			creationOptions.y = nextPos.y;
 
-			// 次回のために位置を保存
-			this.lastAutoPosition = { x: nextX, y: nextY };
+			// ポップアップでない場合のみ、次回のカスケード位置を保存
+			if (!creationOptions._isPopup) {
+				this.lastAutoPosition = { x: nextPos.x, y: nextPos.y };
+			}
 		}
 
 		const win = new WinLetWindow(creationOptions, this);
@@ -587,17 +616,50 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 		}
 		winOptions.height = 150;
 
-		winOptions.x = "center";
-		winOptions.y = "center";
+		const winWidth = winOptions.width!;
+		const winHeight = winOptions.height!;
+		const containerRect = this.workspaceEl!.getBoundingClientRect();
+		const centerPos = {
+			x: (containerRect.width - winWidth) / 2,
+			y: (containerRect.height - winHeight) / 2,
+		};
+
+		let resetCascade = true;
+		if (this.lastPopupPosition) {
+			let lastPosWindowFound = false;
+			for (const win of this.windows.values()) {
+				if (win.options._isPopup && win.state === "normal") {
+					const pos = win.getPosition();
+					if (Math.abs(pos.x - this.lastPopupPosition.x) < 5 && Math.abs(pos.y - this.lastPopupPosition.y) < 5) {
+						lastPosWindowFound = true;
+						break;
+					}
+				}
+			}
+			if (lastPosWindowFound) {
+				resetCascade = false;
+			}
+		}
+
+		let nextPos: { x: number; y: number };
+		if (resetCascade) {
+			nextPos = centerPos;
+		} else {
+			nextPos = {
+				x: this.lastPopupPosition!.x + this.CASCADE_OFFSET,
+				y: this.lastPopupPosition!.y + this.CASCADE_OFFSET,
+			};
+		}
+
+		if (nextPos.x + winWidth > containerRect.width || nextPos.y + winHeight > containerRect.height) {
+			nextPos = centerPos;
+		}
+
+		winOptions.x = nextPos.x;
+		winOptions.y = nextPos.y;
 
 		const win = this.createWindow(winOptions);
-		// 計算が面倒なので前回1回分のみで判断
-		let winPosition = win.getPosition();
-		if (this.lastPopupPosition && this.lastPopupPosition.x === winPosition.x && this.lastPopupPosition.y === winPosition.y) {
-			win.setPosition(this.lastPopupPosition.x + this.CASCADE_OFFSET, this.lastPopupPosition.y + this.CASCADE_OFFSET);
-			winPosition = win.getPosition();
-		}
-		this.lastPopupPosition = winPosition;
+		this.lastPopupPosition = nextPos; // Save the position for the next popup
 		win.popupCloseCallback = closeCallback;
 
 		win.el.querySelectorAll<HTMLButtonElement>(`.${LIBRARY_NAME}-popup-button`).forEach((button) => {
@@ -653,7 +715,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 				if (nextWin) this.focusWindow(nextWin);
 			}
 			// ウィンドウ破棄後に仮想化状態を更新
-			this.updateVirtualization();
+			(async () => await this.updateVirtualization())();
 		}
 	}
 
@@ -678,7 +740,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove(`${LIBRARY_NAME}-active`));
 		win.options._taskbarItem?.classList.add(`${LIBRARY_NAME}-active`);
 		// ウィンドウのフォーカス、移動、リサイズ時に仮想化状態を即時更新
-		this.updateVirtualization();
+		(async () => await this.updateVirtualization())();
 
 		// focus()はWindowクラス側で呼ばれるので不要
 	}
@@ -875,10 +937,10 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 
 		item.addEventListener("click", () => {
 			if (win.state === "minimized") {
-				win.restore();
+				win.restore({ origin: item });
 			} else {
 				if (this.activeWindow === win) {
-					win.minimize();
+					win.minimize({ origin: item });
 				} else {
 					win.focus();
 				}
@@ -991,7 +1053,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 	/**
 	 * 全てのウィンドウの可視性をチェックし、必要に応じて仮想化/復元を行う
 	 */
-	public updateVirtualization(): void {
+	public async updateVirtualization(): Promise<void> {
 		if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
 
 		const threshold = this.globalConfig.virtualizationThreshold ?? 5;
@@ -1070,9 +1132,12 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 
 			// 3. 最終的な可視性に基づいて仮想化状態を更新
 			if (isVisible) {
-				targetWin.unvirtualize();
+				const restoreMode = targetWin.options.virtualizationRestoreMode || this.globalConfig.virtualizationRestoreMode || "auto";
+				if (restoreMode === "auto") {
+					targetWin.unvirtualize();
+				}
 			} else {
-				targetWin.virtualize("auto");
+				await targetWin.virtualize("auto");
 			}
 		}
 	}

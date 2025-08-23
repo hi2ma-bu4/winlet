@@ -104,4 +104,27 @@ export default class Utils {
 	public static escapeRegex(string: string): string {
 		return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
 	}
+
+	/**
+	 * 関数をスロットリングします。指定された時間内に複数回呼び出されても、最後の呼び出しから一定時間後に一度だけ実行します。
+	 * @param func - スロットリングする関数
+	 * @param delay - 遅延時間 (ミリ秒)
+	 * @returns スロットリングされた関数
+	 */
+	public static throttle(func: (...args: any[]) => void, delay: number): (...args: any[]) => void {
+		let timeoutId: number | null = null;
+		let lastArgs: any[] | null = null;
+
+		return function (...args: any[]) {
+			lastArgs = args;
+			if (timeoutId === null) {
+				timeoutId = window.setTimeout(() => {
+					if (lastArgs) {
+						func(...lastArgs);
+					}
+					timeoutId = null;
+				}, delay);
+			}
+		};
+	}
 }
