@@ -4687,7 +4687,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.6";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.7";
 
 },{}]},{},[43])
 //# sourceMappingURL=winlet.js.map
