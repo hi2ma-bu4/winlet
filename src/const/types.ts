@@ -202,10 +202,11 @@ export interface IWindow {
 	shake(): void;
 	/**
 	 * ウィンドウの内容をキャプチャして、画像データとして取得します。
+	 * @param mode - "window" (デフォルト) または "content"
 	 * @returns PNG形式のデータURLを含むPromise
 	 * @see https://github.com/niklasvh/html2canvas
 	 */
-	capture(): Promise<string>;
+	capture(mode?: "window" | "content"): Promise<string>;
 	/**
 	 * ウィンドウのコンテンツを印刷します。
 	 */
@@ -553,11 +554,6 @@ export interface WindowOptions {
 	disableResizeEvent?: boolean;
 	/**
 	 * このウィンドウに適用する仮想化戦略
-	 * 'standard': DOMを非表示/解放 (デフォルト)
-	 * 'canvas': コンテンツをCanvasに描き出してDOMを解放
-	 */
-	virtualizationStrategy?: "standard" | "canvas" | null;
-	/**
 	 * 仮想化からの復帰モード
 	 * 'auto': ウィンドウが可視になった際に自動で復帰 (デフォルト)
 	 * 'manual': ユーザーのアクション（クリック、フォーカス、更新ボタン）で復帰
@@ -726,11 +722,6 @@ export interface GlobalConfigOptions {
 	indicateVirtualizationInTaskbar?: boolean;
 	/**
 	 * グローバルな仮想化戦略
-	 * 'standard': DOMを非表示/解放 (デフォルト)
-	 * 'canvas': コンテンツをCanvasに描き出してDOMを解放
-	 */
-	virtualizationStrategy?: "standard" | "canvas";
-	/**
 	 * グローバルな仮想化からの復帰モード
 	 * 'auto': ウィンドウが可視になった際に自動で復帰 (デフォルト)
 	 * 'manual': ユーザーのアクション（クリック、フォーカス、更新ボタン）で復帰

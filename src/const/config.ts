@@ -83,7 +83,6 @@ export const defaultConfig: Required<WindowOptions> = {
 	lazyLoad: false,
 	disableMoveEvent: false,
 	disableResizeEvent: false,
-	virtualizationStrategy: null,
 	virtualizationRestoreMode: "auto",
 	showVirtualizationRefreshButton: true,
 	onOpen: () => {},

@@ -53,8 +53,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 	private isContentLoaded = false;
 	private throttledEmitMove: (() => void) | null = null;
 	private throttledEmitResize: (() => void) | null = null;
-	private canvasSnapshot: string | null = null;
-	private canvasOverlayEl: HTMLElement | null = null;
 	public virtualizationLevel: VirtualizationLevel = "none";
 	private minimizeVirtualizeTimer: number | null = null;
 	private readonly virtualizationHierarchy: readonly VirtualizationLevel[] = ["none", "frozen", "suspended", "unloaded"];
@@ -116,7 +114,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 		this.mainContentEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-main-content`)!;
 		this.contentEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-content`)!;
 		this.loaderEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-loader-overlay`)!;
-		this.canvasOverlayEl = this.mainContentEl.querySelector<HTMLElement>(`.${LIBRARY_NAME}-canvas-overlay`)!;
 		this.debugOverlayEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-debug-overlay`);
 		this.statusBarEl = this.el.querySelector<HTMLElement>(`.${LIBRARY_NAME}-statusbar`);
 
@@ -239,7 +236,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 
 		const statusBarHTML = this.options.statusBar.enabled ? `<div class="${LIBRARY_NAME}-statusbar"></div>` : "";
 		const debugHTML = `<div class="${LIBRARY_NAME}-debug-overlay"></div>`;
-		const canvasOverlayHTML = `<div class="${LIBRARY_NAME}-canvas-overlay"></div>`;
 
 		windowEl.innerHTML = `
 			${debugHTML}
@@ -251,7 +247,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
                 ${!isMergedTabs && hasTabs ? `<div class="${LIBRARY_NAME}-tab-bar" role="tablist"></div>` : ""}
                 <div class="${LIBRARY_NAME}-content"></div>
 				${loaderHTML}
-				${canvasOverlayHTML}
             </div>
 			${statusBarHTML}
             ${resizableHandlesHTML}
@@ -1215,27 +1210,6 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			this.el.classList.add(`${LIBRARY_NAME}-is-virtualized-manual`);
 		}
 
-		const strategy = this.options.virtualizationStrategy || this.manager.getGlobalConfig().virtualizationStrategy;
-
-		if (strategy === "canvas" && level === "unloaded") {
-			this.showLoader();
-			try {
-				this.canvasSnapshot = await this.capture();
-				if (this.canvasOverlayEl && this.canvasSnapshot) {
-					const img = document.createElement("img");
-					img.src = this.canvasSnapshot;
-					this.canvasOverlayEl.innerHTML = "";
-					this.canvasOverlayEl.appendChild(img);
-					this.canvasOverlayEl.style.display = "block";
-				}
-			} catch (e) {
-				console.error("WinLet: Canvas virtualization failed, falling back to standard.", e);
-				this.canvasSnapshot = null; // Ensure fallback works
-			} finally {
-				this.hideLoader();
-			}
-		}
-
 		this.virtualizationLevel = level;
 
 		if (currentIndex === 0 && targetIndex > 0) {
@@ -1270,12 +1244,6 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		if (this.virtualizationLevel === "none") return;
 
 		this.el.classList.remove(`${LIBRARY_NAME}-virtualization-lock`, `${LIBRARY_NAME}-is-virtualized-manual`);
-
-		if (this.canvasSnapshot && this.canvasOverlayEl) {
-			this.canvasOverlayEl.style.display = "none";
-			this.canvasOverlayEl.innerHTML = "";
-			this.canvasSnapshot = null;
-		}
 
 		this.manager.updateTaskbarItem(this, "unvirtualized");
 
@@ -1911,7 +1879,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 		return manager.popupAsync(popupOptionsWithParent);
 	}
 
-	public async capture(): Promise<string> {
+	public async capture(mode: "window" | "content" = "window"): Promise<string> {
 		// HTML2Canvasがロードされているかどうかを確認します（例：CDN経由）
 		if (typeof window.html2canvas !== "function") {
 			const e = new WinLetError("The capture() feature requires the 'html2canvas' library. Please include it from a CDN to use this feature. https://html2canvas.hertzen.com/");
@@ -1919,14 +1887,29 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			return Promise.reject(e);
 		}
 
+		const targetEl = mode === "content" ? this.mainContentEl : this.el;
+
 		try {
-			const canvas = await window.html2canvas(this.el, {
+			const canvas = await window.html2canvas(targetEl, {
 				allowTaint: true,
 				useCORS: true,
 				logging: false,
 				onclone: (clonedDoc: Document) => {
+					const clonedTarget = clonedDoc.querySelector(`#${this.id}`);
+					if (!clonedTarget) return;
+
 					// 一時的なUI要素のキャプチャを避けるため
-					clonedDoc.querySelector(`#${this.id}`)?.classList.remove(`${LIBRARY_NAME}-is-resizing`, `${LIBRARY_NAME}-is-dragging`);
+					clonedTarget.classList.remove(`${LIBRARY_NAME}-is-resizing`, `${LIBRARY_NAME}-is-dragging`);
+
+					// 除外DOMの削除
+					const selectorsToRemove = [
+						`.${LIBRARY_NAME}-resize-handle`,
+						`.${LIBRARY_NAME}-debug-overlay`,
+						`.${LIBRARY_NAME}-controls`,
+					];
+					selectorsToRemove.forEach((selector) => {
+						clonedTarget.querySelectorAll(selector).forEach((el) => el.remove());
+					});
 				},
 			});
 			return canvas.toDataURL("image/png");
