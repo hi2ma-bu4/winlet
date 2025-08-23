@@ -1421,6 +1421,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			const doRestore = () => {
 				this.state = "normal";
 				this.el.classList.remove(`${LIBRARY_NAME}-is-restoring-from-minimized`);
+				// アニメーション後に不要なスタイルをクリーンアップ
 				this.el.style.transformOrigin = "";
 				this.updateDebugOverlay();
 				this.manager.updateVirtualization();
@@ -1435,6 +1436,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 				const origin = originPriority.find((o) => o != null);
 				this.el.style.transformOrigin = this._calculateTransformOrigin(origin);
 
+				// `minimized`クラスを削除して表示状態にし、アニメーションを開始
 				this.el.classList.remove(`${LIBRARY_NAME}-minimized`);
 				this.el.classList.add(`${LIBRARY_NAME}-is-restoring-from-minimized`);
 				this.el.addEventListener("transitionend", doRestore, { once: true });
