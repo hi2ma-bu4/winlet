@@ -1,6 +1,6 @@
 {
   "name": "winlet",
-  "version": "v1.0.3.0",
+  "version": "v1.0.3.1",
   "description": "ウィンドウ生成ライブラリ",
   "license": "Apache-2.0",
   "repository": {
