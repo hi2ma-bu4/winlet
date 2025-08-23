@@ -17,7 +17,6 @@ jasc.on("DOMContentLoaded", () => {
 			moveDelay: 100,
 			resizeDelay: 100,
 		},
-		virtualizationStrategy: "canvas",
 	});
 });
 
