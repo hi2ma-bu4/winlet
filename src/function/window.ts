@@ -1086,7 +1086,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 						this.manager.container?.appendChild(ghostEl);
 					}
 
-					const direction = handle.className.replace(`${LIBRARY_NAME}-resize-handle `, "");
+					const direction = handle.classList;
 					const { clientX: startX, clientY: startY } = e;
 					const { offsetWidth: startWidth, offsetHeight: startHeight, offsetLeft: startLeft, offsetTop: startTop } = this.el;
 					const { minWidth, minHeight } = this.options;
@@ -1099,16 +1099,22 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 						const deltaX = moveE.clientX - startX;
 						const deltaY = moveE.clientY - startY;
 
-						if (direction.includes(`${LIBRARY_NAME}-e`)) newWidth = Math.max(minWidth, startWidth + deltaX);
-						if (direction.includes(`${LIBRARY_NAME}-w`)) {
-							newWidth = Math.max(minWidth, startWidth - deltaX);
-							newLeft = startLeft + deltaX;
-						}
-						if (direction.includes(`${LIBRARY_NAME}-s`)) newHeight = Math.max(minHeight, startHeight + deltaY);
-						if (direction.includes(`${LIBRARY_NAME}-n`)) {
+						const nw = direction.contains(`${LIBRARY_NAME}-nw`);
+						const ne = direction.contains(`${LIBRARY_NAME}-ne`);
+						const sw = direction.contains(`${LIBRARY_NAME}-sw`);
+						const se = direction.contains(`${LIBRARY_NAME}-se`);
+
+						if (direction.contains(`${LIBRARY_NAME}-n`) || nw || ne) {
 							newHeight = Math.max(minHeight, startHeight - deltaY);
 							newTop = startTop + deltaY;
 						}
+						if (direction.contains(`${LIBRARY_NAME}-s`) || sw || se) newHeight = Math.max(minHeight, startHeight + deltaY);
+						if (direction.contains(`${LIBRARY_NAME}-w`) || nw || sw) {
+							newWidth = Math.max(minWidth, startWidth - deltaX);
+							newLeft = startLeft + deltaX;
+						}
+						if (direction.contains(`${LIBRARY_NAME}-e`) || ne || se) newWidth = Math.max(minWidth, startWidth + deltaX);
+
 						if (ghostEl) {
 							ghostEl.style.left = `${newLeft}px`;
 							ghostEl.style.top = `${newTop}px`;

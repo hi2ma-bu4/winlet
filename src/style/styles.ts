@@ -51,6 +51,7 @@ const styleData: string = `
     /* リサイズハンドル */
     --$[prefix]-resize-handle-size: 8px;
     --$[prefix]-resize-handle-offset: -4px;
+    --$[prefix]-resize-handle-distance: calc(var(--$[prefix]-resize-handle-offset) * -1);
 
     /* タスクバー */
     --$[prefix]-taskbar-bg: rgba(240, 240, 240, 0.9);
@@ -848,10 +849,10 @@ const styleData: string = `
     touch-action: none;
 }
 
-.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }
-.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: 0; right: 0; height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }
-.$[prefix]-resize-handle.$[prefix]-w { top: 0; bottom: 0; left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }
-.$[prefix]-resize-handle.$[prefix]-e { top: 0; bottom: 0; right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }
+.$[prefix]-resize-handle.$[prefix]-n { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-distance); right: var(--$[prefix]-resize-handle-distance); height: var(--$[prefix]-resize-handle-size); cursor: n-resize; }
+.$[prefix]-resize-handle.$[prefix]-s { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-distance); right: var(--$[prefix]-resize-handle-distance); height: var(--$[prefix]-resize-handle-size); cursor: s-resize; }
+.$[prefix]-resize-handle.$[prefix]-w { top: var(--$[prefix]-resize-handle-distance); bottom: var(--$[prefix]-resize-handle-distance); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: w-resize; }
+.$[prefix]-resize-handle.$[prefix]-e { top: var(--$[prefix]-resize-handle-distance); bottom: var(--$[prefix]-resize-handle-distance); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); cursor: e-resize; }
 .$[prefix]-resize-handle.$[prefix]-nw { top: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: nw-resize; }
 .$[prefix]-resize-handle.$[prefix]-ne { top: var(--$[prefix]-resize-handle-offset); right: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: ne-resize; }
 .$[prefix]-resize-handle.$[prefix]-sw { bottom: var(--$[prefix]-resize-handle-offset); left: var(--$[prefix]-resize-handle-offset); width: var(--$[prefix]-resize-handle-size); height: var(--$[prefix]-resize-handle-size); cursor: sw-resize; }
