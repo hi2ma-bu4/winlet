@@ -1674,7 +1674,20 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             _this1.el.releasePointerCapture(e.pointerId);
             _this1.contentEl.style.pointerEvents = "auto";
             _this1.emit("move-end", _this1);
-            _this1.manager.updateVirtualization();
+            (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee() {
+              return _regenerator["default"].wrap(function (_context) {
+                while (1) switch (_context.prev = _context.next) {
+                  case 0:
+                    _context.next = 1;
+                    return _this1.manager.updateVirtualization();
+                  case 1:
+                    return _context.abrupt("return", _context.sent);
+                  case 2:
+                  case "end":
+                    return _context.stop();
+                }
+              }, _callee);
+            }))();
           }
           _this1.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-dragging"));
         };
@@ -1773,7 +1786,20 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
             document.removeEventListener("pointerup", _onPointerUp3);
             _this10.emit("resize-end", _this10);
             _this10.updateDebugOverlay();
-            _this10.manager.updateVirtualization();
+            (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee2() {
+              return _regenerator["default"].wrap(function (_context2) {
+                while (1) switch (_context2.prev = _context2.next) {
+                  case 0:
+                    _context2.next = 1;
+                    return _this10.manager.updateVirtualization();
+                  case 1:
+                    return _context2.abrupt("return", _context2.sent);
+                  case 2:
+                  case "end":
+                    return _context2.stop();
+                }
+              }, _callee2);
+            }))();
             _this10.el.classList.remove("".concat(_types.LIBRARY_NAME, "-is-resizing"));
           };
           document.addEventListener("pointermove", onPointerMove, {
@@ -1822,27 +1848,27 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "virtualize",
     value: (function () {
-      var _virtualize = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee(level) {
+      var _virtualize = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee3(level) {
         var currentIndex, targetIndex, restoreMode, strategy, img, _t, _t2;
-        return _regenerator["default"].wrap(function (_context) {
-          while (1) switch (_context.prev = _context.next) {
+        return _regenerator["default"].wrap(function (_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
             case 0:
               if (level === "auto") {
                 level = this.getUnsafeContentLevel();
               }
               if (!(level === "none")) {
-                _context.next = 1;
+                _context3.next = 1;
                 break;
               }
-              return _context.abrupt("return");
+              return _context3.abrupt("return");
             case 1:
               currentIndex = this.virtualizationHierarchy.indexOf(this.virtualizationLevel);
               targetIndex = this.virtualizationHierarchy.indexOf(level);
               if (!(targetIndex <= currentIndex)) {
-                _context.next = 2;
+                _context3.next = 2;
                 break;
               }
-              return _context.abrupt("return");
+              return _context3.abrupt("return");
             case 2:
               this.cleanupVirtualizationStyles();
               this.el.classList.add("".concat(_types.LIBRARY_NAME, "-virtualization-lock"));
@@ -1852,15 +1878,15 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               }
               strategy = this.options.virtualizationStrategy || this.manager.getGlobalConfig().virtualizationStrategy;
               if (!(strategy === "canvas" && level === "unloaded")) {
-                _context.next = 7;
+                _context3.next = 7;
                 break;
               }
               this.showLoader();
-              _context.prev = 3;
-              _context.next = 4;
+              _context3.prev = 3;
+              _context3.next = 4;
               return this.capture();
             case 4:
-              this.canvasSnapshot = _context.sent;
+              this.canvasSnapshot = _context3.sent;
               if (this.canvasOverlayEl && this.canvasSnapshot) {
                 img = document.createElement("img");
                 img.src = this.canvasSnapshot;
@@ -1868,31 +1894,31 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
                 this.canvasOverlayEl.appendChild(img);
                 this.canvasOverlayEl.style.display = "block";
               }
-              _context.next = 6;
+              _context3.next = 6;
               break;
             case 5:
-              _context.prev = 5;
-              _t = _context["catch"](3);
+              _context3.prev = 5;
+              _t = _context3["catch"](3);
               console.error("WinLet: Canvas virtualization failed, falling back to standard.", _t);
               this.canvasSnapshot = null;
             case 6:
-              _context.prev = 6;
+              _context3.prev = 6;
               this.hideLoader();
-              return _context.finish(6);
+              return _context3.finish(6);
             case 7:
               this.virtualizationLevel = level;
               if (currentIndex === 0 && targetIndex > 0) {
                 this.manager.updateTaskbarItem(this, "virtualized");
               }
               _t2 = level;
-              _context.next = _t2 === "frozen" ? 8 : _t2 === "suspended" ? 9 : _t2 === "unloaded" ? 10 : 11;
+              _context3.next = _t2 === "frozen" ? 8 : _t2 === "suspended" ? 9 : _t2 === "unloaded" ? 10 : 11;
               break;
             case 8:
               this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-frozen"));
-              return _context.abrupt("continue", 11);
+              return _context3.abrupt("continue", 11);
             case 9:
               this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-suspended"));
-              return _context.abrupt("continue", 11);
+              return _context3.abrupt("continue", 11);
             case 10:
               this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-virtualized"));
               if (this.tabs.length > 0) {
@@ -1902,14 +1928,14 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
               } else {
                 this.contentEl.innerHTML = "";
               }
-              return _context.abrupt("continue", 11);
+              return _context3.abrupt("continue", 11);
             case 11:
               this.updateDebugOverlay();
             case 12:
             case "end":
-              return _context.stop();
+              return _context3.stop();
           }
-        }, _callee, this, [[3, 5, 6, 7]]);
+        }, _callee3, this, [[3, 5, 6, 7]]);
       }));
       function virtualize(_x) {
         return _virtualize.apply(this, arguments);
@@ -2076,6 +2102,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         };
         this.el.removeAttribute("aria-hidden");
         this.el.removeAttribute("inert");
+        this.el.style.transition = "";
         if (this.manager.getGlobalConfig().enableAnimations) {
           var originPriority = [options === null || options === void 0 ? void 0 : options.origin, this.options.animationOrigin, this.manager.getGlobalConfig().animateFromTaskbar ? this.options._taskbarItem : null];
           var origin = originPriority.find(function (o) {
@@ -2097,6 +2124,7 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
         var _doRestore = function _doRestore() {
           _this14.state = "normal";
           _this14.el.classList.remove("".concat(_types.LIBRARY_NAME, "-maximized"), "".concat(_types.LIBRARY_NAME, "-is-restoring"));
+          _this14.el.style.transition = "";
           var maxBtn = _this14.el.querySelector(".".concat(_types.LIBRARY_NAME, "-maximize-btn"));
           if (maxBtn) {
             maxBtn.title = "Maximize";
@@ -2105,19 +2133,35 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
           }
           _this14.updateDebugOverlay();
         };
-        this.el.style.transition = "top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out";
-        this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-restoring"));
-        this.setSize(this.lastState.width, this.lastState.height);
-        this.setPosition(this.lastState.x, this.lastState.y);
-        this.el.addEventListener("transitionend", function () {
-          _this14.el.style.transition = "";
+        if (this.manager.getGlobalConfig().enableAnimations) {
+          this.el.style.transition = "top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out";
+          this.el.classList.add("".concat(_types.LIBRARY_NAME, "-is-restoring"));
+          this.setSize(this.lastState.width, this.lastState.height);
+          this.setPosition(this.lastState.x, this.lastState.y);
+          this.el.addEventListener("transitionend", _doRestore, {
+            once: true
+          });
+        } else {
+          this.setSize(this.lastState.width, this.lastState.height);
+          this.setPosition(this.lastState.x, this.lastState.y);
           _doRestore();
-        }, {
-          once: true
-        });
+        }
       }
       this.updateDebugOverlay();
-      this.manager.updateVirtualization();
+      (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee4() {
+        return _regenerator["default"].wrap(function (_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
+            case 0:
+              _context4.next = 1;
+              return _this14.manager.updateVirtualization();
+            case 1:
+              return _context4.abrupt("return", _context4.sent);
+            case 2:
+            case "end":
+              return _context4.stop();
+          }
+        }, _callee4);
+      }))();
     }
   }, {
     key: "focus",
@@ -2513,22 +2557,22 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "capture",
     value: function () {
-      var _capture = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee2() {
+      var _capture = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee5() {
         var _this19 = this;
         var e, canvas, _e, _t3;
-        return _regenerator["default"].wrap(function (_context2) {
-          while (1) switch (_context2.prev = _context2.next) {
+        return _regenerator["default"].wrap(function (_context5) {
+          while (1) switch (_context5.prev = _context5.next) {
             case 0:
               if (!(typeof window.html2canvas !== "function")) {
-                _context2.next = 1;
+                _context5.next = 1;
                 break;
               }
               e = new _errors.WinLetError("The capture() feature requires the 'html2canvas' library. Please include it from a CDN to use this feature. https://html2canvas.hertzen.com/");
               console.warn(e);
-              return _context2.abrupt("return", Promise.reject(e));
+              return _context5.abrupt("return", Promise.reject(e));
             case 1:
-              _context2.prev = 1;
-              _context2.next = 2;
+              _context5.prev = 1;
+              _context5.next = 2;
               return window.html2canvas(this.el, {
                 allowTaint: true,
                 useCORS: true,
@@ -2539,20 +2583,20 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
                 }
               });
             case 2:
-              canvas = _context2.sent;
-              return _context2.abrupt("return", canvas.toDataURL("image/png"));
+              canvas = _context5.sent;
+              return _context5.abrupt("return", canvas.toDataURL("image/png"));
             case 3:
-              _context2.prev = 3;
-              _t3 = _context2["catch"](1);
+              _context5.prev = 3;
+              _t3 = _context5["catch"](1);
               _e = new _errors.WinLetError("html2canvas failed to capture the window. Error: ".concat(_t3.message));
               _e.stack += "\n\n--- Caused by ---\n" + _t3.stack;
               console.error(_e);
-              return _context2.abrupt("return", Promise.reject(_e));
+              return _context5.abrupt("return", Promise.reject(_e));
             case 4:
             case "end":
-              return _context2.stop();
+              return _context5.stop();
           }
-        }, _callee2, this, [[1, 3]]);
+        }, _callee5, this, [[1, 3]]);
       }));
       function capture() {
         return _capture.apply(this, arguments);
@@ -2613,12 +2657,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
       frameDoc.write("</body></html>");
       frameDoc.close();
       var doPrint = function () {
-        var _ref = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee3() {
+        var _ref4 = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee6() {
           var _printFrame$contentWi2, _printFrame$contentWi3;
-          return _regenerator["default"].wrap(function (_context3) {
-            while (1) switch (_context3.prev = _context3.next) {
+          return _regenerator["default"].wrap(function (_context6) {
+            while (1) switch (_context6.prev = _context6.next) {
               case 0:
-                _context3.next = 1;
+                _context6.next = 1;
                 return new Promise(function (resolve) {
                   return setTimeout(resolve, 300);
                 });
@@ -2635,12 +2679,12 @@ var WinLetWindow = exports["default"] = function (_WinLetBaseClass) {
                 }
               case 2:
               case "end":
-                return _context3.stop();
+                return _context6.stop();
             }
-          }, _callee3);
+          }, _callee6);
         }));
         return function doPrint() {
-          return _ref.apply(this, arguments);
+          return _ref4.apply(this, arguments);
         };
       }();
       if (((_printFrame$contentWi4 = printFrame.contentWindow) === null || _printFrame$contentWi4 === void 0 ? void 0 : _printFrame$contentWi4.document.readyState) === "complete") {
@@ -2845,8 +2889,10 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports["default"] = void 0;
+var _regenerator = _interopRequireDefault(require("@babel/runtime/regenerator"));
 var _slicedToArray2 = _interopRequireDefault(require("@babel/runtime/helpers/slicedToArray"));
 var _typeof2 = _interopRequireDefault(require("@babel/runtime/helpers/typeof"));
+var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/asyncToGenerator"));
 var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
 var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
 var _possibleConstructorReturn2 = _interopRequireDefault(require("@babel/runtime/helpers/possibleConstructorReturn"));
@@ -2991,7 +3037,20 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
       } else {
         this.setTheme("default");
       }
-      this.updateVirtualization();
+      (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee() {
+        return _regenerator["default"].wrap(function (_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              _context.next = 1;
+              return _this2.updateVirtualization();
+            case 1:
+              return _context.abrupt("return", _context.sent);
+            case 2:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee);
+      }))();
       window.addEventListener("blur", function () {
         return (requestAnimationFrame(function () {
             var activeEl = document.activeElement;
@@ -3096,7 +3155,13 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
             title: tabData.title,
             content: tabData.content
           };
-          var mergedWindowOptions = _utils["default"].deepMerge(_utils["default"].deepCopy(sourceWindow.options), {
+          var cleanSourceOptions = _utils["default"].deepCopy(sourceWindow.options);
+          delete cleanSourceOptions.id;
+          delete cleanSourceOptions.animationOrigin;
+          delete cleanSourceOptions.content;
+          delete cleanSourceOptions.tabs;
+          delete cleanSourceOptions.splitView;
+          var mergedWindowOptions = _utils["default"].deepMerge(cleanSourceOptions, {
             tabs: [newTab],
             x: e.clientX,
             y: e.clientY,
@@ -3513,6 +3578,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "destroyWindow",
     value: function destroyWindow(id) {
+      var _this6 = this;
       this.ensureInitialized();
       var win = this.windows.get(id);
       if (win) {
@@ -3531,13 +3597,28 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
           var nextWin = Array.from(this.windows.values()).pop();
           if (nextWin) this.focusWindow(nextWin);
         }
-        this.updateVirtualization();
+        (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee2() {
+          return _regenerator["default"].wrap(function (_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.next = 1;
+                return _this6.updateVirtualization();
+              case 1:
+                return _context2.abrupt("return", _context2.sent);
+              case 2:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2);
+        }))();
       }
     }
   }, {
     key: "focusWindow",
     value: function focusWindow(win) {
-      var _this$activeWindow, _win$options$_taskbar;
+      var _this$activeWindow,
+        _win$options$_taskbar,
+        _this7 = this;
       this.ensureInitialized();
       if (this.activeWindow === win && !win.options.windowOptions.modal) return;
       (_this$activeWindow = this.activeWindow) === null || _this$activeWindow === void 0 || _this$activeWindow.blur();
@@ -3553,7 +3634,20 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         return (_w$options$_taskbarIt = w.options._taskbarItem) === null || _w$options$_taskbarIt === void 0 ? void 0 : _w$options$_taskbarIt.classList.remove("".concat(_types.LIBRARY_NAME, "-active"));
       });
       (_win$options$_taskbar = win.options._taskbarItem) === null || _win$options$_taskbar === void 0 || _win$options$_taskbar.classList.add("".concat(_types.LIBRARY_NAME, "-active"));
-      this.updateVirtualization();
+      (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee3() {
+        return _regenerator["default"].wrap(function (_context3) {
+          while (1) switch (_context3.prev = _context3.next) {
+            case 0:
+              _context3.next = 1;
+              return _this7.updateVirtualization();
+            case 1:
+              return _context3.abrupt("return", _context3.sent);
+            case 2:
+            case "end":
+              return _context3.stop();
+          }
+        }, _callee3);
+      }))();
     }
   }, {
     key: "getWindow",
@@ -3596,7 +3690,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "showContextMenu",
     value: function showContextMenu(x, y, menuItems, contextWindow) {
-      var _this6 = this;
+      var _this8 = this;
       this.ensureInitialized();
       this.hideContextMenu();
       this.contextMenuEl = document.createElement("ul");
@@ -3612,10 +3706,10 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
             var _itemData$action;
             e.stopPropagation();
             (_itemData$action = itemData.action) === null || _itemData$action === void 0 || _itemData$action.call(itemData, contextWindow);
-            _this6.hideContextMenu();
+            _this8.hideContextMenu();
           });
         }
-        _this6.contextMenuEl.appendChild(itemEl);
+        _this8.contextMenuEl.appendChild(itemEl);
       });
       this.workspaceEl.appendChild(this.contextMenuEl);
       var _this$contextMenuEl = this.contextMenuEl,
@@ -3750,7 +3844,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "createTaskbarItem",
     value: function createTaskbarItem(win) {
-      var _this7 = this;
+      var _this9 = this;
       if (!this.taskbarEl) return;
       var item = document.createElement("div");
       item.className = "".concat(_types.LIBRARY_NAME, "-taskbar-item");
@@ -3764,7 +3858,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
             origin: item
           });
         } else {
-          if (_this7.activeWindow === win) {
+          if (_this9.activeWindow === win) {
             win.minimize({
               origin: item
             });
@@ -3879,102 +3973,173 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
     }
   }, {
     key: "updateVirtualization",
-    value: function updateVirtualization() {
-      var _this$globalConfig$vi;
-      if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
-      var threshold = (_this$globalConfig$vi = this.globalConfig.virtualizationThreshold) !== null && _this$globalConfig$vi !== void 0 ? _this$globalConfig$vi : 5;
-      if (this.windows.size <= threshold) {
-        var _iterator5 = _createForOfIteratorHelper(this.windows.values()),
-          _step5;
-        try {
-          for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-            var win = _step5.value;
-            if (win.virtualizationLevel !== "none" && win.state !== "minimized") {
-              win.unvirtualize();
-            }
-          }
-        } catch (err) {
-          _iterator5.e(err);
-        } finally {
-          _iterator5.f();
-        }
-        return;
-      }
-      var windows = Array.from(this.windows.values()).sort(function (a, b) {
-        return parseInt(a.el.style.zIndex || "0", 10) - parseInt(b.el.style.zIndex || "0", 10);
-      });
-      var viewportRect = this.workspaceEl.getBoundingClientRect();
-      for (var i = 0; i < windows.length; i++) {
-        var targetWin = windows[i];
-        if (!targetWin.options.virtualizable || targetWin.state !== "normal" && targetWin.state !== "minimized" || targetWin === this.activeWindow) {
-          targetWin.unvirtualize();
-          continue;
-        }
-        var targetRect = targetWin.el.getBoundingClientRect();
-        if (targetRect.width <= 1 || targetRect.height <= 1) {
-          targetWin.virtualize("auto");
-          continue;
-        }
-        var samplePoints = [{
-          x: targetRect.left + 1,
-          y: targetRect.top + 1
-        }, {
-          x: targetRect.right - 1,
-          y: targetRect.top + 1
-        }, {
-          x: targetRect.right - 1,
-          y: targetRect.bottom - 1
-        }, {
-          x: targetRect.left + 1,
-          y: targetRect.bottom - 1
-        }, {
-          x: targetRect.left + targetRect.width * 0.5,
-          y: targetRect.top + targetRect.height * 0.5
-        }];
-        var isVisible = false;
-        for (var _i3 = 0, _samplePoints = samplePoints; _i3 < _samplePoints.length; _i3++) {
-          var point = _samplePoints[_i3];
-          var inViewport = point.x >= viewportRect.left && point.x < viewportRect.right && point.y >= viewportRect.top && point.y < viewportRect.bottom;
-          if (!inViewport) {
-            continue;
-          }
-          var pointIsOccluded = false;
-          for (var j = i + 1; j < windows.length; j++) {
-            var _occluderWin$getOpaci;
-            var occluderWin = windows[j];
-            if (occluderWin.state !== "normal" || ((_occluderWin$getOpaci = occluderWin.getOpacity()) !== null && _occluderWin$getOpaci !== void 0 ? _occluderWin$getOpaci : 1) < 0.9) {
-              continue;
-            }
-            var occluderRect = occluderWin.el.getBoundingClientRect();
-            if (point.x >= occluderRect.left && point.x < occluderRect.right && point.y >= occluderRect.top && point.y < occluderRect.bottom) {
+    value: (function () {
+      var _updateVirtualization = (0, _asyncToGenerator2["default"])(_regenerator["default"].mark(function _callee4() {
+        var _this$globalConfig$vi;
+        var threshold, _iterator5, _step5, win, windows, viewportRect, i, targetWin, targetRect, samplePoints, isVisible, _i3, _samplePoints, point, inViewport, pointIsOccluded, j, _occluderWin$getOpaci, occluderWin, occluderRect, restoreMode;
+        return _regenerator["default"].wrap(function (_context4) {
+          while (1) switch (_context4.prev = _context4.next) {
+            case 0:
+              if (!(!this.globalConfig.enableVirtualization || !this.workspaceEl)) {
+                _context4.next = 1;
+                break;
+              }
+              return _context4.abrupt("return");
+            case 1:
+              threshold = (_this$globalConfig$vi = this.globalConfig.virtualizationThreshold) !== null && _this$globalConfig$vi !== void 0 ? _this$globalConfig$vi : 5;
+              if (!(this.windows.size <= threshold)) {
+                _context4.next = 2;
+                break;
+              }
+              _iterator5 = _createForOfIteratorHelper(this.windows.values());
+              try {
+                for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+                  win = _step5.value;
+                  if (win.virtualizationLevel !== "none" && win.state !== "minimized") {
+                    win.unvirtualize();
+                  }
+                }
+              } catch (err) {
+                _iterator5.e(err);
+              } finally {
+                _iterator5.f();
+              }
+              return _context4.abrupt("return");
+            case 2:
+              windows = Array.from(this.windows.values()).sort(function (a, b) {
+                return parseInt(a.el.style.zIndex || "0", 10) - parseInt(b.el.style.zIndex || "0", 10);
+              });
+              viewportRect = this.workspaceEl.getBoundingClientRect();
+              i = 0;
+            case 3:
+              if (!(i < windows.length)) {
+                _context4.next = 16;
+                break;
+              }
+              targetWin = windows[i];
+              if (!(!targetWin.options.virtualizable || targetWin.state !== "normal" && targetWin.state !== "minimized" || targetWin === this.activeWindow)) {
+                _context4.next = 4;
+                break;
+              }
+              targetWin.unvirtualize();
+              return _context4.abrupt("continue", 15);
+            case 4:
+              targetRect = targetWin.el.getBoundingClientRect();
+              if (!(targetRect.width <= 1 || targetRect.height <= 1)) {
+                _context4.next = 5;
+                break;
+              }
+              targetWin.virtualize("auto");
+              return _context4.abrupt("continue", 15);
+            case 5:
+              samplePoints = [{
+                x: targetRect.left + 1,
+                y: targetRect.top + 1
+              }, {
+                x: targetRect.right - 1,
+                y: targetRect.top + 1
+              }, {
+                x: targetRect.right - 1,
+                y: targetRect.bottom - 1
+              }, {
+                x: targetRect.left + 1,
+                y: targetRect.bottom - 1
+              }, {
+                x: targetRect.left + targetRect.width * 0.5,
+                y: targetRect.top + targetRect.height * 0.5
+              }];
+              isVisible = false;
+              _i3 = 0, _samplePoints = samplePoints;
+            case 6:
+              if (!(_i3 < _samplePoints.length)) {
+                _context4.next = 13;
+                break;
+              }
+              point = _samplePoints[_i3];
+              inViewport = point.x >= viewportRect.left && point.x < viewportRect.right && point.y >= viewportRect.top && point.y < viewportRect.bottom;
+              if (inViewport) {
+                _context4.next = 7;
+                break;
+              }
+              return _context4.abrupt("continue", 12);
+            case 7:
+              pointIsOccluded = false;
+              j = i + 1;
+            case 8:
+              if (!(j < windows.length)) {
+                _context4.next = 11;
+                break;
+              }
+              occluderWin = windows[j];
+              if (!(occluderWin.state !== "normal" || ((_occluderWin$getOpaci = occluderWin.getOpacity()) !== null && _occluderWin$getOpaci !== void 0 ? _occluderWin$getOpaci : 1) < 0.9)) {
+                _context4.next = 9;
+                break;
+              }
+              return _context4.abrupt("continue", 10);
+            case 9:
+              occluderRect = occluderWin.el.getBoundingClientRect();
+              if (!(point.x >= occluderRect.left && point.x < occluderRect.right && point.y >= occluderRect.top && point.y < occluderRect.bottom)) {
+                _context4.next = 10;
+                break;
+              }
               pointIsOccluded = true;
+              return _context4.abrupt("continue", 11);
+            case 10:
+              j++;
+              _context4.next = 8;
               break;
-            }
+            case 11:
+              if (pointIsOccluded) {
+                _context4.next = 12;
+                break;
+              }
+              isVisible = true;
+              return _context4.abrupt("continue", 13);
+            case 12:
+              _i3++;
+              _context4.next = 6;
+              break;
+            case 13:
+              if (!isVisible) {
+                _context4.next = 14;
+                break;
+              }
+              restoreMode = targetWin.options.virtualizationRestoreMode || this.globalConfig.virtualizationRestoreMode || "auto";
+              if (restoreMode === "auto") {
+                targetWin.unvirtualize();
+              }
+              _context4.next = 15;
+              break;
+            case 14:
+              _context4.next = 15;
+              return targetWin.virtualize("auto");
+            case 15:
+              i++;
+              _context4.next = 3;
+              break;
+            case 16:
+            case "end":
+              return _context4.stop();
           }
-          if (!pointIsOccluded) {
-            isVisible = true;
-            break;
-          }
-        }
-        if (isVisible) {
-          targetWin.unvirtualize();
-        } else {
-          targetWin.virtualize("auto");
-        }
+        }, _callee4, this);
+      }));
+      function updateVirtualization() {
+        return _updateVirtualization.apply(this, arguments);
       }
-    }
+      return updateVirtualization;
+    }())
   }, {
     key: "startBootstrapThemeObserver",
     value: function startBootstrapThemeObserver() {
-      var _this8 = this;
+      var _this0 = this;
       if (this.bootstrapThemeObserver || !this.container) return;
       this.highContrastMatcher = window.matchMedia("(prefers-contrast: more)");
       this.highContrastListener = function (e) {
         if (e.matches) {
-          _this8.stopAutoThemeListener();
-          _this8.setTheme("high-contrast");
+          _this0.stopAutoThemeListener();
+          _this0.setTheme("high-contrast");
         } else {
-          _this8.applyBootstrapTheme(document.documentElement.getAttribute("data-bs-theme"));
+          _this0.applyBootstrapTheme(document.documentElement.getAttribute("data-bs-theme"));
         }
       };
       this.highContrastMatcher.addEventListener("change", this.highContrastListener);
@@ -3984,8 +4149,8 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
         attributeFilter: ["data-bs-theme"]
       };
       var callback = function callback(mutationsList) {
-        var _this8$highContrastMa;
-        if (!((_this8$highContrastMa = _this8.highContrastMatcher) !== null && _this8$highContrastMa !== void 0 && _this8$highContrastMa.matches)) {
+        var _this0$highContrastMa;
+        if (!((_this0$highContrastMa = _this0.highContrastMatcher) !== null && _this0$highContrastMa !== void 0 && _this0$highContrastMa.matches)) {
           var _iterator6 = _createForOfIteratorHelper(mutationsList),
             _step6;
           try {
@@ -3993,7 +4158,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
               var mutation = _step6.value;
               if (mutation.type === "attributes" && mutation.attributeName === "data-bs-theme") {
                 var themeValue = mutation.target.getAttribute("data-bs-theme");
-                _this8.applyBootstrapTheme(themeValue);
+                _this0.applyBootstrapTheme(themeValue);
               }
             }
           } catch (err) {
@@ -4038,11 +4203,11 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
   }, {
     key: "startAutoThemeListener",
     value: function startAutoThemeListener() {
-      var _this9 = this;
+      var _this1 = this;
       if (this.prefersColorSchemeListener || !window.matchMedia) return;
       this.prefersDarkMatcher = window.matchMedia("(prefers-color-scheme: dark)");
       this.prefersColorSchemeListener = function (e) {
-        _this9.setTheme(e.matches ? "dark" : "default");
+        _this1.setTheme(e.matches ? "dark" : "default");
       };
       this.prefersDarkMatcher.addEventListener("change", this.prefersColorSchemeListener);
       this.setTheme(this.prefersDarkMatcher.matches ? "dark" : "default");
@@ -4060,7 +4225,7 @@ var WindowManager = exports["default"] = function (_WinLetBaseClass) {
 }(_baseclass["default"]);
 (0, _defineProperty2["default"])(WindowManager, "allWindows", new Map());
 
-},{"../const/config":38,"../const/errors":39,"../const/types":40,"../libs/baseclass":44,"../libs/utils":45,"../style/styles":46,"../style/themes/dark":47,"../style/themes/default":48,"../style/themes/high-contrast":49,"./window":41,"@babel/runtime/helpers/classCallCheck":7,"@babel/runtime/helpers/createClass":9,"@babel/runtime/helpers/defineProperty":10,"@babel/runtime/helpers/getPrototypeOf":11,"@babel/runtime/helpers/inherits":12,"@babel/runtime/helpers/interopRequireDefault":13,"@babel/runtime/helpers/possibleConstructorReturn":20,"@babel/runtime/helpers/slicedToArray":30,"@babel/runtime/helpers/typeof":34}],43:[function(require,module,exports){
+},{"../const/config":38,"../const/errors":39,"../const/types":40,"../libs/baseclass":44,"../libs/utils":45,"../style/styles":46,"../style/themes/dark":47,"../style/themes/default":48,"../style/themes/high-contrast":49,"./window":41,"@babel/runtime/helpers/asyncToGenerator":6,"@babel/runtime/helpers/classCallCheck":7,"@babel/runtime/helpers/createClass":9,"@babel/runtime/helpers/defineProperty":10,"@babel/runtime/helpers/getPrototypeOf":11,"@babel/runtime/helpers/inherits":12,"@babel/runtime/helpers/interopRequireDefault":13,"@babel/runtime/helpers/possibleConstructorReturn":20,"@babel/runtime/helpers/slicedToArray":30,"@babel/runtime/helpers/typeof":34,"@babel/runtime/regenerator":37}],43:[function(require,module,exports){
 "use strict";
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");

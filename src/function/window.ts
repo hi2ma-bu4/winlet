@@ -1043,7 +1043,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 					this.el.releasePointerCapture(e.pointerId);
 					this.contentEl.style.pointerEvents = "auto";
 					this.emit("move-end", this);
-					this.manager.updateVirtualization();
+					(async () => await this.manager.updateVirtualization())();
 				}
 
 				this.el.classList.remove(`${LIBRARY_NAME}-is-dragging`);
@@ -1140,7 +1140,7 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 						document.removeEventListener("pointerup", onPointerUp);
 						this.emit("resize-end", this);
 						this.updateDebugOverlay();
-						this.manager.updateVirtualization();
+						(async () => await this.manager.updateVirtualization())();
 
 						this.el.classList.remove(`${LIBRARY_NAME}-is-resizing`);
 					};
@@ -1429,6 +1429,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 
 			this.el.removeAttribute("aria-hidden");
 			this.el.removeAttribute("inert");
+			this.el.style.transition = ""; // Use CSS transition for transform/opacity
 
 			if (this.manager.getGlobalConfig().enableAnimations) {
 				const originPriority = [options?.origin, this.options.animationOrigin, this.manager.getGlobalConfig().animateFromTaskbar ? this.options._taskbarItem : null];
@@ -1450,6 +1451,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 			const doRestore = () => {
 				this.state = "normal";
 				this.el.classList.remove(`${LIBRARY_NAME}-maximized`, `${LIBRARY_NAME}-is-restoring`);
+				this.el.style.transition = ""; // Reset transition
 				const maxBtn = this.el.querySelector<HTMLButtonElement>(`.${LIBRARY_NAME}-maximize-btn`);
 				if (maxBtn) {
 					maxBtn.title = "Maximize";
@@ -1459,24 +1461,20 @@ Virt:  ${this.virtualizationLevel}`.trim();
 				this.updateDebugOverlay();
 			};
 
-			// Temporarily add transition for layout properties
-			this.el.style.transition = "top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out";
-
-			this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
-			this.setSize(this.lastState.width, this.lastState.height);
-			this.setPosition(this.lastState.x, this.lastState.y);
-
-			this.el.addEventListener(
-				"transitionend",
-				() => {
-					this.el.style.transition = ""; // remove temporary transition
-					doRestore();
-				},
-				{ once: true }
-			);
+			if (this.manager.getGlobalConfig().enableAnimations) {
+				this.el.style.transition = "top 0.25s ease-in-out, left 0.25s ease-in-out, width 0.25s ease-in-out, height 0.25s ease-in-out";
+				this.el.classList.add(`${LIBRARY_NAME}-is-restoring`);
+				this.setSize(this.lastState.width, this.lastState.height);
+				this.setPosition(this.lastState.x, this.lastState.y);
+				this.el.addEventListener("transitionend", doRestore, { once: true });
+			} else {
+				this.setSize(this.lastState.width, this.lastState.height);
+				this.setPosition(this.lastState.x, this.lastState.y);
+				doRestore();
+			}
 		}
 		this.updateDebugOverlay();
-		this.manager.updateVirtualization();
+		(async () => await this.manager.updateVirtualization())();
 	}
 
 	public focus(): void {

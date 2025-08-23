@@ -160,7 +160,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 			this.setTheme("default");
 		}
 
-		this.updateVirtualization();
+		(async () => await this.updateVirtualization())();
 
 		window.addEventListener("blur", () =>
 			// 次のイベントサイクルでアクティブな要素を取得
@@ -291,7 +291,15 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 					content: tabData.content,
 				};
 
-				const mergedWindowOptions = Utils.deepMerge(Utils.deepCopy(sourceWindow.options), {
+				// Create a clean copy of the source options, removing non-serializable parts.
+				const cleanSourceOptions: Partial<WindowOptions> = Utils.deepCopy(sourceWindow.options);
+				delete cleanSourceOptions.id; // New window should get a new ID
+				delete cleanSourceOptions.animationOrigin; // This is often a non-serializable DOM element or event
+				delete cleanSourceOptions.content; // Will be replaced by the new tab content
+				delete cleanSourceOptions.tabs; // Will be replaced by the new tab
+				delete cleanSourceOptions.splitView; // A detached tab shouldn't inherit a split view
+
+				const mergedWindowOptions = Utils.deepMerge(cleanSourceOptions, {
 					tabs: [newTab],
 					x: e.clientX,
 					y: e.clientY,
@@ -707,7 +715,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 				if (nextWin) this.focusWindow(nextWin);
 			}
 			// ウィンドウ破棄後に仮想化状態を更新
-			this.updateVirtualization();
+			(async () => await this.updateVirtualization())();
 		}
 	}
 
@@ -732,7 +740,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 		this.windows.forEach((w) => w.options._taskbarItem?.classList.remove(`${LIBRARY_NAME}-active`));
 		win.options._taskbarItem?.classList.add(`${LIBRARY_NAME}-active`);
 		// ウィンドウのフォーカス、移動、リサイズ時に仮想化状態を即時更新
-		this.updateVirtualization();
+		(async () => await this.updateVirtualization())();
 
 		// focus()はWindowクラス側で呼ばれるので不要
 	}
@@ -1045,7 +1053,7 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 	/**
 	 * 全てのウィンドウの可視性をチェックし、必要に応じて仮想化/復元を行う
 	 */
-	public updateVirtualization(): void {
+	public async updateVirtualization(): Promise<void> {
 		if (!this.globalConfig.enableVirtualization || !this.workspaceEl) return;
 
 		const threshold = this.globalConfig.virtualizationThreshold ?? 5;
@@ -1124,9 +1132,12 @@ export default class WindowManager extends WinLetBaseClass<GlobalEventMap> {
 
 			// 3. 最終的な可視性に基づいて仮想化状態を更新
 			if (isVisible) {
-				targetWin.unvirtualize();
+				const restoreMode = targetWin.options.virtualizationRestoreMode || this.globalConfig.virtualizationRestoreMode || "auto";
+				if (restoreMode === "auto") {
+					targetWin.unvirtualize();
+				}
 			} else {
-				targetWin.virtualize("auto");
+				await targetWin.virtualize("auto");
 			}
 		}
 	}

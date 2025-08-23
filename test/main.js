@@ -302,6 +302,9 @@ class Main {
 		WinLet.createWindow({
 			title: "Lazy Load Test",
 			lazyLoad: true,
+			windowOptions: {
+				focus: false, // Start unfocused to test lazy loading
+			},
 			content: { html: '<div style="padding:1em;"><h2>このコンテンツは遅延読み込みされました</h2><p>最初のフォーカスで表示されます。</p></div>' },
 		});
 	}
