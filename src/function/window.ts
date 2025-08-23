@@ -69,7 +69,6 @@ export default class WinLetWindow extends WinLetBaseClass<WindowEventMap> implem
 		this.manager = manager;
 		this.options = Utils.deepMerge(Utils.deepCopy(defaultConfig), options) as Required<WindowOptions>;
 		this.parentWindow = options._parent || null;
-
 		// 検索オプションの初期状態を設定
 		this.searchOptionsState.caseSensitive = !!this.options.search.caseSensitive;
 
@@ -1902,11 +1901,7 @@ Virt:  ${this.virtualizationLevel}`.trim();
 					clonedTarget.classList.remove(`${LIBRARY_NAME}-is-resizing`, `${LIBRARY_NAME}-is-dragging`);
 
 					// 除外DOMの削除
-					const selectorsToRemove = [
-						`.${LIBRARY_NAME}-resize-handle`,
-						`.${LIBRARY_NAME}-debug-overlay`,
-						`.${LIBRARY_NAME}-controls`,
-					];
+					const selectorsToRemove = [`.${LIBRARY_NAME}-resize-handle`, `.${LIBRARY_NAME}-debug-overlay`, `.${LIBRARY_NAME}-controls`];
 					selectorsToRemove.forEach((selector) => {
 						clonedTarget.querySelectorAll(selector).forEach((el) => el.remove());
 					});

@@ -40,6 +40,10 @@ export default class Utils {
 		}
 
 		if (seen.has(value)) return seen.get(value);
+
+		if (value instanceof HTMLElement) return value;
+		if (value instanceof RegExp) return value;
+
 		const copiedObj: { [key: string]: any } = {};
 		seen.set(value, copiedObj);
 		for (const key in value) {

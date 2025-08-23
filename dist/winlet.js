@@ -4444,6 +4444,8 @@ var Utils = exports["default"] = function () {
         return arrCopy;
       }
       if (seen.has(value)) return seen.get(value);
+      if (value instanceof HTMLElement) return value;
+      if (value instanceof RegExp) return value;
       var copiedObj = {};
       seen.set(value, copiedObj);
       for (var key in value) {
@@ -4662,7 +4664,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.LIB_VERSION = void 0;
-var LIB_VERSION = exports.LIB_VERSION = "v1.0.2.7";
+var LIB_VERSION = exports.LIB_VERSION = "v1.0.3.0";
 
 },{}]},{},[43])
 //# sourceMappingURL=winlet.js.map
